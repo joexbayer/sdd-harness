@@ -313,6 +313,9 @@ item_phase() {
 	fi
 }
 
+# masked: the input lines that hide a failure ("cmd || true", "|| :", "|| exit 0").
+masked() { grep -E '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)'; }
+
 # run_check <id>: run every check.run command from the repo root, stdin closed. Exit 0
 # pass, 1 fail, 3 when the output shows zero tests ran. Records the result for <id> (if
 # given) and sets CHECK_LOG, CHECK_NOTRUN to the first command the shell could not run, and
@@ -320,7 +323,7 @@ item_phase() {
 # and CHECK_ARTICLES to the constitution's problems (see check_articles).
 run_check() {
 	_cmds=$(cfg_all check.run) || die "no check configured: add 'run = <command>' under [check] in $DIRNAME/config"
-	_bad=$(printf '%s\n' "$_cmds" | grep -E '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)')
+	_bad=$(printf '%s\n' "$_cmds" | masked)
 	[ -z "$_bad" ] || die "refusing a check that hides failures: $_bad"
 	_fp=$(fingerprint)
 	CHECK_LOG="$ST/checks/${1:-none}.log"
@@ -337,6 +340,7 @@ run_check() {
 	done <<EOF
 $_cmds
 EOF
+	check_articles "$CHECK_LOG" || _rc=1
 	CHECK_DIRTIED=
 	_fp2=$(fingerprint)
 	[ "$_fp2" = "$_fp" ] || CHECK_DIRTIED=$(git diff-tree -r --name-only "$_fp" "$_fp2" 2>/dev/null)
@@ -346,7 +350,6 @@ EOF
 			_rc=3
 		fi
 	fi
-	check_articles "$CHECK_LOG" || _rc=1
 	if [ -n "${1:-}" ]; then
 		case $_rc in 0) check_record "$1" "$_fp" pass ;; 1) check_record "$1" "$_fp" fail ;; *) check_record "$1" "$_fp" empty ;; esac
 	fi
@@ -506,7 +509,7 @@ parse_item() {
 # through an `amendment` item.
 CONST="$SPECS/constitution.md"
 
-# articles: per article "C-<n>\t<review|check>\t<command>\t<rule>", or "!\t<C-n>\t<problem>"
+# articles: per article "C-<n>\t<review|check>\t<command or ->\t<rule>", or "!\t<C-n>\t<problem>"
 # for one that is malformed. An article is "C-<n> <rule>" at the start of a line, followed by
 # indented "Why: …" and "Enforced: review" or "Enforced: check <command>" lines.
 articles() {
@@ -516,7 +519,7 @@ articles() {
 		if (id == "") return
 		if (!why) print "!\t" id "\tno \"Why:\" line"
 		else if (enf == "") print "!\t" id "\tno \"Enforced:\" line"
-		else if (enf == "review") print id "\treview\t\t" rule
+		else if (enf == "review") print id "\treview\t-\t" rule
 		else if (enf ~ /^check [^ ]/) print id "\tcheck\t" substr(enf, 7) "\t" rule
 		else print "!\t" id "\t\"Enforced:\" must be review or check <command>"
 		id = ""
@@ -538,14 +541,14 @@ check_articles() {
 	_arts=$(articles)
 	_n=$(printf '%s\n' "$_arts" | grep -c '^C-')
 	_max=$(cfg constitution.max-articles 30)
-	[ "$_n" -le "$_max" ] || CHECK_ARTICLES="constitution over budget ($_n of $_max articles)"
+	[ "$_n" -le "$_max" ] || CHECK_ARTICLES="over budget ($_n of $_max articles)"
 	_tab=$(printf '\t')
 	while IFS="$_tab" read -r _id _kind _cmd _rule; do
 		_p=
 		if [ "$_id" = '!' ]; then
 			_p="$_kind: $_cmd"
 		elif [ "$_kind" = check ]; then
-			if printf '%s\n' "$_cmd" | grep -Eq '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)'; then
+			if printf '%s\n' "$_cmd" | masked >/dev/null; then
 				_p="$_id $_rule (its check hides failures: $_cmd)"
 			else
 				printf '$ %s   # %s\n' "$_cmd" "$_id" >>"$1"
@@ -564,7 +567,8 @@ EOF2
 # changes only through an amendment, and an amendment changes nothing outside specs/.
 # Prints the reason and fails otherwise.
 constitution_guard() {
-	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD 2>/dev/null) || return 0
+	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD 2>/dev/null) ||
+		{ echo "base branch '$(cfg sdd.base main)' not found, so the constitution cannot be checked (set base under [sdd] in $DIRNAME/config)"; return 1; }
 	if [ "$ITYPE" = amendment ]; then
 		! code_changed || { echo "an amendment lands no code: move code changes to their own items and list them under Impact"; return 1; }
 		return 0

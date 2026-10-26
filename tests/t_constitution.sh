@@ -27,7 +27,11 @@ assert_eq $? 1
 assert_contains "$out" '✗ constitution: C-3: no "Enforced:" line'
 printf 'C-3 Unenforced.\n  Why: oops.\n  Enforced: maybe\n' >"$T/c3" && head -n 8 specs/constitution.md >"$T/c" && cat "$T/c" "$T/c3" >specs/constitution.md
 assert_contains "$(sdd check 2>&1)" 'C-3: "Enforced:" must be review or check <command>'
-head -n 8 specs/constitution.md >"$T/c" && cp "$T/c" specs/constitution.md
+printf 'C-3 No reason.\n  Enforced: review\n' >"$T/c3" && head -n 8 specs/constitution.md >"$T/c" && cat "$T/c" "$T/c3" >specs/constitution.md
+assert_contains "$(sdd check 2>&1)" 'C-3: no "Why:" line'
+printf 'C-3 Masked.\n  Why: oops.\n  Enforced: check false || true\n' >"$T/c3" && cat "$T/c" "$T/c3" >specs/constitution.md
+assert_contains "$(sdd check 2>&1)" 'C-3 Masked. (its check hides failures: false || true)'
+cp "$T/c" specs/constitution.md
 
 # FR-3.2: a failing check article fails the check, naming the article.
 touch forbidden.txt
@@ -38,7 +42,7 @@ rm forbidden.txt
 
 # FR-3.3: over budget.
 git config -f .sdd/config constitution.max-articles 1
-assert_contains "$(sdd check 2>&1)" 'constitution over budget (2 of 1 articles)'
+assert_contains "$(sdd check 2>&1)" '✗ constitution: over budget (2 of 1 articles)'
 git config -f .sdd/config --unset constitution.max-articles
 
 # FR-3.4 and FR-3.5: the rules ride along with instructions; review articles go to the human.
@@ -65,9 +69,16 @@ assert_contains "$out" 'the constitution changes only through'
 git switch -q main
 
 # FR-3.7: an amendment may change it, lands no code, and every gate blocks even in lite.
+# Its Impact section is required: approve refuses while it is empty.
 sdd new amendment "Allow forbidden.txt in docs" >/dev/null 2>&1
 f=$(ls specs/changes/3-*/item.md)
-fill "$f" plan && sdd approve >/dev/null 2>&1 || fail "approve amendment failed"
+fill "$f" plan
+awk '/^## Impact$/ { print; skip = 1; next } skip && /^## / { skip = 0 } !skip' "$f" >"$T/a" && cp "$f" "$T/full" && cp "$T/a" "$f"
+out=$(sdd approve 2>&1)
+assert_eq $? 1 "(approve refuses an empty Impact)"
+assert_contains "$out" 'Impact'
+cp "$T/full" "$f"
+sdd approve >/dev/null 2>&1 || fail "approve amendment failed"
 sed 's/^C-1 Nothing named forbidden.txt./C-1 Nothing named forbidden.txt, except in docs\/./' specs/constitution.md >"$T/c" && cp "$T/c" specs/constitution.md
 out=$(sdd check 2>&1) || fail "amendment check should pass: $out"
 echo code >code.txt
@@ -88,4 +99,21 @@ assert_contains "$out" 'Constitution diff'
 assert_contains "$out" '+C-1 Nothing named forbidden.txt, except in docs/.'
 sdd ship >/dev/null 2>&1 || fail "amendment ship failed"
 assert_contains "$(git show main:specs/constitution.md)" 'except in docs/'
+# A check article added on main while an item is in flight runs at ship, after the rebase,
+# even though the item's code check already passed (the code fingerprint did not change).
+sdd new feature "In flight" >/dev/null 2>&1
+f=$(ls specs/changes/4-*/item.md)
+fill "$f" plan && sdd approve >/dev/null 2>&1 && fill "$f" built
+echo feature >feature.txt && git add -A && git commit -qm feature
+sdd check >/dev/null 2>&1 || fail "in-flight check should pass"
+git switch -q main
+sdd new amendment "No feature.txt" >/dev/null 2>&1
+a=$(ls specs/changes/5-*/item.md)
+fill "$a" plan && sdd approve >/dev/null 2>&1 && fill "$a" built
+printf '\nC-4 No feature.txt.\n  Why: a test rule.\n  Enforced: check test ! -f feature.txt\n' >>specs/constitution.md
+git add -A && git commit -qm amend && sdd check >/dev/null 2>&1 && sdd ship >/dev/null 2>&1 || fail "amendment 5 ship failed"
+git switch -q feature/4-in-flight
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(the new article must run at ship)"
+assert_contains "$out" 'C-4 No feature.txt. (its check failed)'
 exit 0

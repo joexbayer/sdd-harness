@@ -197,8 +197,8 @@ readers ignore keys they do not know.
 | 4 knowledge | `kb search/links/add/accept`, `tidy`, `explain` |
 | 5 strict | `trust`, env allowlist, role profiles, `upgrade` with checksums |
 
-Every verb prints a few lines and ends with the next command to run. Only `new` and `ship`
-create commits. No verb pushes, except `ship` in team PR mode.
+Every verb prints a few lines and ends with the next command to run. Only `new`, `approve`
+and `ship` create commits (constitution C-4). No verb pushes, except `ship` in team PR mode.
 
 ## 9. Verification ladder
 

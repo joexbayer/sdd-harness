@@ -49,6 +49,7 @@
 	# Changes the constitution: every gate blocks, in every profile.
 	planned = block
 	approved = block
+	check = block
 	built = block
 [type "spike"]
 	gates = planned approved built

@@ -84,41 +84,59 @@ DOD-3.2 This repo has `specs/constitution.md`. Editing it on a feature branch fa
 `sdd check`, while the same edit on an amendment branch passes and ships.
 
 ## Built
-- FR-3.1 parsing and format: `articles` (`.sdd/core/lib/common.sh:389`) gives one row per
+- FR-3.1 parsing and format: `articles` (`.sdd/core/lib/common.sh`) gives one row per
   article, or a problem row for a missing `Why:`/`Enforced:` or an unknown enforcement;
-  `check_articles` (`:412`) fails on those. Test: tests/t_constitution.sh.
-- FR-3.2 check articles run inside `run_check` after the configured checks (`:348`), output
+  `check_articles`  fails on those. Test: tests/t_constitution.sh.
+- FR-3.2 check articles run inside `run_check` after the configured checks , output
   in the same log; `check` prints `✗ constitution: C-n … (its check failed)`
   (`cmd/check.sh`). A command masked with `|| true` is refused, as for the checks. Test:
   t_constitution.sh.
 - FR-3.3 budget: `constitution.max-articles` (default 30, `core/config`). Test:
   t_constitution.sh.
-- FR-3.4 `next` appends the rule lines in plan and build (`cmd/next.sh:34`). Test:
+- FR-3.4 `next` appends the rule lines in plan and build (`cmd/next.sh`). Test:
   t_constitution.sh.
 - FR-3.5 `review` lists review articles under "Constitution: confirm each" with `[ ]` boxes
-  for the human (`cmd/review.sh:67`). Test: t_constitution.sh.
-- FR-3.6 `constitution_guard` (`:443`), called by `check` (`cmd/check.sh:8`) and `ship`
-  (`cmd/ship.sh:60`, blocks in every profile): it compares against the merge-base, so an
+  for the human (`cmd/review.sh`). Test: t_constitution.sh.
+- FR-3.6 `constitution_guard` , called by `check` (`cmd/check.sh`) and `ship`
+  (`cmd/ship.sh`, blocks in every profile): it compares against the merge-base, so an
   amendment shipped to main in the meantime is not blamed on this branch; with no
   constitution on the merge-base, any item may create it (bootstrap). Test: t_constitution.sh
   (check fails and ship refuses on a feature branch).
 - FR-3.7 `templates/amendment.md` (Impact required); `[type "amendment"]` sets planned,
   approved and built to block (`core/config`); the guard refuses code outside specs/; ship
-  re-runs the check articles (`cmd/ship.sh:61`) because a constitution edit does not change
-  the code fingerprint, so a cached pass would not have seen new articles. Prompts
+  runs the check articles after the rebase (`cmd/ship.sh`), on the constitution that will be
+  in force, because a constitution edit does not change the code fingerprint, so a cached
+  pass would not have seen new articles. Prompts
   `plan.amendment.md` and `build.amendment.md`. Test: t_constitution.sh (code refused, Built
   blocks in lite, ships).
 - FR-3.8 `review` shows the constitution diff against the merge-base for amendments
-  (`cmd/review.sh:72`). Test: t_constitution.sh.
-- This repo's `specs/constitution.md`: C-1 (core needs only sh, git, awk; checked by
-  `tests/constitution/c1-deps.sh`), C-2 (state derived, review), C-3 (IDs permanent, review),
+  (`cmd/review.sh`). Test: t_constitution.sh.
+- This repo's `specs/constitution.md`: C-1 (POSIX sh, git and POSIX utilities only; checked
+  by `tests/constitution/c1-deps.sh`: no jq outside hook, sync and agents, no python, perl,
+  ruby or node), C-2 (state derived, review), C-3 (IDs permanent, review),
   C-4 (only new, approve and ship commit; no verb pushes; checked by
   `tests/constitution/c4-commits.sh`). `.sdd/config` adds `tests/constitution/*.sh` to
   shellcheck. Design §3, §4 and §5 describe the constitution and the amendment type.
 
 Deviations:
-- C-4 says "new, approve and ship". Design §8 still says only `new` and `ship` create
-  commits, but `approve` has committed since item 1. The article states what is true.
+- C-4 says "new, approve and ship": `approve` has committed since item 1 (lite core). Design §8
+  now says the same.
+
+Fresh-context review (1 blocker, 5 warnings) and what changed:
+- Blocker fixed: ship ran the check articles before rebasing, so an amendment that added a
+  check article on main while this item was in flight was never run here. They now run after
+  the rebase. Test: t_constitution.sh, the last block (an in-flight feature is refused by the
+  new C-4).
+- Fixed: a missing base branch now fails the guard instead of silently passing; amendments
+  also pin `check = block`; check articles run before the "check changed files" detection, so
+  one that writes into the tree is reported; C-1 now says what its script enforces, and the
+  script also catches python, perl, ruby and node.
+- Fixed claims: tests now cover a missing `Why:`, a masked `|| true` article and an empty
+  Impact (approve refuses it). "Every profile" is shown where it matters: amendments block in
+  lite, where features only warn, because type settings beat profile settings.
+- Cleaned up: one `masked` helper for checks and articles; no doubled "constitution:" in
+  messages; the articles log is truncated per ship; review rows carry `-` instead of an empty
+  field, which `read` would collapse.
 
 Follow-ups:
 - Item 2 adds `PHASE_FP` for other branches; the guard and check articles do not depend on it,

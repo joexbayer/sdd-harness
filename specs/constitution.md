@@ -3,7 +3,8 @@
 The ground truths of sdd. Each article is enforced: by a command inside `sdd check`, or by
 the human at every review. They change only through `sdd new amendment "…"`.
 
-C-1 The core needs only POSIX sh, git and awk; jq only where agent hook JSON is unavoidable.
+C-1 The core needs only POSIX sh, git and the POSIX utilities (awk, sed, grep, …): no
+  python, perl, ruby or node, and jq only where agent hook JSON is unavoidable.
   Why: sdd must run wherever an agent has a shell, with nothing to install.
   Enforced: check sh tests/constitution/c1-deps.sh
 
