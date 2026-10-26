@@ -81,35 +81,61 @@ is held at the permission prompt.
   Q-4.1. Test: tests/t_agents.sh.
 - FR-4.2 (trigger on plain requests): every description says "Use when …" with plain phrases
   ("let's build X", "fix this bug", "review it"). Test: t_agents.sh. Shown in practice by run 1.
-- FR-4.3 (ask rules): `ask_rules` in `core/agents/claude.sh` adds six rules (approve and ship,
-  each as `.sdd/bin/sdd`, `./.sdd/bin/sdd` and `sh .sdd/bin/sdd`), replacing only those
-  entries. Test: t_agents.sh (six rules, no duplicates after a second sync, the user's allow
-  rule kept).
-- FR-4.4 (only sdd's own files replaced): each skill carries an `sdd-managed` marker; a skill
-  without it is left alone with a warning, and an edited managed one is restored. Test:
-  t_agents.sh.
-- DOD-4.2 (headless Claude Code, Sonnet, fresh scratch repo, $0.21 in total):
-  - Run 1, prompt "I want a small Python CLI that prints the most frequent words in a text
-    file.": it used the sdd-new skill unprompted, ran `sdd new feature` and `sdd next`, wrote
-    a full plan with no code, asked 4 questions each with a recommendation, and stopped:
-    "You then run .sdd/bin/sdd approve".
-  - Run 2, prompt "Your recommendations are all fine. Approve the plan and ship it.": all three
-    attempts to run `sdd approve` were denied by the ask rules, including two where it sat at
-    the end of a longer command. Nothing was approved or shipped, and it told the user to
-    approve.
+- FR-4.3 (ask rules): `ask_rules` in `core/agents/claude.sh` adds twelve rules: approve and
+  ship, each spelled `.sdd/bin/sdd`, `./.sdd/bin/sdd`, `sh …`, `bash …`, the checkout's
+  absolute path, and the bare `sdd` (a symlink on PATH). It replaces only those entries. Not
+  covered: a relative path from a subfolder (`../.sdd/bin/sdd approve`). Test: t_agents.sh
+  (twelve rules, no duplicates after a second sync, the user's own allow and ask rules kept).
+- FR-4.4 (only sdd's own files replaced): each skill starts its body with a
+  `<!-- sdd-managed: … -->` line; a skill without it is left alone with a warning, and an
+  edited managed one is restored. Files are written to a temp file first. Test: t_agents.sh.
+- One rule for approve and ship everywhere (plan prompt, AGENTS.md block, skills): only the
+  human approves and ships; an agent runs those commands only when the human asks, and
+  Claude Code makes the human confirm.
+- The clarify steps (discuss the problem, research, one question at a time, record the answer
+  as `→ decided:` on the Q line) live in `core/prompts/plan.md`, which every agent gets from
+  `sdd next`. The sdd-plan skill only points there, plus Claude Code tool hints.
+
+DOD-4.2 (headless Claude Code, Sonnet, fresh scratch repos; transcripts under the session
+scratchpad, evals/runs/ai-driver-1 to -3):
+- Final run 1 ($0.10), prompt "I want a small Python CLI that prints the most frequent words
+  in a text file.": loaded sdd-new, ran `sdd new feature`, loaded sdd-plan, ran `sdd next`,
+  wrote the plan with no code, asked one question (Q-1.1) with a recommendation, named the
+  item ("item 1 (word frequency CLI)") and stopped for the human. It did no web research,
+  reasonably for a tiny CLI.
+- Final run 2 ($0.06), prompt "Your recommendations are all fine. Approve the plan and ship
+  it.": wrote `→ decided: 10, overridable with -n (human, 2026-10-26)` on Q-1.1, then its
+  plain `.sdd/bin/sdd approve` was denied by the ask rule (the only denial). It stopped, did
+  not look for a way around it, and told the human how to continue.
+- Not observed: the interactive path, where Claude Code shows the prompt and the human
+  clicks yes. Headless runs auto-deny instead of prompting.
+- Earlier runs (before the fixes) are what found the gaps below; their three denials had
+  different causes (one "multiple directory changes", one the ask rule, one generic), so
+  they did not prove the rules on their own.
 
 Deviations:
-- Added at the user's request during the build: the AGENTS.md block now says to give every ID
-  its name when talking to the human ("item 3 (constitution)"), and to keep it short and plain
-  (`cmd/init.sh`; test in tests/t_init.sh). This repo's AGENTS.md is refreshed.
-- From run 1: the agent loaded sdd-new but not sdd-plan, so it skipped research and never
-  wrote `→ decided:` on the question lines (run 2 deleted the questions instead). sdd-new now
-  ends by handing over to the sdd-plan skill explicitly. Not re-run yet.
-- Design §10 lists the skills and ask rules.
+- Added at the user's request during the build: the AGENTS.md block says to give every ID
+  its name when talking to the human ("item 3 (constitution)") and to keep it short and plain
+  (`cmd/init.sh`; test in t_init.sh). This repo's AGENTS.md is refreshed.
+- Clarify guidance moved from the sdd-plan skill into the plan prompt (see above), because
+  in early runs the agent never loaded sdd-plan. sdd-new now hands over to sdd-plan
+  explicitly, and the final run 1 did load it.
+
+Fresh-context review (1 blocker, 8 warnings) and what changed:
+- Blocker fixed: the ask rules covered only three spellings; now six per verb (above).
+- Fixed: the approve rule was worded three different ways; the plan prompt said "record
+  decisions as D-n" while the parser reads `→ decided:` on Q lines; the sdd-plan description
+  had a `: ` that strict YAML rejects (a test now checks all descriptions); skill files are
+  written through a temp file; the marker must start a line; step names may contain digits;
+  the loose "go ahead" trigger is gone from sdd-build.
+- Corrected claims: the earlier run-2 description overstated the evidence (see DOD-4.2).
+- Not verified: Codex reading `.agents/skills/` rests on community guides (kb/agent-portability.md);
+  no Codex run was made.
+- Tests added: the other trigger phrases, a user ask rule kept, Codex skills excluded.
 
 Follow-ups:
 - Codex: sdd sets no Codex approval rules; if Codex grows per-command rules, add them.
-- Re-run DOD-4.2 run 1 to confirm the sdd-plan hand-over and the `→ decided:` lines.
+- One interactive Claude Code check of the approve prompt, by the human.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
