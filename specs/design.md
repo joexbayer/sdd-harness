@@ -309,3 +309,26 @@ hijack.
   commit? Recommend PR review.
 - Q-0.2 Living specs per capability (`specs/<capability>.md`, folded in at ship), in
   step 4 or later? Recommend later. The IDs already work without them.
+
+## 16. Roadmap and dogfooding
+
+Mindset: agile waterfall. Planning with the human carries the weight, building is mostly
+automated behind gates, and every change leaves the code easy to change again.
+
+| item | what | why now |
+|---|---|---|
+| 2 | `sdd ls` / `sdd show`, both with `--json`; spec grammar | Spec Kit's best trait is greppable progress; the app and MCP server read this |
+| 3 | constitution + `amendment` type | ground truths that are hard to change, enforced, not prose |
+| next | tasks (`task red/done`), plan lint at approve | Spec Kit parity; planning quality as a gate |
+| then | `sdd-server` (stdio, then HTTP with mirrors) | team coordination across branches and repos |
+| then | fresh-context review for clean, easy-to-change code | ladder step 5 |
+
+Dogfooding stages:
+1. **This repo, now.** Every change goes plan → approve → build → review → ship through sdd,
+   and narrow + qwen evaluate it (kb/narrow-lessons.md).
+2. **Pilot.** After items 2-3, tasks and plan lint: new work in one real repo runs on sdd next
+   to Spec Kit. Old specs are not migrated.
+3. **Replace Spec Kit.** After the team layer: MCP server, team IDs, `ship` via PR, gates in CI.
+
+Exit criteria for the pilot: about 10 items shipped, no gate had to be bypassed, reviews take
+minutes, and the narrow + qwen evaluation stays green.
