@@ -57,9 +57,10 @@ D-5.2 A separate verb rather than an `ls` flag, because `ls` is the machine-frie
 `summary` is for people; both read the same rows.
 
 ## Questions (optional)
-Q-5.1 Name the verb `summary`, or `report`? → recommend: `summary`.
+Q-5.1 Name the verb `summary`, or `report`? → recommend: `summary`. → decided: `summary`
+(joexbayer, 2026-10-26)
 Q-5.2 Default window: open items plus shipped in the last 7 days, or today only? → recommend:
-open + last 7 days.
+open + last 7 days. → decided: open + last 7 days (joexbayer, 2026-10-26)
 
 ## Done when
 DOD-5.1 `sdd check` passes, with a test naming each FR, under /bin/sh and dash.
