@@ -4,6 +4,7 @@ type: feature
 title: Lite core
 status: open
 created: 2026-10-26
+approved: c89cb8271414da5b3eee3996d1686ccde5f41e37 2026-10-26 joexbayer
 ---
 # 1 Lite core
 
