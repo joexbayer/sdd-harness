@@ -180,8 +180,10 @@ guidance indents its examples. Facts are read from the plan part (above `## Buil
 The JSON contract. `ls --json` prints one object per line with `id` (number), `type`,
 `status` (open, shipped, dropped), `phase` (plan, build, review, done, or `review?` when the
 answer depends on a check run on another machine), `frs`, `tasks_done`, `tasks_total`,
-`title`, `branch` (empty for archived items) and `source` (archive, worktree, local,
-remote or base: where the item was read). `show <id> --json` prints the same fields plus the
+`title`, `branch` (empty for archived items), `source` (archive, worktree, local,
+remote or base: where the item was read), `questions_open`, `approved_by`, `opened_by` (author
+of the item's open commit), `shipped` (date), `active` (shipped date, else the branch's last
+commit, today with uncommitted edits) and `reason` (why the item is in its phase). `show <id> --json` prints the same fields plus the
 arrays `stories`, `requirements` (with `example`), `tasks` (with `done`), `decisions`,
 `questions` (with `decided`) and `done_when`, each element with `id` and `text`. The current
 item is read from the working file, so uncommitted plan edits show. New keys may be added;
@@ -191,7 +193,7 @@ readers ignore keys they do not know.
 
 | step | verbs |
 |---|---|
-| 1 lite | `init new status next check ship sync hook help`, `ls`, `show` |
+| 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary` |
 | 2 standard | `approve`, `task red/done`, `trace`, `run <role>`, `drop` |
 | 3 team | team IDs, `ship` via PR, `sdd-server` (MCP), CI job |
 | 4 knowledge | `kb search/links/add/accept`, `tidy`, `explain` |

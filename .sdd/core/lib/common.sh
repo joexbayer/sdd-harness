@@ -419,7 +419,9 @@ AWK_JSON='function esc(s,   o, i, c) {
 }
 function row_json() {
 	return sprintf("\"id\":%d,\"type\":\"%s\",\"status\":\"%s\",\"phase\":\"%s\",\"frs\":%d,\"tasks_done\":%d,\"tasks_total\":%d,\"title\":\"%s\",\"branch\":\"%s\",\"source\":\"%s\"", \
-		$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10))
+		$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10)) \
+		sprintf(",\"questions_open\":%d,\"approved_by\":\"%s\",\"opened_by\":\"%s\",\"shipped\":\"%s\",\"active\":\"%s\",\"reason\":\"%s\"", \
+		$11, esc($12), esc($13), esc($14), esc($15), esc($16))
 }
 '
 
@@ -471,8 +473,11 @@ item_load() {
 	ITYPE=$(fm_get type "$IFILE")
 }
 
-# item_row <origin> <ref> <path>: one TSV summary line:
-# id type status phase frs tasks_done tasks_total title branch origin (see row_json)
+# item_row <origin> <ref> <path>: one TSV summary line (see row_json):
+#  1 id  2 type  3 status  4 phase  5 frs  6 tasks_done  7 tasks_total  8 title  9 branch
+# 10 origin  11 questions_open  12 approved_by  13 opened_by  14 shipped  15 active  16 reason
+# "active" is the shipped date, else the last commit on the branch (today if the working
+# tree has edits); "opened_by" is the author of the item's open commit.
 item_row() {
 	item_load "$@" || return 1
 	item_phase
@@ -481,12 +486,24 @@ item_row() {
 		PHASE='review?'
 	fi
 	_counts=$(parse_item "$IFILE" "$ID" | awk -F '\t' '
-		$1 == "fr" { f++ } $1 == "task" { t++; if ($3 == "done") d++ }
-		END { printf "%d\t%d\t%d", f, d, t }')
+		$1 == "fr" { f++ } $1 == "task" { t++; if ($3 == "done") d++ } $1 == "q" && $3 == "open" { q++ }
+		END { printf "%d\t%d\t%d\t%d", f, d, t, q }')
 	_br=$2
 	[ "$1" = archive ] && _br=
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
-		"$PHASE" "$_counts" "$(fm_get title "$IFILE")" "$_br" "$1"
+	_ap=$(fm_get approved "$IFILE")
+	[ -z "$_ap" ] || _ap=${_ap#* } && _ap=${_ap#* }
+	_shipped=$(fm_get shipped "$IFILE")
+	_by=$(git log -1 --format=%an --grep="^docs($ID): open " "$2" 2>/dev/null)
+	if [ -n "$_shipped" ]; then
+		_act=$_shipped
+	elif [ "$1" = worktree ] && [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+		_act=$(date +%F)
+	else
+		_act=$(git log -1 --format=%cs "$2" 2>/dev/null)
+	fi
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
+		"$PHASE" "${_counts%"$(printf '\t')"*}" "$(fm_get title "$IFILE")" "$_br" "$1" "${_counts##*"$(printf '\t')"}" \
+		"$_ap" "$_by" "$_shipped" "$_act" "$WHY"
 	[ -z "$ITMP" ] || rm -f "$ITMP"
 	PHASE_FP=
 }
