@@ -77,9 +77,9 @@ gate_level() {
 # --- text helpers -----------------------------------------------------------------
 
 # render <file> <id> <title> <type>: substitute {{id}} {{title}} {{type}} {{date}}
-# {{cmd}} {{base}} literally (no regex, so titles may contain any character).
+# {{cmd}} {{base}} {{name}} literally (no regex, so titles may contain any character).
 render() {
-	R_ID=$2 R_TITLE=$3 R_TYPE=$4 R_DATE=$(date +%F) R_CMD=$CMD R_BASE=$(cfg sdd.base main) \
+	R_ID=$2 R_TITLE=$3 R_TYPE=$4 R_DATE=$(date +%F) R_CMD=$CMD R_BASE=$(cfg sdd.base main) R_NAME=$NAME \
 		awk '
 	function repl(s, from, to,   out, i) {
 		out = ""
@@ -90,6 +90,7 @@ render() {
 		$0 = repl($0, "{{id}}", ENVIRON["R_ID"]); $0 = repl($0, "{{title}}", ENVIRON["R_TITLE"])
 		$0 = repl($0, "{{type}}", ENVIRON["R_TYPE"]); $0 = repl($0, "{{date}}", ENVIRON["R_DATE"])
 		$0 = repl($0, "{{cmd}}", ENVIRON["R_CMD"]); $0 = repl($0, "{{base}}", ENVIRON["R_BASE"])
+		$0 = repl($0, "{{name}}", ENVIRON["R_NAME"])
 		print
 	}' "$1"
 }
@@ -366,6 +367,25 @@ sync_agent() {
 		. "$_a"
 		agent_sync
 	)
+}
+
+# install_skills <dir> <agent>: one skill per step, <dir>/<name>-<step>/SKILL.md, from
+# agents/skills/<step>.md plus <step>.<agent>.md (that agent's tool hints), kept out of git.
+# Only folders sdd made (marked <name>-managed) are replaced; a user's own skill stays.
+install_skills() {
+	for _st in $(ls "$SDD_HOME/core/agents/skills" | sed -n 's/^\([a-z]*\)\.md$/\1/p'); do
+		_f="$1/$NAME-$_st/SKILL.md"
+		if [ -f "$_f" ] && ! grep -q "$NAME-managed" "$_f"; then
+			warn "left $_f alone: it was not made by $NAME"
+			continue
+		fi
+		mkdir -p "${_f%/SKILL.md}"
+		{
+			render "$(sdd_path "agents/skills/$_st.md")" '' '' ''
+			if _h=$(sdd_path "agents/skills/$_st.$2.md"); then echo; render "$_h" '' '' ''; fi
+		} >"$_f"
+		exclude "${_f%/SKILL.md}"
+	done
 }
 
 agents() {

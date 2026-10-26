@@ -63,6 +63,8 @@ This repo tracks changes with $NAME (\`$DIRNAME/\`). Before changing code, run \
   then walk the human through \`$CMD review\`. Only the human ships (\`$CMD ship\`).
 - Start: \`$CMD new <$(types | paste -sd '|' -)> "title"\`
 - Small changes (under ~20 lines, no behaviour change) need no item.
+- Talking to the human: give every ID its name ("item 3 (constitution)", "FR-3.6 (feature
+  branches can't edit it)"), keep it short and plain, and explain terms instead of assuming.
 $end
 EOF
 )

@@ -15,6 +15,22 @@ agent_sync() {
 		echo "added @AGENTS.md to CLAUDE.md (commit this change)"
 	fi
 	merge_hooks .claude/settings.local.json claude
+	ask_rules .claude/settings.local.json
 	exclude .claude/settings.local.json
-	echo "claude: session-start and stop hooks in .claude/settings.local.json (kept out of git)"
+	echo "claude: session-start and stop hooks, and ask rules for approve and ship, in .claude/settings.local.json"
+	install_skills .claude/skills claude
+	echo "claude: skills $NAME-new, -plan, -build, -review, -ship in .claude/skills (all kept out of git)"
+}
+
+# ask_rules <settings>: Claude Code asks the human before approve or ship runs, however the
+# agent spells the call. Replaces exactly these entries, keeping the user's own rules.
+ask_rules() {
+	_rules=$(for _v in approve ship; do
+		printf '"Bash(%s %s:*)","Bash(./%s %s:*)","Bash(sh %s %s:*)",' "$CMD" "$_v" "$CMD" "$_v" "$CMD" "$_v"
+	done)
+	jq --argjson add "[${_rules%,}]" '
+		.permissions = (.permissions // {})
+		| .permissions.ask = (((.permissions.ask // []) - $add) + $add)
+	' "$1" >"$1.tmp.$$" || { rm -f "$1.tmp.$$"; die "could not update $1"; }
+	mv "$1.tmp.$$" "$1"
 }

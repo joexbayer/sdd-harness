@@ -1,5 +1,7 @@
 # FR-1.10 sync claude/codex: hooks merged, existing settings kept, idempotent, excluded.
 # FR-1.11 stop hook: warn in lite, block once in standard. FR-1.12 name derived.
+# FR-4.1 step skills, FR-4.2 descriptions trigger on plain requests, FR-4.3 ask rules for
+# approve and ship, FR-4.4 only sdd's own skills and rules are replaced.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -18,8 +20,36 @@ grep -qx '/.claude/settings.local.json' "$ex" || fail "settings not excluded"
 grep -qx '/CLAUDE.md' "$ex" || fail "CLAUDE.md not excluded"
 [ -z "$(git status --porcelain)" ] || fail "sync must not leave anything to commit: $(git status --porcelain)"
 
+# Step skills: one per step, named after the tool, kept out of git; tool hints per agent.
+for st in new plan build review ship; do
+	assert_file ".claude/skills/sdd-$st/SKILL.md"
+	assert_contains "$(sed -n 2p ".claude/skills/sdd-$st/SKILL.md")" "name: sdd-$st"
+	grep -q '^description: .*Use when' ".claude/skills/sdd-$st/SKILL.md" || fail "sdd-$st: no trigger in description"
+	grep -qx "/.claude/skills/sdd-$st" "$ex" || fail "sdd-$st not excluded"
+done
+assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" "let's build X"
+assert_contains "$(cat .claude/skills/sdd-new/SKILL.md)" 'sdd-plan skill now'
+assert_contains "$(cat .claude/skills/sdd-plan/SKILL.md)" 'AskUserQuestion'
+assert_contains "$(cat .claude/skills/sdd-plan/SKILL.md)" 'Run `.sdd/bin/sdd next`'
+
+# Ask rules: the human confirms approve and ship, however the call is spelled; no duplicates.
+assert_eq "$(jq '[.permissions.ask[] | select(test("sdd (approve|ship)"))] | length' "$s")" 6
+assert_contains "$(jq -r '.permissions.ask | join(" ")' "$s")" 'Bash(.sdd/bin/sdd approve:*)'
+assert_contains "$(jq -r '.permissions.ask | join(" ")' "$s")" 'Bash(sh .sdd/bin/sdd ship:*)'
+
+# Re-sync replaces only sdd's own skills: an edited managed skill comes back, the user's stays.
+echo edited >>.claude/skills/sdd-review/SKILL.md
+printf -- '---\nname: sdd-build\ndescription: mine\n---\nMy own build skill.\n' >.claude/skills/sdd-build/SKILL.md
+out=$(sdd sync claude 2>&1)
+assert_contains "$out" 'left .claude/skills/sdd-build/SKILL.md alone'
+assert_not_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'edited'
+assert_eq "$(sed -n 5p .claude/skills/sdd-build/SKILL.md)" 'My own build skill.'
+assert_eq "$(jq '.permissions.ask | length' "$s")" 6
+
 sdd sync codex >/dev/null 2>&1 || fail "sync codex failed"
 assert_eq "$(jq '.hooks.Stop | length' .codex/hooks.json)" 1
+assert_file .agents/skills/sdd-plan/SKILL.md
+assert_not_contains "$(cat .agents/skills/sdd-plan/SKILL.md)" 'AskUserQuestion'
 
 # Run the generated hook command exactly as the agent would, from inside the repo.
 stop_cmd=$(jq -r '.hooks.Stop[0].hooks[0].command' "$s")

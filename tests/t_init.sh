@@ -15,6 +15,7 @@ assert_eq "$(git config -f .sdd/config sdd.base)" main
 assert_eq "$(git config -f .sdd/config --get-all check.run | paste -sd '|' -)" 'go vet ./...|go test ./...'
 assert_contains "$(cat AGENTS.md)" 'Keep this line.'
 assert_contains "$(cat AGENTS.md)" '.sdd/bin/sdd next'
+assert_contains "$(cat AGENTS.md)" 'give every ID its name'
 
 # Idempotent: a second run changes nothing.
 before=$(cat AGENTS.md .sdd/config)

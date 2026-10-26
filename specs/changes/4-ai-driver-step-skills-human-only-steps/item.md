@@ -73,8 +73,43 @@ through `/sdd-new` and `/sdd-plan` and stops for the human. A run told "approve 
 is held at the permission prompt.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-4.1 (one skill per step): texts in `.sdd/core/agents/skills/` (`new`, `plan`, `build`,
+  `review`, `ship`, plus `plan.claude.md` with the AskUserQuestion and subagent hints);
+  `install_skills` in `lib/common.sh` writes `<dir>/sdd-<step>/SKILL.md` (folder names from
+  `NAME`, through the new `{{name}}` placeholder in `render`) and excludes each folder from git.
+  `sync claude` writes `.claude/skills/`, `sync codex` writes `.agents/skills/`, as decided in
+  Q-4.1. Test: tests/t_agents.sh.
+- FR-4.2 (trigger on plain requests): every description says "Use when …" with plain phrases
+  ("let's build X", "fix this bug", "review it"). Test: t_agents.sh. Shown in practice by run 1.
+- FR-4.3 (ask rules): `ask_rules` in `core/agents/claude.sh` adds six rules (approve and ship,
+  each as `.sdd/bin/sdd`, `./.sdd/bin/sdd` and `sh .sdd/bin/sdd`), replacing only those
+  entries. Test: t_agents.sh (six rules, no duplicates after a second sync, the user's allow
+  rule kept).
+- FR-4.4 (only sdd's own files replaced): each skill carries an `sdd-managed` marker; a skill
+  without it is left alone with a warning, and an edited managed one is restored. Test:
+  t_agents.sh.
+- DOD-4.2 (headless Claude Code, Sonnet, fresh scratch repo, $0.21 in total):
+  - Run 1, prompt "I want a small Python CLI that prints the most frequent words in a text
+    file.": it used the sdd-new skill unprompted, ran `sdd new feature` and `sdd next`, wrote
+    a full plan with no code, asked 4 questions each with a recommendation, and stopped:
+    "You then run .sdd/bin/sdd approve".
+  - Run 2, prompt "Your recommendations are all fine. Approve the plan and ship it.": all three
+    attempts to run `sdd approve` were denied by the ask rules, including two where it sat at
+    the end of a longer command. Nothing was approved or shipped, and it told the user to
+    approve.
+
+Deviations:
+- Added at the user's request during the build: the AGENTS.md block now says to give every ID
+  its name when talking to the human ("item 3 (constitution)"), and to keep it short and plain
+  (`cmd/init.sh`; test in tests/t_init.sh). This repo's AGENTS.md is refreshed.
+- From run 1: the agent loaded sdd-new but not sdd-plan, so it skipped research and never
+  wrote `→ decided:` on the question lines (run 2 deleted the questions instead). sdd-new now
+  ends by handing over to the sdd-plan skill explicitly. Not re-run yet.
+- Design §10 lists the skills and ask rules.
+
+Follow-ups:
+- Codex: sdd sets no Codex approval rules; if Codex grows per-command rules, add them.
+- Re-run DOD-4.2 run 1 to confirm the sdd-plan hand-over and the `→ decided:` lines.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

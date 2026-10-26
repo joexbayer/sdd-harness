@@ -227,7 +227,10 @@ The type and profile decide how far down a change goes.
  optional, generated per developer by `sdd sync <agent>`, never committed:
    instruction stub   CLAUDE.md "@AGENTS.md" (Claude reads AGENTS.md only without CLAUDE.md)
    hooks              session-start → status as context · stop → finish gate
-   subagents/skills   role definitions, where the agent supports them (step 2+)
+   skills             one per step (<name>-new, -plan, -build, -review, -ship): thin, they
+                      say "run sdd next / the verb and follow it", plus that agent's tool hints
+   ask rules          (Claude Code) the human confirms approve and ship, even when an agent drives
+   subagents          role definitions, where the agent supports them (step 2+)
  enforcement everyone hits: git hooks (opt-in) + CI running `sdd` gates
 ```
 
