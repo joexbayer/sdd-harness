@@ -6,7 +6,7 @@
 new_repo
 
 mkdir -p .claude
-printf '{"permissions":{"allow":["Bash(ls:*)"]}}\n' >.claude/settings.local.json
+printf '{"permissions":{"allow":["Bash(ls:*)"],"ask":["Bash(rm:*)"]}}\n' >.claude/settings.local.json
 sdd sync claude >/dev/null 2>&1 || fail "sync claude failed"
 sdd sync claude >/dev/null 2>&1 || fail "second sync claude failed"
 s=.claude/settings.local.json
@@ -28,14 +28,24 @@ for st in new plan build review ship; do
 	grep -qx "/.claude/skills/sdd-$st" "$ex" || fail "sdd-$st not excluded"
 done
 assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" "let's build X"
+assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" 'fix this bug'
+assert_contains "$(sed -n 3p .claude/skills/sdd-review/SKILL.md)" 'wants to review it'
+# Strict YAML: no ": " inside a description's plain value.
+for st in new plan build review ship; do
+	sed -n 3p ".claude/skills/sdd-$st/SKILL.md" | cut -c14- | grep -q ': ' && fail "sdd-$st: ': ' in description"
+done
 assert_contains "$(cat .claude/skills/sdd-new/SKILL.md)" 'sdd-plan skill now'
 assert_contains "$(cat .claude/skills/sdd-plan/SKILL.md)" 'AskUserQuestion'
 assert_contains "$(cat .claude/skills/sdd-plan/SKILL.md)" 'Run `.sdd/bin/sdd next`'
 
 # Ask rules: the human confirms approve and ship, however the call is spelled; no duplicates.
-assert_eq "$(jq '[.permissions.ask[] | select(test("sdd (approve|ship)"))] | length' "$s")" 6
-assert_contains "$(jq -r '.permissions.ask | join(" ")' "$s")" 'Bash(.sdd/bin/sdd approve:*)'
-assert_contains "$(jq -r '.permissions.ask | join(" ")' "$s")" 'Bash(sh .sdd/bin/sdd ship:*)'
+assert_eq "$(jq '[.permissions.ask[] | select(test("sdd (approve|ship)"))] | length' "$s")" 12
+asks=$(jq -r '.permissions.ask | join(" ")' "$s")
+assert_contains "$asks" 'Bash(.sdd/bin/sdd approve:*)'
+assert_contains "$asks" 'Bash(bash .sdd/bin/sdd ship:*)'
+assert_contains "$asks" "Bash($(git rev-parse --show-toplevel)/.sdd/bin/sdd approve:*)"
+assert_contains "$asks" 'Bash(sdd ship:*)'
+assert_contains "$asks" 'Bash(rm:*)'
 
 # Re-sync replaces only sdd's own skills: an edited managed skill comes back, the user's stays.
 echo edited >>.claude/skills/sdd-review/SKILL.md
@@ -44,11 +54,12 @@ out=$(sdd sync claude 2>&1)
 assert_contains "$out" 'left .claude/skills/sdd-build/SKILL.md alone'
 assert_not_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'edited'
 assert_eq "$(sed -n 5p .claude/skills/sdd-build/SKILL.md)" 'My own build skill.'
-assert_eq "$(jq '.permissions.ask | length' "$s")" 6
+assert_eq "$(jq '.permissions.ask | length' "$s")" 13
 
 sdd sync codex >/dev/null 2>&1 || fail "sync codex failed"
 assert_eq "$(jq '.hooks.Stop | length' .codex/hooks.json)" 1
 assert_file .agents/skills/sdd-plan/SKILL.md
+grep -qx '/.agents/skills/sdd-plan' "$ex" || fail "codex skills not excluded"
 assert_not_contains "$(cat .agents/skills/sdd-plan/SKILL.md)" 'AskUserQuestion'
 
 # Run the generated hook command exactly as the agent would, from inside the repo.

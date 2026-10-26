@@ -22,14 +22,15 @@ agent_sync() {
 	echo "claude: skills $NAME-new, -plan, -build, -review, -ship in .claude/skills (all kept out of git)"
 }
 
-# ask_rules <settings>: Claude Code asks the human before approve or ship runs, however the
-# agent spells the call. Replaces exactly these entries, keeping the user's own rules.
+# ask_rules <settings>: Claude Code asks the human before approve or ship runs. Covers the
+# spellings agents use (relative, ./, sh or bash, this checkout's absolute path, and the bare
+# name for a symlink on PATH); a relative path from a subfolder (../.sdd/bin/sdd) is not.
+# Replaces exactly these entries, keeping the user's own rules.
 ask_rules() {
-	_rules=$(for _v in approve ship; do
-		printf '"Bash(%s %s:*)","Bash(./%s %s:*)","Bash(sh %s %s:*)",' "$CMD" "$_v" "$CMD" "$_v" "$CMD" "$_v"
-	done)
-	jq --argjson add "[${_rules%,}]" '
-		.permissions = (.permissions // {})
+	jq --arg cmd "$CMD" --arg root "$ROOT" --arg name "$NAME" '
+		([$cmd, "./" + $cmd, "sh " + $cmd, "bash " + $cmd, $root + "/" + $cmd, $name]
+			| map(. as $c | ["approve", "ship"] | map("Bash(" + $c + " " + . + ":*)")) | flatten) as $add
+		| .permissions = (.permissions // {})
 		| .permissions.ask = (((.permissions.ask // []) - $add) + $add)
 	' "$1" >"$1.tmp.$$" || { rm -f "$1.tmp.$$"; die "could not update $1"; }
 	mv "$1.tmp.$$" "$1"

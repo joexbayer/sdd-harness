@@ -23,6 +23,12 @@ refuses a dirty tree), and `fill`.
   Use `$CMD`, `$DIRNAME` and `$SPECS` instead of literal `sdd` or `.sdd` in output.
 - **A new agent:** `.sdd/core/agents/<agent>.sh` defining `agent_sync` and `agent_hook_reply`.
   Claude and Codex share `_hooks.sh` because their hook JSON is identical.
+- **Agent skills:** step texts in `.sdd/core/agents/skills/<step>.md` (agent-neutral, thin:
+  "run sdd next and follow it"), plus `<step>.<agent>.md` for one agent's tool hints;
+  `install_skills` writes them on `sync`. Behaviour agents must follow goes in
+  `core/prompts/`, not in skills: in headless runs agents loaded sdd-new but never sdd-plan,
+  while `sdd next` output was always followed. Claude Code ask rules for approve/ship live in
+  `ask_rules` in `agents/claude.sh`.
 - **A new type:** add `templates/<type>.md`. A type exists when its template exists. Optional
   `[type "<t>"]` settings go in `core/config`.
 - **Defaults** go in `core/config` (git-config format, read with `git config -f`). Lookup order

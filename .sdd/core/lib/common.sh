@@ -373,9 +373,9 @@ sync_agent() {
 # agents/skills/<step>.md plus <step>.<agent>.md (that agent's tool hints), kept out of git.
 # Only folders sdd made (marked <name>-managed) are replaced; a user's own skill stays.
 install_skills() {
-	for _st in $(ls "$SDD_HOME/core/agents/skills" | sed -n 's/^\([a-z]*\)\.md$/\1/p'); do
+	for _st in $(ls "$SDD_HOME/core/agents/skills" | sed -n 's/^\([a-z0-9-]*\)\.md$/\1/p'); do
 		_f="$1/$NAME-$_st/SKILL.md"
-		if [ -f "$_f" ] && ! grep -q "$NAME-managed" "$_f"; then
+		if [ -f "$_f" ] && ! grep -q "^<!-- $NAME-managed:" "$_f"; then
 			warn "left $_f alone: it was not made by $NAME"
 			continue
 		fi
@@ -383,7 +383,7 @@ install_skills() {
 		{
 			render "$(sdd_path "agents/skills/$_st.md")" '' '' ''
 			if _h=$(sdd_path "agents/skills/$_st.$2.md"); then echo; render "$_h" '' '' ''; fi
-		} >"$_f"
+		} >"$_f.tmp.$$" && mv "$_f.tmp.$$" "$_f" || { rm -f "$_f.tmp.$$"; die "could not write $_f"; }
 		exclude "${_f%/SKILL.md}"
 	done
 }
