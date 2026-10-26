@@ -64,6 +64,15 @@ SessionStart plain stdout becomes context in both Claude Code and Codex.
 - **Skills** (agentskills.io) are loaded by Claude Code, Cursor (`.agents/skills`,
   `.claude/skills`), Codex, Copilot and Kiro. They are the closest thing to a universal slash
   command.
+- **Skill folders (checked 2026-10-26):** Claude Code reads `.claude/skills/<name>/SKILL.md`.
+  Codex reads `.agents/skills/` in the project first, then `~/.agents/skills/` and
+  `/etc/codex/skills/`; the official page confirms CLI support but its excerpt shows no path,
+  so the path comes from community guides (one older page says `.codex/skills/`). opencode
+  reads `.opencode/skills/`, `.claude/skills/` and `.agents/skills/`, walking up to the git
+  worktree, needs `name` to match the folder name, and warns about duplicate IDs. Sources:
+  https://developers.openai.com/codex/skills ,
+  https://codex.danielvaughan.com/2026/05/05/agent-skills-open-standard-portable-skills-codex-cli-cross-agent/ ,
+  https://opencode.ai/docs/skills (all retrieved 2026-10-26).
 - **MCP:** tools work over stdio and HTTP almost everywhere. Support for prompts and resources
   varies, so don't rely on them.
 
