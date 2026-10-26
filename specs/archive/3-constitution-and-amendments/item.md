@@ -2,9 +2,10 @@
 id: 3
 type: feature
 title: Constitution and amendments
-status: open
+status: shipped
 created: 2026-10-26
 approved: 0df87bfc46c19342ce9a9d22532a948fd7e519dd 2026-10-26 joexbayer
+shipped: 2026-10-26
 ---
 # 3 Constitution and amendments
 
