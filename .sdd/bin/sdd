@@ -1,0 +1,33 @@
+#!/bin/sh
+# Entry point. Finds its own folder (following symlinks, so ~/bin/sdd -> <repo>/.sdd/bin/sdd
+# works), so the folder can be renamed. Inside a repo that vendors its own copy, that copy
+# runs instead (except for `init`, which installs it).
+set -u
+
+_self=$0
+while [ -L "$_self" ]; do
+	_link=$(readlink "$_self")
+	case $_link in /*) _self=$_link ;; *) _self=$(dirname -- "$_self")/$_link ;; esac
+done
+SDD_HOME=$(CDPATH='' cd -- "$(dirname -- "$_self")/.." && pwd -P) || exit 1
+export SDD_HOME
+# shellcheck source=/dev/null
+. "$SDD_HOME/core/lib/common.sh"
+
+cmd=${1:-help}
+[ $# -gt 0 ] && shift
+
+if [ "$cmd" != init ] && _root=$(git rev-parse --show-toplevel 2>/dev/null); then
+	_own="$_root/$DIRNAME"
+	if [ -x "$_own/bin/$NAME" ] && [ "$(cd "$_own" && pwd -P)" != "$SDD_HOME" ]; then
+		exec "${SDD_SH:-/bin/sh}" "$_own/bin/$NAME" "$cmd" "$@"
+	fi
+fi
+
+case $cmd in
+-h | --help) cmd=help ;;
+*[!a-z-]*) usage_die "unknown command: $cmd (try: $NAME help)" ;;
+esac
+script=$(sdd_path "cmd/$cmd.sh") || usage_die "unknown command: $cmd (try: $NAME help)"
+# shellcheck source=/dev/null
+. "$script"

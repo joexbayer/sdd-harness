@@ -1,0 +1,8 @@
+[sdd]
+	profile = lite
+	mode = solo
+	base = main
+[check]
+	run = shellcheck -s sh -S warning .sdd/bin/sdd .sdd/core/lib/common.sh .sdd/core/cmd/*.sh .sdd/core/agents/*.sh tests/*.sh
+	run = sh tests/run.sh
+	run = dash tests/run.sh dash
