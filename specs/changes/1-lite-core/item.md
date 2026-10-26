@@ -100,3 +100,41 @@ D-1.4 Fast-forwarding a base that is checked out elsewhere runs `git -C <that wo
 ## Done when
 DOD-1.1 `tests/run.sh` passes under `/bin/sh` and `dash`, and `shellcheck -s sh` is clean.
 DOD-1.2 An independent reviewer (fresh context) finds no BLOCKER against this item.
+
+## Built
+Bootstrap item: the code landed on `main` in 5eb4dca before sdd could track itself, so this
+item is shipped retroactively. The plan above was approved as built.
+
+Per requirement (verb in `.sdd/core/cmd/`, helpers in `.sdd/core/lib/common.sh`), each named
+by its test:
+- FR-1.1 init: `cmd/init.sh`, tests/t_init.sh
+- FR-1.2 new and IDs: `cmd/new.sh`, `next_id`, `max_seen_id`, tests/t_new.sh
+- FR-1.3 `--worktree`: `cmd/new.sh`, tests/t_new.sh
+- FR-1.4 item from branch name: `current_item`, `id_of`, tests/t_new.sh
+- FR-1.5 status and phase: `cmd/status.sh`, `item_phase`, tests/t_phase.sh
+- FR-1.6 next prompts with `local/` overrides: `cmd/next.sh`, `core/prompts/`, tests/t_phase.sh
+- FR-1.7 check (zero tests = exit 3, `|| true` refused, fingerprint): `cmd/check.sh`,
+  `run_check`, `fingerprint`, tests/t_phase.sh
+- FR-1.8 ship: `cmd/ship.sh`, tests/t_ship.sh
+- FR-1.9 spike lands only its item: `cmd/ship.sh`, tests/t_ship.sh
+- FR-1.10 sync claude/codex: `cmd/sync.sh`, `core/agents/`, tests/t_agents.sh
+- FR-1.11 stop hook (block once): `cmd/hook.sh`, `agents/_hooks.sh`, tests/t_agents.sh
+- FR-1.12 name defined once: `NAME` in `lib/common.sh`, tests/t_agents.sh
+
+Deviations:
+- Added during the build: `approve` (plan hash pinned in frontmatter, code before approval
+  refused) and `review` (walkthrough computed from git). The tests call it FR-1.13, but the
+  plan never defined it. The phases are now plan → build → review → ship.
+- From the narrow + qwen co-evaluation (kb/narrow-lessons.md): `python3 -m pytest` at init;
+  check reports exit 126/127 as a config problem and lists files the check itself wrote;
+  review traces FR names in untracked files too; human notes moved to a new
+  `## Review (optional)` section, and agent `## ` headings inside Built stay part of Built.
+- The hotfix template has "What is broken" + Built, while design §5 lists
+  "What is broken · Fix · Follow-up". The template wins; fix design §5 when next touched.
+
+Verified: `sdd check` (shellcheck -S warning, tests under /bin/sh and dash) passes.
+DOD-1.2 (independent review) is not done yet: it moves to the review item on the roadmap.
+
+## Review (optional)
+<!-- The human's review notes: what to change, one per line. The agent works through them
+and says under "## Built" what it changed for each. -->
