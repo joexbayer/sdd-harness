@@ -4,6 +4,7 @@ type: feature
 title: AI driver: step skills, human-only steps
 status: open
 created: 2026-10-26
+approved: ad2148d1984538c5713a47a11b7bd5141b5e0fd5 2026-10-26 joexbayer
 ---
 # 4 AI driver: step skills, human-only steps
 
