@@ -2,9 +2,10 @@
 id: 2
 type: feature
 title: Spec query: ls and show, with JSON
-status: open
+status: shipped
 created: 2026-10-26
 approved: bfac00e9a2a2458786674f0e8a04ce729e918717 2026-10-26 joexbayer
+shipped: 2026-10-26
 ---
 # 2 Spec query: ls and show, with JSON
 
