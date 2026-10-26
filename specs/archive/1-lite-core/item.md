@@ -2,9 +2,10 @@
 id: 1
 type: feature
 title: Lite core
-status: open
+status: shipped
 created: 2026-10-26
 approved: c89cb8271414da5b3eee3996d1686ccde5f41e37 2026-10-26 joexbayer
+shipped: 2026-10-26
 ---
 # 1 Lite core
 
