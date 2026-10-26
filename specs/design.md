@@ -319,6 +319,7 @@ automated behind gates, and every change leaves the code easy to change again.
 |---|---|---|
 | 2 | `sdd ls` / `sdd show`, both with `--json`; spec grammar | Spec Kit's best trait is greppable progress; the app and MCP server read this |
 | 3 | constitution + `amendment` type | ground truths that are hard to change, enforced, not prose |
+| 4 | GitHub forge adapter (`core/forges/github.sh`, via `gh`), on automatically when `origin` is github.com and `gh` is logged in | `ship` pushes and opens a PR with the brief as body; PR and CI state in `status`/`ls`/`review`; in team mode the PR review is the approval |
 | next | tasks (`task red/done`), plan lint at approve | Spec Kit parity; planning quality as a gate |
 | then | `sdd-server` (stdio, then HTTP with mirrors) | team coordination across branches and repos |
 | then | fresh-context review for clean, easy-to-change code | ladder step 5 |
