@@ -11,19 +11,19 @@ created: {{date}}
 <!-- The problem in plain words: who hurts, and how. 2-4 lines. -->
 
 ## What changes
-<!-- User-visible behaviour. One requirement per entry, each with a concrete example.
-US-{{id}}.1 As a <role> I <action>, so that <outcome>.
-FR-{{id}}.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-  e.g. <input> → <output>
-IDs never change; leave gaps instead of renumbering. -->
+<!-- User-visible behaviour. One requirement per entry, each with a concrete example:
+    US-{{id}}.1 As a <role> I <action>, so that <outcome>.
+    FR-{{id}}.1 WHEN <trigger> THE SYSTEM SHALL <response>.
+      e.g. <input> → <output>
+Start each entry at the beginning of its line, ID first. IDs never change; leave gaps. -->
 
 ## Not in scope (optional)
 <!-- What this deliberately leaves out, and where it went. -->
 
 ## How
 <!-- What a reviewer needs: an ASCII sketch of the moving parts, key types or signatures,
-and the decisions they would question:
-D-{{id}}.1 <decision>, because <reason>. -->
+and the decisions they would question, each at the start of its line:
+    D-{{id}}.1 <decision>, because <reason>. -->
 
 ## Questions (optional)
 <!-- Q-{{id}}.1 <question> → recommend: <answer>. Resolve before building. -->

@@ -148,11 +148,30 @@ IDs inside an item embed the item number. They never change, and gaps are fine
 `git grep -wF FR-57.2` finds the requirement, its tests and its commits. Commits use
 Conventional Commits with the item as scope: `fix(57): … Refs: FR-57.2`.
 
+### Spec grammar
+
+One fact per line, ID first, so `grep` alone answers the common questions and an app can
+read specs without sdd. `sdd ls --json` and `sdd show <id> --json` give the same facts with
+fixed keys; every other reader (the MCP server too) uses them instead of parsing markdown.
+
+| fact | line | example grep |
+|---|---|---|
+| story | `US-<id>.<n> As a …` | `grep -h '^US-' specs/changes/*/item.md` |
+| requirement | `FR-<id>.<n> WHEN … THE SYSTEM SHALL …`, continued on the next lines, then an `e.g.` line | `grep -c '^FR-41\.' specs/changes/41-*/item.md` |
+| task | `- [ ] T-<id>.<n> …` or `- [x] T-<id>.<n> …` | `grep -c '^- \[x\] T-' specs/changes/*/item.md` |
+| decision | `D-<id>.<n> … because …` | `git grep -n '^D-' specs/` |
+| question | `Q-<id>.<n> … → recommend: …`; answered with `→ decided: …` | `grep '^Q-' … \| grep -v 'decided:'` |
+| outcome | `DOD-<id>.<n> …` | |
+| item state | frontmatter `status: open\|shipped\|dropped`; open items live on their branch, shipped ones in `specs/archive/` | `grep -l '^status: open' specs/*/*/item.md` |
+
+A fact counts only at the start of a line and outside HTML comments, which is why template
+guidance indents its examples. Facts are read from the plan part (above `## Built`).
+
 ## 8. Commands
 
 | step | verbs |
 |---|---|
-| 1 lite | `init new status next check ship sync hook help` |
+| 1 lite | `init new status next check ship sync hook help`, `ls`, `show` |
 | 2 standard | `approve`, `task red/done`, `trace`, `run <role>`, `drop` |
 | 3 team | team IDs, `ship` via PR, `sdd-server` (MCP), CI job |
 | 4 knowledge | `kb search/links/add/accept`, `tidy`, `explain` |

@@ -74,8 +74,38 @@ DOD-2.2 In a repo with one shipped item, one local branch and one remote-only br
 `sdd ls --json | jq .` parses, and the counts match `grep` on the same files.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-2.1 `ls`: `.sdd/core/cmd/ls.sh`; sources in `item_sources` (`lib/common.sh:398`: archive,
+  worktree, local, remote, base; first source of an id wins, so a stale remote branch of a
+  shipped item stays hidden); one summary row per item in `item_row` (`:444`). Test:
+  tests/t_query.sh (shipped, local and pushed, remote-only).
+- FR-2.2 `?` phases: `item_load` (`:427`) fingerprints the ref's committed code (tree without
+  `specs/`, via `git mktree`) so the local check record is judged against exactly that code;
+  `item_row` marks a remote item with Built written but no local check `review?` (`:449`).
+  Test: t_query.sh (`review?` for the teammate's item).
+- FR-2.3 `show`: `.sdd/core/cmd/show.sh`; facts from `parse_item` (`:466`): one awk parser,
+  continuation lines joined, `e.g.` lines kept as the example, code fences skipped. Test:
+  t_query.sh.
+- FR-2.4 `--json` on both: escaping by `AWK_ESC` (`:385`), character by character. Tests:
+  t_query.sh parses with `jq` and compares counts with plain `grep` (DOD-2.2).
+- FR-2.5 comments ignored: `parse_item` reads `plan_part | uncomment`. Test: t_query.sh
+  (`FR-2.9` only in a comment is absent).
+- `status` now lists open items through the same sources (`cmd/status.sh:7`); its output is
+  unchanged. `help` lists both verbs; design §7 has the "Spec grammar" table.
+
+Deviations:
+- FR-2.2's example says a teammate's approved item with Built empty shows `build?`. It shows
+  `build`: with Built empty the phase is build whatever the check says, so `?` appears only
+  where the answer depends on a check this machine does not have (`review?`).
+- Found while testing DOD-2.2: template guidance had example lines like `FR-1.1 WHEN <trigger>`
+  at the start of a line, so plain `grep '^FR-1\.'` counted them. The feature template now
+  indents its examples and says to start each entry at the beginning of its line.
+- Q-2.1 settled as recommended: dropped items only with `ls --all`.
+
+Follow-ups:
+- Bare repositories: the readers use `git show`, but `need_repo` still wants a work tree.
+  The sdd-server item must relax that.
+- Speed: `ls` computes the phase per item (one `git show` + parse each); fine for tens of
+  items, revisit if a repo reaches hundreds of open ones.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

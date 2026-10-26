@@ -12,6 +12,8 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME next                        instructions for the current phase (agents call this)
   $NAME approve                     the human hands the plan over to the agent (pins the plan)
   $NAME check                       run the configured checks (0 pass, 1 fail, 3 no tests ran)
+  $NAME ls [--all] [--json]         every item and its progress (archive + all branches)
+  $NAME show <id> [--json]          an item's stories, requirements, tasks, decisions, questions
   $NAME review                      walkthrough of what was built: commits, diff, FRs, check
   $NAME ship                        gates, archive the item, fast-forward the base branch locally
   $NAME sync <agent>                hooks for your agent ($(agents | paste -sd ' ' -)), never committed

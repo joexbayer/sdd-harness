@@ -9,6 +9,7 @@ NAME=sdd
 SPECS=specs
 DIRNAME=${SDD_HOME##*/}
 CMD="$DIRNAME/bin/$NAME"
+PHASE_FP=
 
 die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 1; }
 usage_die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 2; }
@@ -299,7 +300,7 @@ item_phase() {
 		fi
 	else
 		MISSING=$(missing_sections "$IFILE" built)
-		if [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID"; then
+		if [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
 			PHASE=build
 			WHY="no passing check for the current code"
 		elif [ -n "$MISSING" ]; then
@@ -373,4 +374,118 @@ exclude() {
 	_ex=$(git rev-parse --path-format=absolute --git-path info/exclude)
 	mkdir -p "$(dirname "$_ex")"
 	grep -qxF "/$1" "$_ex" 2>/dev/null || printf '/%s\n' "$1" >>"$_ex"
+}
+
+# --- query (ls, show) -------------------------------------------------------------
+# Every reader (ls, show, and later the MCP server through `--json`) goes through these, so
+# the item grammar is parsed in one place. Items are read with `git show`, never a checkout.
+
+# json_esc: awk function esc(s) that makes s safe inside a JSON string. Prepend it to an awk
+# program. Character by character, because gsub's backslash handling differs between awks.
+AWK_ESC='function esc(s,   o, i, c) {
+	o = ""
+	for (i = 1; i <= length(s); i++) {
+		c = substr(s, i, 1)
+		if (c == "\\") o = o "\\\\"; else if (c == "\"") o = o "\\\""; else o = o c
+	}
+	return o
+}
+'
+
+# item_sources: "<origin>\t<ref>\t<path>" for every item, the first source of an id winning:
+# archive (on the base branch), worktree (the current item), local and remote branches, then
+# base (specs/changes on the base branch).
+item_sources() {
+	_base=$(cfg sdd.base main)
+	{
+		git ls-tree -r --name-only "$_base" -- "$SPECS/archive" 2>/dev/null | grep '/item\.md$' |
+			sed "s|^|archive	$_base	|"
+		current_item && printf 'worktree\t%s\t%s\n' "$BRANCH" "$IFILE"
+		for _kind in heads remotes; do
+			git for-each-ref --format='%(refname:short)' "refs/$_kind" | while IFS= read -r _b; do
+				case $_b in */HEAD | HEAD) continue ;; esac
+				_bid=$(id_of "$_b") || continue
+				git ls-tree --name-only "$_b" -- "$SPECS/changes/" 2>/dev/null | grep "^$SPECS/changes/$_bid-" |
+					while IFS= read -r _d; do
+						git cat-file -e "$_b:$_d/item.md" 2>/dev/null || continue
+						printf '%s\t%s\t%s\n' "$([ $_kind = heads ] && echo local || echo remote)" "$_b" "$_d/item.md"
+					done
+			done
+		done
+		git ls-tree -r --name-only "$_base" -- "$SPECS/changes" 2>/dev/null | grep '/item\.md$' |
+			sed "s|^|base	$_base	|"
+	} | while IFS="$(printf '\t')" read -r _o _r _p; do
+		_d=${_p%/item.md}
+		_i=$(id_of "$_d") || continue
+		printf '%s\t%s\t%s\t%s\n' "$_i" "$_o" "$_r" "$_p"
+	done | awk -F '\t' '!seen[$1]++ { print $2 "\t" $3 "\t" $4 }'
+}
+
+# item_load <origin> <ref> <path>: point IFILE/ID/ITYPE at that item (a temp copy unless it
+# is the working file; ITMP names it for cleanup) and set PHASE_FP to the fingerprint of the
+# ref's committed code, so item_phase judges that code instead of the working tree.
+item_load() {
+	ITMP=
+	PHASE_FP=
+	if [ "$1" = worktree ]; then
+		IFILE=$3
+	else
+		ITMP=$(mktemp "${TMPDIR:-/tmp}/$NAME-item.XXXXXX") || return 1
+		git show "$2:$3" >"$ITMP" 2>/dev/null || return 1
+		IFILE=$ITMP
+		PHASE_FP=$(git ls-tree "$2" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
+	fi
+	ID=$(fm_get id "$IFILE")
+	ITYPE=$(fm_get type "$IFILE")
+}
+
+# item_row <origin> <ref> <path>: one TSV summary line:
+# id type status phase frs tasks_done tasks_total title branch origin
+item_row() {
+	item_load "$@" || return 1
+	item_phase
+	# A teammate's check results live on their machine: say what the file alone cannot.
+	if [ "$1" = remote ] && [ "$PHASE" = build ] && [ -z "$(missing_sections "$IFILE" built)" ]; then
+		PHASE='review?'
+	fi
+	_counts=$(parse_item "$IFILE" "$ID" | awk -F '\t' '
+		$1 == "fr" { f++ } $1 == "task" { t++; if ($3 == "done") d++ }
+		END { printf "%d\t%d\t%d", f, d, t }')
+	_br=$2
+	[ "$1" = archive ] && _br=
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
+		"$PHASE" "$_counts" "$(fm_get title "$IFILE")" "$_br" "$1"
+	[ -z "$ITMP" ] || rm -f "$ITMP"
+}
+
+# parse_item <file> <id>: the facts in the plan part of an item, guidance comments removed,
+# as TSV "kind id state text example". kind is us|fr|task|d|q|dod; state is open|done for
+# tasks, open|decided for questions. A fact is a line starting with its ID (tasks:
+# "- [ ] T-<id>.<n>" or "- [x] …"); following lines continue it until a blank line, and
+# "e.g." lines are its example.
+parse_item() {
+	plan_part "$1" | uncomment | I=$2 awk '
+	function emit() {
+		if (k == "q") st = (index(txt, "decided:") ? "decided" : "open")
+		if (k != "") printf "%s\t%s\t%s\t%s\t%s\n", k, id, st, txt, eg
+		k = ""; txt = ""; eg = ""; st = ""
+	}
+	function start(kind, s,   n) {
+		n = index(s, " "); id = (n ? substr(s, 1, n - 1) : s); txt = (n ? substr(s, n + 1) : "")
+		sub(/^[ \t]+/, "", txt)
+		k = (substr(id, index(id, "-") + 1, length(ENVIRON["I"]) + 1) == ENVIRON["I"] ".") ? kind : ""
+	}
+	{ gsub(/\t/, " ") }
+	/^```/ { emit(); fence = !fence; next }
+	fence { next }
+	/^- \[[ xX]\] T-[0-9]+\.[0-9]+/ { emit(); start("task", substr($0, 7)); st = (substr($0, 4, 1) == " ") ? "open" : "done"; next }
+	/^(US|FR|D|Q|DOD)-[0-9]+\.[0-9]+([ ]|$)/ {
+		emit(); p = substr($0, 1, index($0, "-") - 1)
+		start(p == "US" ? "us" : p == "FR" ? "fr" : p == "D" ? "d" : p == "Q" ? "q" : "dod", $0); next
+	}
+	k != "" && /^[ ]*e\.g\./ { l = $0; sub(/^[ ]*e\.g\.[ ]*/, "", l); eg = (eg == "" ? l : eg " " l); next }
+	k != "" && /^#/ { emit(); next }
+	k != "" && /[^ ]/ { l = $0; sub(/^[ ]+/, "", l); if (eg != "") eg = eg " " l; else txt = txt " " l; next }
+	{ emit() }
+	END { emit() }'
 }

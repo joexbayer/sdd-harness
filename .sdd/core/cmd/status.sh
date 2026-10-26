@@ -5,18 +5,9 @@ need_repo
 
 # open_items: "<id>\t<type>\t<title>\t<branch>" for every open item on its own local branch.
 open_items() {
-	git for-each-ref --format='%(refname:short)' refs/heads | while IFS= read -r b; do
-		bid=$(id_of "$b") || continue
-		git ls-tree -r --name-only "$b" -- "$SPECS/changes" 2>/dev/null | grep '/item\.md$' |
-			while IFS= read -r p; do
-				d=${p%/item.md}
-				[ "$(id_of "$d")" = "$bid" ] || continue
-				body=$(git show "$b:$p")
-				[ "$(printf '%s\n' "$body" | fm_get status)" = open ] || continue
-				printf '%s\t%s\t%s\t%s\n' "$bid" "$(printf '%s\n' "$body" | fm_get type)" \
-					"$(printf '%s\n' "$body" | fm_get title)" "$b"
-			done
-	done | sort -n
+	item_sources | while IFS="$(printf '\t')" read -r o r p; do
+		[ "$o" = local ] && item_row "$o" "$r" "$p"
+	done | awk -F '\t' '$3 == "open" { print $1 "\t" $2 "\t" $8 "\t" $9 }' | sort -n
 }
 
 if current_item; then
