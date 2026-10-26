@@ -59,9 +59,11 @@ D-4.3 Skills are generated per developer (like the hooks), never committed, so a
 Q-4.1 Which skill folders? Research (kb/agent-portability.md): Claude Code reads
 `.claude/skills/`; Codex reads `.agents/skills/`; opencode reads both and warns about duplicate
 IDs. → recommend: `sync claude` writes `.claude/skills/`, `sync codex` writes `.agents/skills/`,
-which opencode and Cursor also read; no opencode adapter yet.
+which opencode and Cursor also read; no opencode adapter yet. → decided: per agent, as
+recommended (joexbayer, 2026-10-26)
 Q-4.2 Should `/sdd-ship` exist, given that only the human ships? → recommend: yes. It runs
 `sdd review` and then proposes `sdd ship`, which the ask rule makes the human confirm.
+→ decided: yes, gated (joexbayer, 2026-10-26)
 
 ## Done when
 DOD-4.1 `sdd check` passes, with a test naming each FR, under /bin/sh and dash.
