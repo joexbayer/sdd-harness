@@ -316,7 +316,8 @@ item_phase() {
 # run_check <id>: run every check.run command from the repo root, stdin closed. Exit 0
 # pass, 1 fail, 3 when the output shows zero tests ran. Records the result for <id> (if
 # given) and sets CHECK_LOG, CHECK_NOTRUN to the first command the shell could not run, and
-# CHECK_DIRTIED to the files the run itself created or changed (the pass is for the code before).
+# CHECK_DIRTIED to the files the run itself created or changed (the pass is for the code before),
+# and CHECK_ARTICLES to the constitution's problems (see check_articles).
 run_check() {
 	_cmds=$(cfg_all check.run) || die "no check configured: add 'run = <command>' under [check] in $DIRNAME/config"
 	_bad=$(printf '%s\n' "$_cmds" | grep -E '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)')
@@ -345,6 +346,7 @@ EOF
 			_rc=3
 		fi
 	fi
+	check_articles "$CHECK_LOG" || _rc=1
 	if [ -n "${1:-}" ]; then
 		case $_rc in 0) check_record "$1" "$_fp" pass ;; 1) check_record "$1" "$_fp" fail ;; *) check_record "$1" "$_fp" empty ;; esac
 	fi
@@ -496,4 +498,77 @@ parse_item() {
 	k != "" && /[^ ]/ { l = $0; sub(/^[ ]+/, "", l); if (eg != "") eg = eg " " l; else txt = txt " " l; next }
 	{ emit() }
 	END { emit() }'
+}
+
+# --- constitution -----------------------------------------------------------------
+# specs/constitution.md holds a system's ground truths. Each article is enforced, either by a
+# command that runs inside `check` or by the human at every review, and it changes only
+# through an `amendment` item.
+CONST="$SPECS/constitution.md"
+
+# articles: per article "C-<n>\t<review|check>\t<command>\t<rule>", or "!\t<C-n>\t<problem>"
+# for one that is malformed. An article is "C-<n> <rule>" at the start of a line, followed by
+# indented "Why: …" and "Enforced: review" or "Enforced: check <command>" lines.
+articles() {
+	[ -f "$CONST" ] || return 0
+	uncomment "$CONST" | awk '
+	function flush() {
+		if (id == "") return
+		if (!why) print "!\t" id "\tno \"Why:\" line"
+		else if (enf == "") print "!\t" id "\tno \"Enforced:\" line"
+		else if (enf == "review") print id "\treview\t\t" rule
+		else if (enf ~ /^check [^ ]/) print id "\tcheck\t" substr(enf, 7) "\t" rule
+		else print "!\t" id "\t\"Enforced:\" must be review or check <command>"
+		id = ""
+	}
+	{ gsub(/\t/, " ") }
+	/^C-[0-9]+ / { flush(); id = $1; rule = substr($0, length($1) + 2); why = 0; enf = ""; next }
+	id != "" && /^[ ]+Why:/ { why = 1; next }
+	id != "" && /^[ ]+Enforced:/ { enf = $0; sub(/^[ ]+Enforced:[ ]*/, "", enf); sub(/[ ]+$/, "", enf); next }
+	/^[^ ]/ { flush() }
+	END { flush() }'
+}
+
+# check_articles <log>: the constitution's own gate. Fails, with CHECK_ARTICLES holding one
+# problem per line, when an article is malformed, the constitution is over budget, or an
+# "Enforced: check" command fails (its output goes to <log>).
+check_articles() {
+	CHECK_ARTICLES=
+	[ -f "$CONST" ] || return 0
+	_arts=$(articles)
+	_n=$(printf '%s\n' "$_arts" | grep -c '^C-')
+	_max=$(cfg constitution.max-articles 30)
+	[ "$_n" -le "$_max" ] || CHECK_ARTICLES="constitution over budget ($_n of $_max articles)"
+	_tab=$(printf '\t')
+	while IFS="$_tab" read -r _id _kind _cmd _rule; do
+		_p=
+		if [ "$_id" = '!' ]; then
+			_p="$_kind: $_cmd"
+		elif [ "$_kind" = check ]; then
+			if printf '%s\n' "$_cmd" | grep -Eq '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)'; then
+				_p="$_id $_rule (its check hides failures: $_cmd)"
+			else
+				printf '$ %s   # %s\n' "$_cmd" "$_id" >>"$1"
+				sh -c "$_cmd" </dev/null >>"$1" 2>&1 || _p="$_id $_rule (its check failed)"
+			fi
+		fi
+		[ -z "$_p" ] || CHECK_ARTICLES="${CHECK_ARTICLES:+$CHECK_ARTICLES
+}$_p"
+	done <<EOF2
+$_arts
+EOF2
+	[ -z "$CHECK_ARTICLES" ]
+}
+
+# constitution_guard: on an item branch the constitution (once it is on the base branch)
+# changes only through an amendment, and an amendment changes nothing outside specs/.
+# Prints the reason and fails otherwise.
+constitution_guard() {
+	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD 2>/dev/null) || return 0
+	if [ "$ITYPE" = amendment ]; then
+		! code_changed || { echo "an amendment lands no code: move code changes to their own items and list them under Impact"; return 1; }
+		return 0
+	fi
+	git cat-file -e "$_mb:$CONST" 2>/dev/null || return 0
+	git diff --quiet "$_mb" -- "$CONST" || { echo "the constitution changes only through: $CMD new amendment \"…\""; return 1; }
 }

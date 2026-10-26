@@ -45,6 +45,11 @@
 	planned = warn
 [type "chore"]
 	gates = planned check built
+[type "amendment"]
+	# Changes the constitution: every gate blocks, in every profile.
+	planned = block
+	approved = block
+	built = block
 [type "spike"]
 	gates = planned approved built
 	lands = item
@@ -59,3 +64,7 @@
 	no-tests = (^|[^0-9])0 passing
 	no-tests = No tests found
 	no-tests = Tests:[[:space:]]+0 total
+
+# The constitution (specs/constitution.md) is capped, because budgets are lint errors.
+[constitution]
+	max-articles = 30

@@ -44,6 +44,7 @@ replacing the team's git host.
 | check | your test/lint commands. Passing them is the main gate |
 | profile | lite (default), standard, strict. Sets how hard each gate is |
 | mode | solo (default) or team. Decides where IDs come from and how approval works |
+| constitution | `specs/constitution.md`: a system's ground truths, each an article `C-n` with a reason and its enforcement (a check command or human review); changed only by an amendment |
 
 ## 4. Layout
 
@@ -64,6 +65,7 @@ specs/                        content; the only other folder sdd writes to
   changes/<id>-<slug>/        open items
   archive/<id>-<slug>/        shipped or dropped items
   kb/                         research, decisions, concepts, lessons
+  constitution.md             ground truths (C-n), each enforced; changed only by amendments
   design.md                   (this repo only) living design
 AGENTS.md                     managed block: how to use sdd
 ```
@@ -82,7 +84,15 @@ state (ID counter, check results, synced agents) lives in `$(git rev-parse
 | chore | deps, config, CI | What and why | described, check |
 | refactor | structure only | Goal · Invariants | described, check |
 | spike | learning | Question · Timebox · Findings · Decision | described; only the item merges, never the code |
+| amendment | a ground truth must change | Articles affected · Current text · Proposed text · Why now · Impact · Alternatives | every gate blocks in every profile; lands no code (Impact lists the items that follow) |
 | feature | new behaviour | Why · What changes (US/FR + examples) · Not in scope · How · Questions · Done when | described, check (+ approve, tasks, trace in standard) |
+
+**Constitution.** Articles are one line, ID first (`grep '^C-' specs/constitution.md`), with
+indented `Why:` and `Enforced: review | check <command>` lines; at most 30 (`constitution.max-articles`).
+`check` runs the check articles and fails on a malformed one; `next` appends the rules to plan
+and build instructions; `review` lists the review articles for the human to confirm. Once the
+constitution is on the base branch, a branch that changes it fails `check` and `ship` in every
+profile unless it is an `amendment`. Unenforced guidance belongs in `kb/`, not here.
 
 Types live in config, so a team can add `migration` or `security-fix`. Changes under about
 20 lines with no behaviour change need no item. A plain `chore:` commit is enough.

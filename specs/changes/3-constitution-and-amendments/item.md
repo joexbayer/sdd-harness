@@ -84,8 +84,46 @@ DOD-3.2 This repo has `specs/constitution.md`. Editing it on a feature branch fa
 `sdd check`, while the same edit on an amendment branch passes and ships.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-3.1 parsing and format: `articles` (`.sdd/core/lib/common.sh:389`) gives one row per
+  article, or a problem row for a missing `Why:`/`Enforced:` or an unknown enforcement;
+  `check_articles` (`:412`) fails on those. Test: tests/t_constitution.sh.
+- FR-3.2 check articles run inside `run_check` after the configured checks (`:348`), output
+  in the same log; `check` prints `✗ constitution: C-n … (its check failed)`
+  (`cmd/check.sh`). A command masked with `|| true` is refused, as for the checks. Test:
+  t_constitution.sh.
+- FR-3.3 budget: `constitution.max-articles` (default 30, `core/config`). Test:
+  t_constitution.sh.
+- FR-3.4 `next` appends the rule lines in plan and build (`cmd/next.sh:34`). Test:
+  t_constitution.sh.
+- FR-3.5 `review` lists review articles under "Constitution: confirm each" with `[ ]` boxes
+  for the human (`cmd/review.sh:67`). Test: t_constitution.sh.
+- FR-3.6 `constitution_guard` (`:443`), called by `check` (`cmd/check.sh:8`) and `ship`
+  (`cmd/ship.sh:60`, blocks in every profile): it compares against the merge-base, so an
+  amendment shipped to main in the meantime is not blamed on this branch; with no
+  constitution on the merge-base, any item may create it (bootstrap). Test: t_constitution.sh
+  (check fails and ship refuses on a feature branch).
+- FR-3.7 `templates/amendment.md` (Impact required); `[type "amendment"]` sets planned,
+  approved and built to block (`core/config`); the guard refuses code outside specs/; ship
+  re-runs the check articles (`cmd/ship.sh:61`) because a constitution edit does not change
+  the code fingerprint, so a cached pass would not have seen new articles. Prompts
+  `plan.amendment.md` and `build.amendment.md`. Test: t_constitution.sh (code refused, Built
+  blocks in lite, ships).
+- FR-3.8 `review` shows the constitution diff against the merge-base for amendments
+  (`cmd/review.sh:72`). Test: t_constitution.sh.
+- This repo's `specs/constitution.md`: C-1 (core needs only sh, git, awk; checked by
+  `tests/constitution/c1-deps.sh`), C-2 (state derived, review), C-3 (IDs permanent, review),
+  C-4 (only new, approve and ship commit; no verb pushes; checked by
+  `tests/constitution/c4-commits.sh`). `.sdd/config` adds `tests/constitution/*.sh` to
+  shellcheck. Design §3, §4 and §5 describe the constitution and the amendment type.
+
+Deviations:
+- C-4 says "new, approve and ship". Design §8 still says only `new` and `ship` create
+  commits, but `approve` has committed since item 1. The article states what is true.
+
+Follow-ups:
+- Item 2 adds `PHASE_FP` for other branches; the guard and check articles do not depend on it,
+  but whichever ships second rebases over `lib/common.sh` and `cmd/review.sh`.
+- Team mode: a non-author approver for amendments (with the team layer).
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

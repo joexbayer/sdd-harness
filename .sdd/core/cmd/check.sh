@@ -5,6 +5,10 @@ need_repo
 
 id=
 current_item && id=$ID
+if [ -n "$id" ] && ! guard=$(constitution_guard); then
+	echo "✗ $guard"
+	exit 1
+fi
 run_check "$id"
 rc=$?
 case $rc in
@@ -24,6 +28,7 @@ case $rc in
 	;;
 *)
 	tail -n 40 "$CHECK_LOG"
+	[ -z "$CHECK_ARTICLES" ] || printf '%s\n' "$CHECK_ARTICLES" | sed 's/^/✗ constitution: /'
 	if [ -n "$CHECK_NOTRUN" ]; then
 		echo "✗ check could not run \`$CHECK_NOTRUN\` (command not found or not executable)"
 		echo "next    this is the check config, not your code: fix 'run' under [check] in $DIRNAME/config"

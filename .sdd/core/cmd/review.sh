@@ -61,6 +61,18 @@ if [ -n "$frs" ]; then
 	[ -z "$unnamed" ] || echo "  (✗ is for your review only: ship does not check it)"
 fi
 
+confirm=$(articles | awk -F '\t' '$2 == "review" { print "  [ ] " $1 " " $4 }')
+if [ -n "$confirm" ]; then
+	echo
+	echo "Constitution: confirm each against this change (you, not the agent)"
+	printf '%s\n' "$confirm"
+fi
+if [ "$ITYPE" = amendment ]; then
+	echo
+	echo "Constitution diff (against where this branch left $base)"
+	git diff "$mb" -- "$CONST" | sed 's/^/  /'
+fi
+
 echo
 echo "Built (written by the agent)"
 section "Built" | sed '/^[[:space:]]*$/d; s/^/  /'

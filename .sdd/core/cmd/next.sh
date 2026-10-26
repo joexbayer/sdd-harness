@@ -26,3 +26,13 @@ echo "Phase: $PHASE ($WHY)"
 echo
 prompt "$PHASE" "$ID" "$title" "$ITYPE"
 prompt "$PHASE.$ITYPE" "$ID" "$title" "$ITYPE"
+case $PHASE in
+plan | build)
+	rules=$(articles | awk -F '\t' '$1 != "!" { print $1 " " $4 }')
+	if [ -n "$rules" ]; then
+		echo
+		echo "Constitution (ground truths; changing one needs: $CMD new amendment \"…\"):"
+		printf '%s\n' "$rules"
+	fi
+	;;
+esac

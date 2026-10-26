@@ -55,6 +55,10 @@ if [ "$(gate_level approved "$ITYPE")" != off ]; then
 	fi
 fi
 [ -z "$(missing_sections "$IFILE" built)" ] || gate built "item $ID: \"## Built\" is not written yet"
+# The constitution blocks in every profile. Its checks run here too: editing it does not
+# change the code fingerprint, so a cached check would not have seen the new articles.
+guard=$(constitution_guard) || fail "item $ID: $guard"
+check_articles "$ST/checks/$ID.articles.log" || fail "item $ID: constitution: $(printf '%s\n' "$CHECK_ARTICLES" | paste -sd ';' -)"
 
 pre=$(git rev-parse HEAD)
 
