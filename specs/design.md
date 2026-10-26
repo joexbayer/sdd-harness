@@ -320,7 +320,7 @@ automated behind gates, and every change leaves the code easy to change again.
 | 2 | `sdd ls` / `sdd show`, both with `--json`; spec grammar | Spec Kit's best trait is greppable progress; the app and MCP server read this |
 | 3 | constitution + `amendment` type | ground truths that are hard to change, enforced, not prose |
 | 4 | GitHub forge adapter (`core/forges/github.sh`, via `gh`), on automatically when `origin` is github.com and `gh` is logged in | `ship` pushes and opens a PR with the brief as body; PR and CI state in `status`/`ls`/`review`; in team mode the PR review is the approval |
-| next | planning gates: clarify (`Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
+| next | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | next | tasks (`task red/done`) | Spec Kit parity |
 | then | `sdd-server` (stdio, then HTTP with mirrors) | team coordination across branches and repos |
 | then | fresh-context review for clean, easy-to-change code | ladder step 5 |
