@@ -19,16 +19,19 @@ while [ $# -gt 0 ]; do
 done
 case $since in
 '' | today | yesterday | *[0-9]d) ;;
-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+[0-9][0-9][0-9][0-9]-0[1-9]-[0-3][0-9] | [0-9][0-9][0-9][0-9]-1[0-2]-[0-3][0-9]) ;;
 *) usage_die "--since takes today, yesterday, <n>d or YYYY-MM-DD (got: $since)" ;;
 esac
 need_repo
+me=$(git config user.name || true)
+[ -z "$mine" ] || [ -n "$me" ] || die "--mine needs your git user.name (git config user.name \"…\")"
 
 rows=$(item_sources | while IFS="$(printf '\t')" read -r o r p; do item_row "$o" "$r" "$p"; done |
 	awk -F '\t' '$10 == "archive" || $3 == "open"')
-me=$(git config user.name || true)
 
-# Pick the rows, then turn facts into the four cells: item, state, who, when.
+# Pick the rows, then turn facts into the four cells: item, state, who, when. The fields are
+# item_row's (lib/common.sh): $1 id, $3 status, $4 phase, $6/$7 tasks, $8 title,
+# $11 questions open, $12 approved by, $13 opened by, $15 active, $16 reason, $17 reason code.
 cells=$(printf '%s\n' "$rows" | TODAY=$(date +%F) SINCE=$since LAST=$last MINE=$mine ME=$me awk -F '\t' '
 	function days(d,   y, m, dd, era, yoe, doy, doe) {
 		y = substr(d, 1, 4) + 0; m = substr(d, 6, 2) + 0; dd = substr(d, 9, 2) + 0
@@ -43,15 +46,14 @@ cells=$(printf '%s\n' "$rows" | TODAY=$(date +%F) SINCE=$since LAST=$last MINE=$
 		if ($3 == "shipped") return "shipped"
 		if ($3 == "dropped") return "dropped"
 		if ($4 == "plan") {
-			if ($16 ~ /^to fill: /) s = "planning: " $16
-			else if ($11 > 0) s = "planning: " plural($11, "open question")
-			else if ($16 ~ /changed after approval/) s = "planning: the plan changed after approval; it needs re-approval"
+			if ($17 == "fill") return "planning: " $16
+			if ($17 == "changed") s = "planning: the plan changed after approval; it needs re-approval"
+			else if ($11 > 0) s = "planning: " plural($11, "open question") "; then approval"
 			else s = "planning: plan ready, waiting for approval"
-			if ($11 > 0 && $16 !~ /^to fill: /) s = s "; then approval"
 			return s
 		}
 		extra = ($7 > 0) ? "; " $6 "/" $7 " tasks done" : ""
-		if ($4 == "build") return ($16 ~ /Built/ ? "building: check passed, Built not written yet" : "building: no passing check yet") extra
+		if ($4 == "build") return ($17 == "built" ? "building: check passed, Built not written yet" : "building: no passing check yet") extra
 		if ($4 == "review?") return "in review? (its check ran on a teammate'"'"'s machine)" extra
 		if ($4 == "review") return "in review: check passed, Built written; ready to review and ship" extra
 		return $4
@@ -113,6 +115,7 @@ printf '%s\n' "$cells" | LC_ALL=C W=${COLUMNS:-100} F=$fmt awk -F '\t' '
 	function rep(s, n,   o) { o = ""; while (n-- > 0) o = o s; return o }
 	# wrap(text, width, lines): word wrap into lines[1..n]; returns n. Overlong words are cut.
 	function wrap(t, w, L,   n, word, line, k, i, words) {
+		if (w < 1) w = 1
 		n = 0; line = ""
 		k = split(t, words, " ")
 		for (i = 1; i <= k; i++) {
@@ -146,10 +149,15 @@ printf '%s\n' "$cells" | LC_ALL=C W=${COLUMNS:-100} F=$fmt awk -F '\t' '
 		else { H = "─"; V = "│"; TL = "┌"; TM = "┬"; TR = "┐"; ML = "├"; MM = "┼"; MR = "┤"; BL = "└"; BM = "┴"; BR = "┘" }
 		split("item state who when", head, " ")
 		for (i = 1; i <= 4; i++) if (clen(head[i]) > max[i]) max[i] = clen(head[i])
-		w[3] = (max[3] > 24 ? 24 : max[3]); w[4] = max[4]
+		# 13 characters go to borders and padding. who and when keep their width until the
+		# item and state columns would drop below 24 together; then who shrinks too.
+		w[4] = max[4]; w[3] = (max[3] > 24 ? 24 : max[3])
 		room = ENVIRON["W"] - 13 - w[3] - w[4]
-		w[1] = (max[1] > 30 ? 30 : max[1]); if (w[1] > int(room / 2)) w[1] = int(room / 2)
-		w[2] = room - w[1]; if (w[2] > max[2]) w[2] = max[2]; if (w[2] < 20) w[2] = 20
+		if (room < 24) { w[3] -= 24 - room; if (w[3] < 4) w[3] = 4; room = ENVIRON["W"] - 13 - w[3] - w[4] }
+		if (room < 16) room = 16
+		w[1] = (max[1] > 30 ? 30 : max[1]); if (w[1] > int(room * 0.4)) w[1] = int(room * 0.4)
+		if (w[1] < 6) w[1] = 6
+		w[2] = room - w[1]; if (w[2] > max[2]) w[2] = max[2]; if (w[2] < 10) w[2] = 10
 		hline(TL, TM, TR)
 		row(head[1], head[2], head[3], head[4])
 		for (r = 1; r <= NR; r++) {

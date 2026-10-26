@@ -42,7 +42,7 @@ widths=$(printf '%s\n' "$out" | LC_ALL=C awk '{ s = $0; gsub(/[\200-\277]/, "", 
 assert_eq "$(printf '%s\n' "$widths" | wc -l | tr -d ' ')" 1 "(every line of the table has the same width, å included)"
 
 # FR-5.4: the state is a sentence made of facts (a wide terminal, so cells do not wrap).
-out=$(COLUMNS=200 sdd summary)
+out=$(export COLUMNS=200; sdd summary)
 assert_contains "$out" 'planning: 2 open questions; then approval'
 assert_contains "$out" 'planning: to fill: What and why'
 assert_contains "$out" 'shipped'
@@ -63,6 +63,15 @@ assert_eq $? 2 "(bad --since)"
 sdd summary --last x >/dev/null 2>&1
 assert_eq $? 2 "(bad --last)"
 
+# Narrow terminals: the table fits when it can, and never hangs when it cannot.
+w60=$( (export COLUMNS=60; sdd summary) | LC_ALL=C awk '{ s = $0; gsub(/[\200-\277]/, "", s); if (length(s) > m) m = length(s) } END { print m }')
+assert_eq "$w60" 60 "(a 60-column terminal gets a 60-column table)"
+(export COLUMNS=20; sdd summary >/dev/null) || fail "summary at 20 columns failed"
+assert_contains "$(sdd summary --last 1 --since 2999-01-01 --md)" '| 3 ('
+sdd summary --since 2026-13-01 >/dev/null 2>&1
+assert_eq $? 2 "(month 13)"
+assert_eq "$(sdd ls --json | jq -r 'select(.id == 2) | .reason_code')" approval
+
 # FR-5.6: --mine keeps what the current git user opened or approved.
 out=$(sdd summary --mine)
 assert_not_contains "$out" 'kari'
@@ -72,5 +81,8 @@ assert_contains "$out" '1 (One)'
 out=$(sdd summary --md)
 assert_eq "$(printf '%s\n' "$out" | head -n 1)" '| item | state | who | when |'
 assert_contains "$out" "| 3 (Kari's thing) |"
+git switch -q feature/2-* 2>/dev/null || git switch -q "$(git branch --format='%(refname:short)' | grep '^feature/2-')"
+sed 's/^title: .*/title: Pipes | in titles/' "$(ls specs/changes/2-*/item.md)" >"$T/t" && cp "$T/t" "$(ls specs/changes/2-*/item.md)"
+assert_contains "$(sdd summary --md)" '2 (Pipes \| in titles)'
 assert_contains "$(sdd summary --ascii)" '+---'
 exit 0

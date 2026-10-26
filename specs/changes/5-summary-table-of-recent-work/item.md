@@ -70,14 +70,18 @@ and `--md` pastes cleanly into a GitHub comment.
 
 ## Built
 - FR-5.1 (boxed table): `.sdd/core/cmd/summary.sh`. Columns item, state, who, when; the item
-  and state columns wrap at word boundaries; widths follow `COLUMNS` (else 100). Character
-  width counts UTF-8 lead bytes under `LC_ALL=C`, so it works the same in every awk. Test:
-  tests/t_summary.sh (every line has the same width, with "Blåbær" in a wrapped title).
+  and state columns wrap at word boundaries; the table fits `COLUMNS` (else 100) down to about
+  44 columns, and below that uses minimum widths rather than failing. Character width counts
+  UTF-8 lead bytes under `LC_ALL=C`; tested with macOS awk only. Test: tests/t_summary.sh
+  (every line has the same width with "Blåbær" in a wrapped title; 60 columns give a 60-wide
+  table; 20 columns finish).
 - FR-5.2 (default window) and FR-5.3 (`--since`, `--last`): dates are turned into day numbers
   inside awk (days-from-civil), because POSIX `date` has no arithmetic. Test: t_summary.sh
   (an item last touched in 2001 shows by default, not with `--since today`).
-- FR-5.4 (state from facts): built from phase, reason, open questions, tasks and check, e.g.
-  "planning: 2 open questions; then approval". Test: t_summary.sh.
+- FR-5.4 (state from facts): built from phase, open questions, tasks and a reason code, e.g.
+  "planning: 2 open questions; then approval". `item_phase` now sets `WHYCODE` (status, fill,
+  approval, changed, check, built, ready) next to its sentence, so the cell never depends on
+  wording; JSON gains `reason_code`. Test: t_summary.sh.
 - FR-5.5 (who): opener and approver, from the open commit's author and the approval. Test:
   t_summary.sh ("kari, approved by lead" on a teammate's remote branch).
 - FR-5.6 (`--mine`) and FR-5.7 (`--md`, plus `--ascii`). Test: t_summary.sh.
@@ -87,8 +91,22 @@ and `--md` pastes cleanly into a GitHub comment.
 
 Deviations:
 - With both `--since` and `--last`, `--last` wins (the n most recently active, any date).
+  Test: t_summary.sh.
 - Items made before sdd tracked itself (item 1, lite core) have no open commit, so "who"
   falls back to the approver.
+
+Fresh-context review (1 blocker, 4 warnings) and what changed:
+- Blocker fixed: on a narrow terminal a column width reached zero and word wrapping looped
+  forever. Widths now fit the terminal and never drop below a minimum, and wrapping guards
+  against width 0. Tests at 60 and 20 columns.
+- Fixed: the state cell matched the phase sentence's wording (now reason codes); `--since`
+  rejects impossible dates such as month 13; `--mine` stops with a message when git
+  user.name is unset; the approval parsing is a plain if; the field map sits next to the awk.
+- Kept: the checked-out item counts as active today whenever the working tree has edits. On
+  an item branch those edits are that item's work.
+- Accepted: `item_row` now makes 2-3 git calls per item (fine at tens of items); a teammate's
+  branch you also have locally shows your local copy (as in `ls`); the opener is unknown when
+  a PR is squash-merged (team mode will need it).
 
 Follow-ups:
 - Team mode will make IDs unique across clones; today two clones that never fetch can pick

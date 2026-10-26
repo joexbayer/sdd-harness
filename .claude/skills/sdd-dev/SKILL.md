@@ -38,6 +38,8 @@ refuses a dirty tree), and `fill`.
 - POSIX sh only. No `local`, arrays, `[[`, `sed -i` or `echo -e`. Pass values into awk via
   `ENVIRON`, never `-v` (backslashes) or gsub replacement strings (`&`). See `render()` and
   `fm_set()`.
+- In tests, `sdd` is a shell function, and POSIX sh may keep `VAR=x sdd …` assignments after a
+  function returns (bash in POSIX mode does). Use `(export VAR=x; sdd …)` instead.
 - A literal `done` as a value or case pattern trips shellcheck SC1010. Quote it: `'done'`.
 - Tests that run things in parallel must not assume which job gets which id.
 - `git config -f` edits in tests leave the tree dirty unless committed. Use `setcfg` before

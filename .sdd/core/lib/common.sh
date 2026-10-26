@@ -279,37 +279,46 @@ check_passed_here() {
 	grep -qx "fp=$_fp" "$_rec" && grep -qx 'result=pass' "$_rec"
 }
 
-# item_phase: sets PHASE (plan|build|review|done), WHY (one line) and MISSING.
+# item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), WHYCODE (the same
+# as a stable word for programs: status|fill|approval|changed|check|built|ready) and MISSING.
 #   plan    the human's time: plan sections empty, or not (or no longer) approved
 #   build   the agent's time: no passing check for this code, or "## Built" empty
 #   review  the human's time: verified and written up
 item_phase() {
 	WHY=
+	WHYCODE=
 	MISSING=$(missing_sections "$IFILE" plan)
 	if [ "$(fm_get status "$IFILE")" != open ]; then
 		PHASE='done'
 		WHY="status: $(fm_get status "$IFILE")"
+		WHYCODE=status
 	elif [ -n "$MISSING" ]; then
 		PHASE=plan
 		WHY="to fill: $(joinlist "$MISSING")"
+		WHYCODE=fill
 	elif [ "$(gate_level approved "$ITYPE")" = block ] && ! approval_ok; then
 		PHASE=plan
 		if [ -n "$(fm_get approved "$IFILE")" ]; then
 			WHY="the plan changed after approval; the human re-approves with: $CMD approve"
+			WHYCODE=changed
 		else
 			WHY="waiting for the human to approve the plan: $CMD approve"
+			WHYCODE=approval
 		fi
 	else
 		MISSING=$(missing_sections "$IFILE" built)
 		if [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
 			PHASE=build
 			WHY="no passing check for the current code"
+			WHYCODE=check
 		elif [ -n "$MISSING" ]; then
 			PHASE=build
 			WHY="\"## Built\" is not written yet"
+			WHYCODE=built
 		else
 			PHASE=review
 			WHY="verified and written up; walk through it with: $CMD review"
+			WHYCODE=ready
 		fi
 	fi
 }
@@ -421,7 +430,8 @@ function row_json() {
 	return sprintf("\"id\":%d,\"type\":\"%s\",\"status\":\"%s\",\"phase\":\"%s\",\"frs\":%d,\"tasks_done\":%d,\"tasks_total\":%d,\"title\":\"%s\",\"branch\":\"%s\",\"source\":\"%s\"", \
 		$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10)) \
 		sprintf(",\"questions_open\":%d,\"approved_by\":\"%s\",\"opened_by\":\"%s\",\"shipped\":\"%s\",\"active\":\"%s\",\"reason\":\"%s\"", \
-		$11, esc($12), esc($13), esc($14), esc($15), esc($16))
+		$11, esc($12), esc($13), esc($14), esc($15), esc($16)) \
+		sprintf(",\"reason_code\":\"%s\"", esc($17))
 }
 '
 
@@ -476,6 +486,7 @@ item_load() {
 # item_row <origin> <ref> <path>: one TSV summary line (see row_json):
 #  1 id  2 type  3 status  4 phase  5 frs  6 tasks_done  7 tasks_total  8 title  9 branch
 # 10 origin  11 questions_open  12 approved_by  13 opened_by  14 shipped  15 active  16 reason
+# 17 reason_code (WHYCODE)
 # "active" is the shipped date, else the last commit on the branch (today if the working
 # tree has edits); "opened_by" is the author of the item's open commit.
 item_row() {
@@ -491,7 +502,11 @@ item_row() {
 	_br=$2
 	[ "$1" = archive ] && _br=
 	_ap=$(fm_get approved "$IFILE")
-	[ -z "$_ap" ] || _ap=${_ap#* } && _ap=${_ap#* }
+	# "approved: <plan hash> <date> <name, may contain spaces>"
+	if [ -n "$_ap" ]; then
+		_ap=${_ap#* }
+		_ap=${_ap#* }
+	fi
 	_shipped=$(fm_get shipped "$IFILE")
 	_by=$(git log -1 --format=%an --grep="^docs($ID): open " "$2" 2>/dev/null)
 	if [ -n "$_shipped" ]; then
@@ -501,9 +516,9 @@ item_row() {
 	else
 		_act=$(git log -1 --format=%cs "$2" 2>/dev/null)
 	fi
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
 		"$PHASE" "${_counts%"$(printf '\t')"*}" "$(fm_get title "$IFILE")" "$_br" "$1" "${_counts##*"$(printf '\t')"}" \
-		"$_ap" "$_by" "$_shipped" "$_act" "$WHY"
+		"$_ap" "$_by" "$_shipped" "$_act" "$WHY" "$WHYCODE"
 	[ -z "$ITMP" ] || rm -f "$ITMP"
 	PHASE_FP=
 }
