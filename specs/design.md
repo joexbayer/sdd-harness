@@ -158,7 +158,7 @@ fixed keys; every other reader (the MCP server too) uses them instead of parsing
 |---|---|---|
 | story | `US-<id>.<n> As a …` | `grep -h '^US-' specs/changes/*/item.md` |
 | requirement | `FR-<id>.<n> WHEN … THE SYSTEM SHALL …`, continued on the next lines, then an `e.g.` line | `grep -c '^FR-41\.' specs/changes/41-*/item.md` |
-| task | `- [ ] T-<id>.<n> …` or `- [x] T-<id>.<n> …` | `grep -c '^- \[x\] T-' specs/changes/*/item.md` |
+| task | `- [ ] T-<id>.<n> …` or `- [x] T-<id>.<n> …` (`[X]` counts too) | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
 | decision | `D-<id>.<n> … because …` | `git grep -n '^D-' specs/` |
 | question | `Q-<id>.<n> … → recommend: …`; answered with `→ decided: …` | `grep '^Q-' … \| grep -v 'decided:'` |
 | outcome | `DOD-<id>.<n> …` | |
@@ -166,6 +166,16 @@ fixed keys; every other reader (the MCP server too) uses them instead of parsing
 
 A fact counts only at the start of a line and outside HTML comments, which is why template
 guidance indents its examples. Facts are read from the plan part (above `## Built`).
+
+The JSON contract. `ls --json` prints one object per line with `id` (number), `type`,
+`status` (open, shipped, dropped), `phase` (plan, build, review, done, or `review?` when the
+answer depends on a check run on another machine), `frs`, `tasks_done`, `tasks_total`,
+`title`, `branch` (empty for archived items) and `source` (archive, worktree, local,
+remote or base: where the item was read). `show <id> --json` prints the same fields plus the
+arrays `stories`, `requirements` (with `example`), `tasks` (with `done`), `decisions`,
+`questions` (with `decided`) and `done_when`, each element with `id` and `text`. The current
+item is read from the working file, so uncommitted plan edits show. New keys may be added;
+readers ignore keys they do not know.
 
 ## 8. Commands
 

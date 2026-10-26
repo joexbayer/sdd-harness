@@ -74,23 +74,26 @@ DOD-2.2 In a repo with one shipped item, one local branch and one remote-only br
 `sdd ls --json | jq .` parses, and the counts match `grep` on the same files.
 
 ## Built
-- FR-2.1 `ls`: `.sdd/core/cmd/ls.sh`; sources in `item_sources` (`lib/common.sh:398`: archive,
+- FR-2.1 `ls`: `.sdd/core/cmd/ls.sh`; sources in `item_sources` (`lib/common.sh`: archive,
   worktree, local, remote, base; first source of an id wins, so a stale remote branch of a
-  shipped item stays hidden); one summary row per item in `item_row` (`:444`). Test:
+  shipped item stays hidden); one summary row per item in `item_row` . Test:
   tests/t_query.sh (shipped, local and pushed, remote-only).
-- FR-2.2 `?` phases: `item_load` (`:427`) fingerprints the ref's committed code (tree without
+- FR-2.2 `?` phases: `item_load`  fingerprints the ref's committed code (tree without
   `specs/`, via `git mktree`) so the local check record is judged against exactly that code;
-  `item_row` marks a remote item with Built written but no local check `review?` (`:449`).
+  `item_row` marks a remote item with Built written but no local check `review?` .
   Test: t_query.sh (`review?` for the teammate's item).
-- FR-2.3 `show`: `.sdd/core/cmd/show.sh`; facts from `parse_item` (`:466`): one awk parser,
+- FR-2.3 `show`: `.sdd/core/cmd/show.sh`; facts from `parse_item` : one awk parser,
   continuation lines joined, `e.g.` lines kept as the example, code fences skipped. Test:
   t_query.sh.
-- FR-2.4 `--json` on both: escaping by `AWK_ESC` (`:385`), character by character. Tests:
+- FR-2.4 `--json` on both: `AWK_JSON` in `lib/common.sh` holds `esc` (character by character,
+  CR escaped) and `row_json`, the one place the summary fields become JSON. Tests:
   t_query.sh parses with `jq` and compares counts with plain `grep` (DOD-2.2).
 - FR-2.5 comments ignored: `parse_item` reads `plan_part | uncomment`. Test: t_query.sh
   (`FR-2.9` only in a comment is absent).
-- `status` now lists open items through the same sources (`cmd/status.sh:7`); its output is
-  unchanged. `help` lists both verbs; design §7 has the "Spec grammar" table.
+- `status`: its `open_items` (still in `cmd/status.sh`, now a thin filter over `item_sources`
+  and `item_row`) prints the same format. One behaviour change: a local branch whose item is
+  already in the archive is no longer listed as open. `help` lists both verbs; design §7 has
+  the "Spec grammar" table and the JSON contract.
 
 Deviations:
 - FR-2.2's example says a teammate's approved item with Built empty shows `build?`. It shows
@@ -100,6 +103,23 @@ Deviations:
   at the start of a line, so plain `grep '^FR-1\.'` counted them. The feature template now
   indents its examples and says to start each entry at the beginning of its line.
 - Q-2.1 settled as recommended: dropped items only with `ls --all`.
+
+Fresh-context review (no blockers) and what changed:
+- Fixed: `esc` now escapes CR (a CRLF title broke `ls --json`); the id comes from the folder
+  name, not the frontmatter; a failed `git show` no longer leaks a temp file; `show` stops
+  with a message when an item cannot be read; `PHASE_FP` is reset after each `item_row`.
+- Fixed: branches contribute open items only (FR-2.1), so a stale shipped copy on a branch
+  without an archive entry no longer shows.
+- Fixed: the JSON contract, including the `source` key and the `review?` phase, is now in
+  design §7. `[x]` and `[X]` both count, and the documented grep matches both.
+- Fixed for easier change: summary JSON is built in one place (`row_json`), and `show` maps
+  fact kinds to keys through one list.
+- Added test: `ls --all` shows a dropped item whose title ends in CR, and `jq` parses it.
+- Accepted, not changed: `show 041` does not match item 41; an unterminated code fence hides
+  the rest of the plan; a branch checked out in another worktree with uncommitted, checked
+  code shows `build` (its committed code is what is judged); `status` with no current item
+  reads every item. All are unlikely or cheap to live with, and fixing them adds code now.
+- By design: the current item is read from the working file, so uncommitted plan edits show.
 
 Follow-ups:
 - Bare repositories: the readers use `git show`, but `need_repo` still wants a work tree.

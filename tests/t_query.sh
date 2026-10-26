@@ -46,11 +46,20 @@ git commit -qam "built 3" && git push -q origin HEAD
 three=$(sed -n "s/^id: //p" "$f")
 cd "$R" && git fetch -q origin
 
+# 9: dropped, in the archive; its title line ends in CR (a CRLF edit), which JSON must escape.
+git switch -q main
+mkdir -p specs/archive/9-gone
+printf -- '---\nid: 9\ntype: chore\ntitle: Gone\r\nstatus: dropped\n---\n# 9 Gone\n' >specs/archive/9-gone/item.md
+git add -A && git commit -qm "drop 9"
+
 out=$(sdd ls) || fail "ls failed: $out"
 assert_contains "$out" '1    feature   shipped  done     FR 2   T 1/2    One'
 assert_contains "$out" 'FR 2   T 1/2    Two   feature/2-two'
 assert_contains "$out" "review?  FR 0   T -      Three   origin/feature/$three-three"
 assert_not_contains "$out" 'origin/feature/2-two'
+assert_not_contains "$out" 'Gone'
+assert_contains "$(sdd ls --all)" 'dropped'
+assert_eq "$(sdd ls --all --json | jq -r 'select(.id == 9) | .title')" "$(printf 'Gone\r')"
 
 # --json: one object per line, fixed keys, counts equal to plain grep on the same file.
 json=$(sdd ls --json)

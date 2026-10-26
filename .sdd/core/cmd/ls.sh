@@ -12,14 +12,13 @@ for _a in "$@"; do
 done
 need_repo
 
+# Branches contribute open items only; shipped and dropped ones are read from the archive.
 rows=$(item_sources | while IFS="$(printf '\t')" read -r o r p; do item_row "$o" "$r" "$p"; done |
-	A=$all awk -F '\t' 'ENVIRON["A"] != "" || $3 != "dropped"' | sort -t "$(printf '\t')" -k1,1n)
+	A=$all awk -F '\t' '($10 == "archive" || $3 == "open") && (ENVIRON["A"] != "" || $3 != "dropped")' |
+	sort -t "$(printf '\t')" -k1,1n)
 
 if [ -n "$json" ]; then
-	[ -z "$rows" ] || printf '%s\n' "$rows" | awk -F '\t' "$AWK_ESC"'{
-		printf "{\"id\":%d,\"type\":\"%s\",\"status\":\"%s\",\"phase\":\"%s\",\"frs\":%d,\"tasks_done\":%d,\"tasks_total\":%d,\"title\":\"%s\",\"branch\":\"%s\",\"source\":\"%s\"}\n",
-			$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10)
-	}'
+	[ -z "$rows" ] || printf '%s\n' "$rows" | awk -F '\t' "$AWK_JSON"'{ print "{" row_json() "}" }'
 	exit 0
 fi
 if [ -z "$rows" ]; then

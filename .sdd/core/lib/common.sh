@@ -380,15 +380,21 @@ exclude() {
 # Every reader (ls, show, and later the MCP server through `--json`) goes through these, so
 # the item grammar is parsed in one place. Items are read with `git show`, never a checkout.
 
-# json_esc: awk function esc(s) that makes s safe inside a JSON string. Prepend it to an awk
-# program. Character by character, because gsub's backslash handling differs between awks.
-AWK_ESC='function esc(s,   o, i, c) {
+# AWK_JSON: awk functions to prepend to a program. esc(s) makes s safe inside a JSON string
+# (character by character, because gsub's backslash handling differs between awks; tabs never
+# reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$10)
+# as the JSON fields every reader sees, so a new column is added here and nowhere else.
+AWK_JSON='function esc(s,   o, i, c) {
 	o = ""
 	for (i = 1; i <= length(s); i++) {
 		c = substr(s, i, 1)
-		if (c == "\\") o = o "\\\\"; else if (c == "\"") o = o "\\\""; else o = o c
+		if (c == "\\") o = o "\\\\"; else if (c == "\"") o = o "\\\""; else if (c == "\r") o = o "\\r"; else o = o c
 	}
 	return o
+}
+function row_json() {
+	return sprintf("\"id\":%d,\"type\":\"%s\",\"status\":\"%s\",\"phase\":\"%s\",\"frs\":%d,\"tasks_done\":%d,\"tasks_total\":%d,\"title\":\"%s\",\"branch\":\"%s\",\"source\":\"%s\"", \
+		$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10))
 }
 '
 
@@ -431,16 +437,17 @@ item_load() {
 		IFILE=$3
 	else
 		ITMP=$(mktemp "${TMPDIR:-/tmp}/$NAME-item.XXXXXX") || return 1
-		git show "$2:$3" >"$ITMP" 2>/dev/null || return 1
+		git show "$2:$3" >"$ITMP" 2>/dev/null || { rm -f "$ITMP"; return 1; }
 		IFILE=$ITMP
 		PHASE_FP=$(git ls-tree "$2" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
 	fi
-	ID=$(fm_get id "$IFILE")
+	# The id comes from the folder name, like everywhere else; the frontmatter repeats it.
+	ID=$(id_of "${3%/item.md}")
 	ITYPE=$(fm_get type "$IFILE")
 }
 
 # item_row <origin> <ref> <path>: one TSV summary line:
-# id type status phase frs tasks_done tasks_total title branch origin
+# id type status phase frs tasks_done tasks_total title branch origin (see row_json)
 item_row() {
 	item_load "$@" || return 1
 	item_phase
@@ -456,6 +463,7 @@ item_row() {
 	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
 		"$PHASE" "$_counts" "$(fm_get title "$IFILE")" "$_br" "$1"
 	[ -z "$ITMP" ] || rm -f "$ITMP"
+	PHASE_FP=
 }
 
 # parse_item <file> <id>: the facts in the plan part of an item, guidance comments removed,

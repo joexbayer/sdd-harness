@@ -20,26 +20,29 @@ done | head -n 1)
 o=$(printf '%s' "$src" | cut -f1)
 r=$(printf '%s' "$src" | cut -f2)
 p=$(printf '%s' "$src" | cut -f3)
-row=$(item_row "$o" "$r" "$p")
-item_load "$o" "$r" "$p"
+row=$(item_row "$o" "$r" "$p") && item_load "$o" "$r" "$p" || die "could not read item $id from $r"
 facts=$(parse_item "$IFILE" "$ID")
 [ -z "$ITMP" ] || rm -f "$ITMP"
 
 if [ -n "$json" ]; then
-	{ printf 'row\t%s\n' "$row"; [ -z "$facts" ] || printf '%s\n' "$facts"; } | awk -F '\t' "$AWK_ESC"'
-	$1 == "row" {
-		printf "{\"id\":%d,\"type\":\"%s\",\"status\":\"%s\",\"phase\":\"%s\",\"title\":\"%s\",\"branch\":\"%s\",\"source\":\"%s\"", $2, esc($3), esc($4), esc($5), esc($9), esc($10), esc($11)
-		next
+	# The item_row fields, then one array per fact kind, in a fixed order.
+	{ printf '%s\n' "$row"; [ -z "$facts" ] || printf '%s\n' "$facts"; } | awk -F '\t' "$AWK_JSON"'
+	NR == 1 { head = row_json(); next }
+	{
+		e = "{\"id\":\"" esc($2) "\",\"text\":\"" esc($4) "\""
+		if ($1 == "fr" || $1 == "us") e = e ",\"example\":\"" esc($5) "\""
+		if ($1 == "task") e = e ",\"done\":" ($3 == "done" ? "true" : "false")
+		if ($1 == "q") e = e ",\"decided\":" ($3 == "decided" ? "true" : "false")
+		list[$1] = list[$1] (list[$1] == "" ? "" : ",") e "}"
 	}
-	{ n[$1]++; e = "{\"id\":\"" esc($2) "\",\"text\":\"" esc($4) "\""
-	  if ($1 == "fr" || $1 == "us") e = e ",\"example\":\"" esc($5) "\""
-	  if ($1 == "task") e = e ",\"done\":" ($3 == "done" ? "true" : "false")
-	  if ($1 == "q") e = e ",\"decided\":" ($3 == "decided" ? "true" : "false")
-	  a[$1] = a[$1] (n[$1] > 1 ? "," : "") e "}" }
 	END {
-		split("us stories fr requirements task tasks d decisions q questions dod done_when", m, " ")
-		for (i = 1; i < 12; i += 2) printf ",\"%s\":[%s]", m[i + 1], a[m[i]]
-		print "}"
+		n = split("us:stories fr:requirements task:tasks d:decisions q:questions dod:done_when", kinds, " ")
+		out = "{" head
+		for (i = 1; i <= n; i++) {
+			split(kinds[i], kv, ":")
+			out = out ",\"" kv[2] "\":[" list[kv[1]] "]"
+		}
+		print out "}"
 	}'
 	exit 0
 fi
