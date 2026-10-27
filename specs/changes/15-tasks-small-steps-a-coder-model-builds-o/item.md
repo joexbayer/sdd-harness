@@ -132,6 +132,34 @@ Deviations:
   unproven tick (FR-15.7). No assertion was dropped.
 - Found while dogfooding: `sdd task` printed a commit hash twice; fixed and tested.
 
+Fresh-context review (no blockers, 7 warnings, 6 nits; security pass: no injection) and what
+changed:
+- Fixed: a box ticked by hand, with any commit naming the task, used to ship (D-15.1 was not
+  enforced). `task done` now notes each tick in this clone (`.git/sdd/checks/<id>.tasks`), and
+  ship refuses a tick whose naming commit is yours but has no note; a teammate's tick (their
+  commit) needs only the commit. This repo's own five ticks were redone through `task done`.
+- Fixed: a red task passed when its test could not run: its `files:` must exist, and a red test
+  whose log shows the check's no-tests patterns is refused. (Matching "No such file" was tried
+  and dropped: a red test legitimately fails on code that does not exist yet.)
+- Fixed: attributes that do not end the task line (a wrapped line, words after them) made sdd run
+  the full check instead of the task's test; `task done` now refuses such a line and `sdd task`
+  flags it. The tick only touches the task's own line in the plan part, outside code fences, by
+  whole ID, and fails loudly if it finds none.
+- Fixed: `[type "feature"] gates` overrode a project's own `sdd.gates`; `tasks` is now in the
+  default gate list and `tasks = off` for fix, refactor and amendment.
+- Fixed nits: a test that hides failures (`|| true`) is refused as in check; task text prints with
+  printf; task IDs must look like `T-<id>.<n>`; "serves" reads FRs from the description, not the
+  test command. Tests: t_task.sh (a second item with each case).
+- Accepted: types without an approval step (hotfix, chore) run a task's test unapproved, the same
+  trust as check commands (noted in task.sh). `item_phase` parses the item twice per row (fine at
+  tens of items).
+
+Upgrading (for items already open when this lands):
+- In standard and strict, an open feature without tasks is blocked at ship; adding tasks
+  changes its plan, so the human approves again.
+- A box ticked before this version needs `task done` (untick, then run it) and a commit naming
+  the task before ship.
+
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->
