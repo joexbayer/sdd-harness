@@ -6,6 +6,10 @@
 new_repo
 git init -q --bare "$T/origin.git" && git remote add origin "$T/origin.git"
 git push -q origin main
+# A constitution with three articles: its check runs before every merge (and once clobbered the
+# PR number, item 13).
+mkdir -p specs && printf 'C-1 One.\n  Why: a.\n  Enforced: check true\n\nC-2 Two.\n  Why: b.\n  Enforced: review\n\nC-3 Three.\n  Why: c.\n  Enforced: review\n' >specs/constitution.md
+git add specs && git commit -qm "docs: constitution"
 setcfg sdd.forge github && git push -q origin main
 
 # The stub keeps PRs in $T/gh/prs as "<branch> <number> <state> <review> <url> <head>" (tabs),
