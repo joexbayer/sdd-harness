@@ -4,6 +4,7 @@ type: feature
 title: Git forge: worktrees, landing and cleanup
 status: open
 created: 2026-10-27
+approved: 18b946634dc1500b48ad086aa9ca0614d87c27de 2026-10-27 joexbayer
 ---
 # 7 Git forge: worktrees, landing and cleanup
 
