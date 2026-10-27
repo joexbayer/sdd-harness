@@ -42,7 +42,11 @@ cleanup) decided to let `sdd tidy --remote` do it (Q-7.4, Q-7.5), which today's 
   the GitHub design is not planned yet.
 
 ## Built
-<!-- The constitution diff as applied, and confirmation that every check article passes. -->
+- specs/constitution.md C-4: replaced with the Proposed text, word for word.
+- specs/design.md §8: "except `ship` in team PR mode" → "except `tidy --remote`, which deletes
+  remote branches of shipped items".
+- `tests/constitution/c4-commits.sh` is unchanged and still forbids every push, which is
+  stricter than the new text; item 7 (git forge) relaxes it for `cmd/tidy.sh`.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

@@ -16,6 +16,8 @@ C-3 IDs never change and are never reused; gaps are fine.
   Why: every reference (tests, commits, other items) depends on them staying put.
   Enforced: review
 
-C-4 Only new, approve and ship create commits, and no verb pushes.
-  Why: the human decides what lands and what leaves the machine.
+C-4 Only new, approve and ship create commits. No verb pushes, except `tidy --remote`, which
+  only deletes remote branches of items already shipped or dropped on the base branch.
+  Why: the human decides what lands and what leaves the machine; `tidy --remote` is
+  human-only (an ask rule) and removes only work the base already holds.
   Enforced: check sh tests/constitution/c4-commits.sh
