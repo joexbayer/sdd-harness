@@ -107,6 +107,7 @@ DOD-16.2 On a scratch repo, a planner subagent (Opus) and a builder run through 
 - [x] T-16.3 Subagents, the sdd-run skill and the subagent hooks, FR-16.2, FR-16.3, FR-16.6 (files: .sdd/core/agents/claude.sh, .sdd/core/agents/skills/run.md, .sdd/core/cmd/hook.sh, tests/t_roles.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_roles.sh)
 - [x] T-16.6 `sdd usage`, FR-16.7 (files: .sdd/core/cmd/usage.sh, tests/t_usage.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_usage.sh)
 - [x] T-16.7 Help, design §8 and §10, README (files: .sdd/core/cmd/help.sh, specs/design.md, README.md)
+- [ ] T-16.8 Usage tracking off by default, FR-16.5, FR-16.6, FR-16.7 (files: .sdd/core/lib/common.sh, .sdd/core/agents/claude.sh, .sdd/core/cmd/usage.sh, tests/t_usage_off.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_usage_off.sh)
 
 ## Built
 - FR-16.1 (a role's tier, agent and model): `cfg_mine` (`lib/common.sh:71`) reads tier and agent
