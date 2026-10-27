@@ -420,6 +420,17 @@ task_rows() {
 		}'
 }
 
+# task_commit <task id>: the newest commit on this branch (since the base) whose subject names
+# the task, as a whole ID: T-4.1 is not T-4.10.
+task_commit() {
+	git log --format='%h %s' "$(cfg sdd.base main)..HEAD" 2>/dev/null |
+		T=$1 awk '{ s = " " substr($0, index($0, " ") + 1) " "; t = ENVIRON["T"]
+			while ((i = index(s, t)) > 0) {
+				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; exit }
+				s = substr(s, i + length(t))
+			} }'
+}
+
 # masked: the input lines that hide a failure ("cmd || true", "|| :", "|| exit 0").
 masked() { grep -E '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)'; }
 

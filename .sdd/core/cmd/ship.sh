@@ -189,6 +189,17 @@ if [ "$(gate_level approved "$ITYPE")" != off ]; then
 	fi
 fi
 [ -z "$(missing_sections "$IFILE" built)" ] || gate built "item $ID: \"## Built\" is not written yet"
+# Tasks: sdd ticks a box when its test passes, git proves it: a ticked task needs a commit
+# naming it, in every profile. Features also need tasks, all ticked (the tasks gate).
+trows=$(task_rows)
+unproven=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' |
+	while IFS= read -r t; do [ -n "$(task_commit "$t")" ] || echo "$t"; done)
+[ -z "$unproven" ] || fail "item $ID: ticked, but no commit names them: $(joinlist "$unproven") (put the task ID in the commit subject)"
+if [ "$(gate_level tasks "$ITYPE")" != off ]; then
+	[ -n "$trows" ] || gate tasks "item $ID: the plan has no tasks (- [ ] T-$ID.1 …)"
+	open=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "open" { print $1 }')
+	[ -z "$open" ] || gate tasks "item $ID: tasks not done: $(joinlist "$open")"
+fi
 # The constitution blocks in every profile.
 guard=$(constitution_guard) || fail "item $ID: $guard"
 

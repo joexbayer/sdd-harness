@@ -14,6 +14,8 @@
 #              committed before the approval
 #   check      the configured checks pass for exactly the code being shipped
 #   built      "## Built" (what was built, how it was verified) is written
+#   tasks      (features) the plan has tasks and every one is ticked; a ticked task needs a
+#              commit naming it in every profile, whatever this level
 #   finish     agent stop hook: no stopping with unplanned, unapproved, unverified or
 #              unwritten-up code changes (blocks once, then lets it stop with a warning)
 [profile "lite"]
@@ -21,18 +23,21 @@
 	approved = block
 	check = block
 	built = warn
+	tasks = warn
 	finish = block
 [profile "standard"]
 	planned = block
 	approved = block
 	check = block
 	built = block
+	tasks = block
 	finish = block
 [profile "strict"]
 	planned = block
 	approved = block
 	check = block
 	built = block
+	tasks = block
 	finish = block
 
 # A type exists when templates/<type>.md exists. Settings here are optional:
@@ -40,6 +45,8 @@
 #   <gate>     a level that beats the profile's
 #   branch     branch name template (last part must be {id}-{slug})
 #   lands      "item" = only the archived item reaches the base branch, never the code
+[type "feature"]
+	gates = planned approved tasks check built
 [type "hotfix"]
 	gates = planned check built
 	planned = warn

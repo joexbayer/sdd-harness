@@ -6,18 +6,6 @@ usage="usage: $NAME task [done T-<id>.<n>]"
 need_repo
 current_item || die "not on an item branch (see: $CMD status)"
 fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
-base=$(cfg sdd.base main)
-
-# commit_for <task id>: the newest commit on this branch whose subject names the task (whole ID:
-# T-4.1 is not T-4.10).
-commit_for() {
-	git log --format='%h %s' "$base..HEAD" 2>/dev/null |
-		T=$1 awk '{ s = " " substr($0, index($0, " ") + 1) " "; t = ENVIRON["T"]
-			while ((i = index(s, t)) > 0) {
-				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; exit }
-				s = substr(s, i + length(t))
-			} }'
-}
 
 if [ $# -eq 0 ]; then
 	rows=$(task_rows)
@@ -26,7 +14,7 @@ if [ $# -eq 0 ]; then
 		t=$(tsv 1 "$r")
 		box="[ ]"
 		[ "$(tsv 2 "$r")" = 'done' ] && box="[x]"
-		c=$(commit_for "$t")
+		c=$(task_commit "$t")
 		echo "$box $t $(tsv 3 "$r")"
 		ex=
 		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail)"
