@@ -11,6 +11,9 @@ printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"duration_m
 assert_eq "$(use claude agent_usage "$T/claude.json")" "4312${tab}56${tab}0.0412${tab}ok"
 printf '%s\n' '{"type":"result","subtype":"error_max_turns","is_error":true,"total_cost_usd":0.5,"usage":{"input_tokens":1,"output_tokens":2}}' >"$T/claude-err.json"
 assert_eq "$(use claude agent_usage "$T/claude-err.json")" "1${tab}2${tab}0.5${tab}error_max_turns"
+# The real result line of claude -p (Claude Code, 2026-10-27; ids redacted): usage.iterations[]
+# repeats the token keys, so the first match (the total) must win.
+assert_eq "$(use claude agent_usage "$SRC/tests/data/claude-p-result.json")" "106709${tab}1746${tab}0.006877399999999999${tab}ok"
 : >"$T/empty"
 assert_eq "$(use claude agent_usage "$T/empty")" "${tab}${tab}${tab}no result"
 

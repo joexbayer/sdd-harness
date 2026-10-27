@@ -135,6 +135,27 @@ Deviations:
 - The claude `agent_run` sends the prompt on stdin; narrow takes it as `-p` text.
 - Tasks were built in order with a test each, ticked through `task done` (item 15's lesson).
 
+Fresh-context review (no blockers, 4 warnings, 8 nits; security pass: no exploitable finding) and
+what changed:
+- Fixed: a tier's settings were read key by key, so a project's `args` for its Claude tier reached
+  a developer who mapped that tier to narrow. A tier is now read whole from one file
+  (`tier_file`, `tier_get`): the developer's if they define it. Test: t_run.sh.
+- Fixed: `sdd run` ran a role in the human's turns (waiting for approval, review, a PR); it now
+  refuses (exit 2). Test: t_run.sh.
+- Fixed: a model value with a newline could add frontmatter (e.g. a permission mode) to a
+  subagent; names are checked (`tier_ok`), bad roles are skipped with a warning. Tests:
+  t_run.sh, t_roles.sh.
+- Fixed by a real run: `sdd run planner` on claude -p (Haiku, $0.007) showed that `usage`
+  repeats its keys in `iterations[]`, so reading the last match logged 38k in / 756 out instead
+  of 107k / 1.7k. The readers take the first match now, and that real result line is a test
+  fixture (tests/data/claude-p-result.json). Costs print with 4 decimals.
+- Fixed nits: args are split on spaces without glob expansion (`set -f`); a role prompt's
+  `{{id}}` reads "the given item" in a subagent; narrow's stop hook blocks the plain way again;
+  the subagent logging moved to the Claude adapter (`agent_subagent_hook`) and `item_phase` sets
+  TASK, so neither repeats the task lookup.
+- Accepted: `run_log` takes 14 arguments (one writer, documented); FR-16.3 (the skill hands off)
+  is shown by the real run, not by a test, since only Claude Code can spawn the subagent.
+
 Found in the real runs, for later items:
 - qwen ticked its task but did not commit: the builder role prompt should insist on the commit.
 - The planner found a real dependency: item 2's branch lacks item 1's code while the check

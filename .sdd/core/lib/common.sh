@@ -484,7 +484,7 @@ run_log() {
 	tail -n 1 "$ST/runs.tsv" | awk -F '\t' '
 		function k(x) { return x == "" ? "?" : x >= 1000 ? sprintf("%.0fk", x / 1000) : x }
 		{ printf "run %s · %s · %s %s · item %s%s · %s in / %s out%s · %ss · exit %s · %s\n", $1, $4, $5, $6, $3,
-			($8 == "" ? "" : " " $8), k($9), k($10), ($11 == "" ? "" : " · $" $11), $12, $13, ($14 == "" ? "-" : $14) }'
+			($8 == "" ? "" : " " $8), k($9), k($10), ($11 == "" ? "" : sprintf(" · $%.4f", $11)), $12, $13, ($14 == "" ? "-" : $14) }'
 }
 
 # masked: the input lines that hide a failure ("cmd || true", "|| :", "|| exit 0").
@@ -567,11 +567,24 @@ agents() {
 	done | sed -n 's/^\([a-z0-9-]*\)\.sh$/\1/p' | sort -u
 }
 
-# json_num <key> <json line>, json_str <key> <json line>: the (last) "<key>": value in one line
-# of an agent's JSON output (numbers; strings without escaped quotes), or nothing. sed only (C-1):
+# json_num <key> <json line>, json_str <key> <json line>: the first "<key>": value in one line
+# of an agent's JSON output (numbers; strings without escaped quotes), or nothing. The first,
+# because totals come before their parts (claude's usage, then usage.iterations[]). awk only (C-1):
 # enough for the few flat fields sdd reads from an agent's final line.
-json_num() { printf '%s\n' "$2" | sed -n "s/.*\"$1\":[[:space:]]*\([0-9][0-9.eE+-]*\).*/\\1/p" | head -n 1; }
-json_str() { printf '%s\n' "$2" | sed -n "s/.*\"$1\":[[:space:]]*\"\([^\"]*\)\".*/\\1/p" | head -n 1; }
+json_num() {
+	K=$1 awk '{ i = index($0, "\"" ENVIRON["K"] "\":"); if (!i) exit
+		s = substr($0, i + length(ENVIRON["K"]) + 3); sub(/^[ \t]*/, "", s)
+		if (match(s, /^[0-9][0-9.eE+-]*/)) print substr(s, 1, RLENGTH); exit }' <<EOF
+$2
+EOF
+}
+json_str() {
+	K=$1 awk '{ i = index($0, "\"" ENVIRON["K"] "\":"); if (!i) exit
+		s = substr($0, i + length(ENVIRON["K"]) + 3); sub(/^[ \t]*/, "", s)
+		if (substr(s, 1, 1) == "\"") { s = substr(s, 2); print substr(s, 1, index(s, "\"") - 1) }; exit }' <<EOF
+$2
+EOF
+}
 
 # exclude <path>: keep a generated file out of git for this clone only.
 exclude() {
