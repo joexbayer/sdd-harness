@@ -15,7 +15,7 @@ awk '/^## What changes$/ { print; print "FR-1.1 WHEN a page is asked for THE SYS
 /^## Tasks \(optional\)$/ { print
 	print "- [ ] T-1.1 Page test first, FR-1.1 (files: t1.sh; test: sh t1.sh; expect: fail)"
 	print "- [ ] T-1.2 Page the orders query, FR-1.1 (files: q.sh; test: sh t1.sh && echo ran >ran.txt)"
-	print "- [ ] T-1.3 Docs (files: README.md)"; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+	print "- [ ] T-1.3 Docs (files: README.md)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs(1): plan with tasks"
 
 # FR-15.1, FR-15.6: sdd task lists each task with its test and whether a commit names it.
@@ -87,4 +87,41 @@ assert_contains "$out" '✓ T-1.3 done (the check passed)'
 git commit -qam "docs(1): T-1.3 docs"
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'shipped 1 into main'
+
+# Review cases, on a second item (standard profile from above).
+sdd new feature "Hard cases" >/dev/null 2>&1
+f=specs/changes/2-hard-cases/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print
+	print "```"; print "- [ ] T-2.1 an example in a fence"; print "```"
+	print "- [ ] T-2.1 Red first (files: t2.sh; test: sh other.sh; expect: fail)"
+	print "- [ ] T-2.2 Hides failures (test: false || true)"
+	print "- [ ] T-2.3 Wrapped (test: true)"; print "  and more words"
+	print "- [ ] T-2.4 Plain (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(2): plan" && sdd approve >/dev/null 2>&1 || fail "approve 2 failed"
+# FR-15.2: a red task's files must exist, and a red test that ran no tests is not red.
+assert_contains "$(sdd task 'done' T-2.1 2>&1)" 't2.sh (in files:) does not exist yet'
+printf 'echo "No tests found"\nexit 1\n' >other.sh
+echo x >t2.sh
+assert_contains "$(sdd task 'done' T-2.1 2>&1)" 'its test ran no tests'
+# FR-15.2: a test that hides failures, and attributes that do not end the line, are refused.
+assert_contains "$(sdd task 'done' T-2.2 2>&1)" 'its test hides failures'
+assert_contains "$(sdd task 'done' T-2.3 2>&1)" 'its attributes must end its line'
+# The fenced example is never ticked; the real line is.
+sdd task 'done' T-2.4 >/dev/null 2>&1 || fail "T-2.4 failed"
+grep -q '^- \[x\] T-2.4 ' "$f" || fail "T-2.4 not ticked"
+git add -A && git commit -qm "feat(2): T-2.4 plain"
+# FR-15.7: a tick by hand is refused at ship, even with a commit naming it.
+sed 's/^- \[ \] T-2.1 Red/- [x] T-2.1 Red/' "$f" >"$T/f" && cp "$T/f" "$f"
+grep -c '^- \[ \] T-2.1 an example' "$f" >/dev/null || fail "the fenced example changed"
+fill "$f" built && git commit -qam "feat(2): T-2.1 red first, by hand"
+assert_contains "$(sdd ship 2>&1)" 'ticked without .sdd/bin/sdd task done: T-2.1'
+# A teammate's tick was proven on their machine: only the commit is asked for.
+git commit -q --amend --author="kari <kari@example.com>" --no-edit
+out=$(sdd ship 2>&1)
+assert_not_contains "$out" 'ticked without'
+assert_contains "$out" 'tasks not done: T-2.2, T-2.3'
+# FR-15.4: any other plan edit still voids the approval.
+sed 's/^- \[ \] T-2.2 Hides failures/- [ ] T-2.2 Hides nothing/' "$f" >"$T/f" && cp "$T/f" "$f"
+assert_contains "$(sdd status)" 'changed after approval'
 exit 0

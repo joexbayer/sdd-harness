@@ -389,20 +389,21 @@ item_phase() {
 }
 
 # task_rows: the current item's tasks (IFILE, ID), one per line, in plan order:
-# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids, space-separated>".
+# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>". <bad> is 1 when the
+# line has attributes that do not end it (a wrapped line, words after them): sdd must not guess.
 # Attributes sit in a final "(files: …; test: …; expect: fail)"; a value runs to the next
 # "; <key>:", so a test command may contain ";" and parentheses.
 task_rows() {
 	parse_item "$IFILE" "$ID" | awk -F '\t' -v OFS='\t' '
-		$1 != "task" { next }
+		$1 != "task" || $2 !~ /^T-[0-9]+\.[0-9]+$/ { next }
 		{
-			txt = $4; what = txt; files = ""; test = ""; expect = ""; frs = ""; s = txt
-			while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
+			txt = $4; what = txt; files = ""; test = ""; expect = ""; frs = ""; bad = 0
 			p = 0
 			for (k = 1; k <= 3; k++) {
 				key = (k == 1 ? "files:" : k == 2 ? "test:" : "expect:")
 				i = index(txt, " (" key); if (i && (p == 0 || i < p)) p = i
 			}
+			if (p && substr(txt, length(txt)) != ")") bad = 1
 			if (p && substr(txt, length(txt)) == ")") {
 				what = substr(txt, 1, p - 1); a = "; " substr(txt, p + 2, length(txt) - p - 2)
 				n = 0
@@ -415,8 +416,10 @@ task_rows() {
 					if (name[j] == "files") files = val[j]; else if (name[j] == "test") test = val[j]; else expect = val[j]
 				}
 			}
+			s = what
+			while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
 			sub(/(,? FR-[0-9]+\.[0-9]+)+[ ,]*$/, "", what); sub(/[ ,]+$/, "", what)
-			print $2, $3, what, files, test, expect, frs
+			print $2, $3, what, files, test, expect, frs, bad
 		}'
 }
 

@@ -190,11 +190,18 @@ if [ "$(gate_level approved "$ITYPE")" != off ]; then
 fi
 [ -z "$(missing_sections "$IFILE" built)" ] || gate built "item $ID: \"## Built\" is not written yet"
 # Tasks: sdd ticks a box when its test passes, git proves it: a ticked task needs a commit
-# naming it, in every profile. Features also need tasks, all ticked (the tasks gate).
+# naming it, in every profile, and, when that commit is yours, the note task done left in this
+# clone (a teammate's tick was proven on their machine). Features also need tasks, all ticked.
 trows=$(task_rows)
 unproven=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' |
 	while IFS= read -r t; do [ -n "$(task_commit "$t")" ] || echo "$t"; done)
 [ -z "$unproven" ] || fail "item $ID: ticked, but no commit names them: $(joinlist "$unproven") (put the task ID in the commit subject)"
+me=$(git config user.name)
+byhand=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r t; do
+	grep -qx "$t" "$ST/checks/$ID.tasks" 2>/dev/null && continue
+	[ "$(git log -1 --format=%an "$(task_commit "$t")")" != "$me" ] || echo "$t"
+done)
+[ -z "$byhand" ] || fail "item $ID: ticked without $CMD task done: $(joinlist "$byhand") (untick them and run task done)"
 if [ "$(gate_level tasks "$ITYPE")" != off ]; then
 	[ -n "$trows" ] || gate tasks "item $ID: the plan has no tasks (- [ ] T-$ID.1 …)"
 	open=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "open" { print $1 }')
