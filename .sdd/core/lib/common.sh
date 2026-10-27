@@ -177,7 +177,9 @@ plan_part() {
 	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit } { print }' "$1"
 }
 
-plan_hash() { plan_part "$1" | git hash-object --stdin; }
+# plan_hash <file>: what approval pins. Task boxes count as unticked: sdd ticks them as tasks pass
+# (task done), which must not void the approval; every other plan edit does.
+plan_hash() { plan_part "$1" | sed 's/^- \[[xX]\] T-/- [ ] T-/' | git hash-object --stdin; }
 
 # approval_ok: approved, and the plan has not changed since.
 approval_ok() {
@@ -378,6 +380,38 @@ item_phase() {
 			WHYCODE=ready
 		fi
 	fi
+}
+
+# task_rows: the current item's tasks (IFILE, ID), one per line, in plan order:
+# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids, space-separated>".
+# Attributes sit in a final "(files: …; test: …; expect: fail)"; a value runs to the next
+# "; <key>:", so a test command may contain ";" and parentheses.
+task_rows() {
+	parse_item "$IFILE" "$ID" | awk -F '\t' -v OFS='\t' '
+		$1 != "task" { next }
+		{
+			txt = $4; what = txt; files = ""; test = ""; expect = ""; frs = ""; s = txt
+			while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
+			p = 0
+			for (k = 1; k <= 3; k++) {
+				key = (k == 1 ? "files:" : k == 2 ? "test:" : "expect:")
+				i = index(txt, " (" key); if (i && (p == 0 || i < p)) p = i
+			}
+			if (p && substr(txt, length(txt)) == ")") {
+				what = substr(txt, 1, p - 1); a = "; " substr(txt, p + 2, length(txt) - p - 2)
+				n = 0
+				while (match(a, /; (files|test|expect): /)) {
+					if (n) val[n] = substr(a, 1, RSTART - 1)
+					kk = substr(a, RSTART + 2, RLENGTH - 4); a = substr(a, RSTART + RLENGTH); n++; name[n] = kk
+				}
+				if (n) val[n] = a
+				for (j = 1; j <= n; j++) {
+					if (name[j] == "files") files = val[j]; else if (name[j] == "test") test = val[j]; else expect = val[j]
+				}
+			}
+			sub(/[ ,]+$/, "", what)
+			print $2, $3, what, files, test, expect, frs
+		}'
 }
 
 # masked: the input lines that hide a failure ("cmd || true", "|| :", "|| exit 0").
