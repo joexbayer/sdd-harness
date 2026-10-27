@@ -122,8 +122,8 @@ DOD-7.2 On this repo, `sdd tidy` removes the leftover local branches of items 2-
   (18 rules now). Test: tests/t_agents.sh. FR-7.11 (`--remote` first only): `tidy.sh:8,12`.
   Test: t_tidy.sh.
 - C-4 enforcement: `tests/constitution/c4-commits.sh` now catches `git push` anywhere in code
-  (it only caught lines starting with it, so `if git push` slipped by), except messages and
-  tidy's `--delete`. Verified it flags an `if git push origin main` in a verb.
+  (it only caught lines starting with it, so `if git push` slipped by); the one allowed push is
+  tidy.sh's line marked `# C-4: tidy --remote` (see the review notes below).
 - Also: AGENTS.md block, the ship skill, help, README and design §8/§16 name `open`, `tidy` and
   `tidy --remote` as human-only; kb note specs/kb/git-cleanup.md; dev skill gotchas.
 
