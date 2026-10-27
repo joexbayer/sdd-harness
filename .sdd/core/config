@@ -69,3 +69,29 @@
 # The constitution (specs/constitution.md) is capped, because budgets are lint errors.
 [constitution]
 	max-articles = 30
+# Files whose diffs the human reads in full in `review`: dependencies, CI and agent config change
+# what runs, with what, and who decides (shell patterns, * matches /). Lines in .sdd/config add
+# to these; the tool's own folder always counts.
+[review]
+	sensitive = *package-lock.json
+	sensitive = *yarn.lock
+	sensitive = *pnpm-lock.yaml
+	sensitive = *Gemfile.lock
+	sensitive = *poetry.lock
+	sensitive = *uv.lock
+	sensitive = *Cargo.lock
+	sensitive = *go.sum
+	sensitive = *package.json
+	sensitive = *Gemfile
+	sensitive = *pyproject.toml
+	sensitive = *requirements*.txt
+	sensitive = *Cargo.toml
+	sensitive = *go.mod
+	sensitive = .github/*
+	sensitive = .gitlab-ci.yml
+	sensitive = AGENTS.md
+	sensitive = CLAUDE.md
+	sensitive = .claude/*
+	sensitive = .mcp.json
+	sensitive = .codex/*
+	sensitive = .cursor/*

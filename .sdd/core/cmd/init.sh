@@ -47,6 +47,14 @@ if [ ! -f "$config" ]; then
 	else
 		warn "no test command detected: add 'run = <command>' under [check] in $DIRNAME/config"
 	fi
+	# Secret scanning, when gitleaks is installed: committed keys are the most common leak, and
+	# agent-written commits leak more often. Optional by design (C-1); the team can remove it.
+	if command -v gitleaks >/dev/null 2>&1; then
+		git config -f "$config" --add check.run 'gitleaks dir . --no-banner'
+		echo "checks: + gitleaks dir . (secret scanning)"
+	else
+		echo "tip     install gitleaks and add 'run = gitleaks dir . --no-banner' under [check] to catch committed secrets"
+	fi
 	echo "wrote $DIRNAME/config (profile lite, base $(git config -f "$config" sdd.base))"
 fi
 

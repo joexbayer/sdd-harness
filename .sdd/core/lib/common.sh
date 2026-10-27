@@ -57,6 +57,15 @@ cfg_all() {
 	return 1
 }
 
+# cfg_every <key>: every value of a multi-valued key from core, user and project config
+# together: a list that adds up, unlike cfg_all, where the first file with any wins.
+cfg_every() {
+	for _f in "$SDD_HOME/core/config" "$(user_config)" "$SDD_HOME/config"; do
+		[ -f "$_f" ] && git config -f "$_f" --get-all "$1"
+	done
+	return 0
+}
+
 # types: every type with a template (core or local).
 types() {
 	for _d in "$SDD_HOME/core/templates" "$SDD_HOME/local/templates"; do
