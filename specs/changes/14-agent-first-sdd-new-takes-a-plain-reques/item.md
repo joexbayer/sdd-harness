@@ -20,7 +20,7 @@ human-only (ask rules, unchanged). No input, dependency, secret or network chang
 ## Built
 - `.sdd/core/agents/skills/new.md`: the description also triggers on `/sdd-new <what you want>`;
   step 2 picks the type and a short title from the request and proposes them in one line
-  ("That's a feature: \"…\". Start it?"), asking first when the request is unclear. The
+  (`That's a feature: "…". Start it?`), asking first when the request is unclear. The
   human still says yes before `new` runs. Test: tests/t_agents.sh (the new trigger and wording).
 - README.md: opens with the agent conversation; the CLI is "what the agent ran underneath"; the
   install step calls `sync` a once-per-developer step and says what it writes; the skills bullet
