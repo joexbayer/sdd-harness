@@ -90,7 +90,7 @@ DOD-15.2 This item's own remaining tasks are ticked through `sdd task done`, and
 each against its commit.
 
 ## Tasks (optional)
-- [ ] T-15.1 Parse task attributes and FRs; normalise boxes in plan_hash, FR-15.1, FR-15.4 (files: .sdd/core/lib/common.sh, tests/t_task.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_task.sh)
+- [x] T-15.1 Parse task attributes and FRs; normalise boxes in plan_hash, FR-15.1, FR-15.4 (files: .sdd/core/lib/common.sh, tests/t_task.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_task.sh)
 - [ ] T-15.2 `sdd task` and `sdd task done`, FR-15.2, FR-15.3, FR-15.6 (files: .sdd/core/cmd/task.sh, tests/t_task.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_task.sh)
 - [ ] T-15.3 Current task in the phase and `next`, FR-15.5 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_task.sh)
 - [ ] T-15.4 Ship drift check and the tasks gate, FR-15.7 (files: .sdd/core/cmd/ship.sh, .sdd/core/config; test: SH=/bin/sh SRC=$PWD sh tests/t_task.sh)
