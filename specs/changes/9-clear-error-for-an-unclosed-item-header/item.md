@@ -4,6 +4,7 @@ type: fix
 title: Clear error for an unclosed item header
 status: open
 created: 2026-10-27
+approved: fe5d615f0b4d18da5144322c552e0106444c482a 2026-10-27 joexbayer
 ---
 # 9 Clear error for an unclosed item header
 
