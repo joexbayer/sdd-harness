@@ -330,7 +330,7 @@ check_passed_here() {
 }
 
 # item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), WHYCODE (the same
-# as a stable word for programs: frontmatter|status|fill|approval|changed|check|built|ready)
+# as a stable word for programs: frontmatter|status|fill|approval|changed|task|check|built|ready)
 # and MISSING.
 #   plan    the human's time: header not closed, plan empty, or not (or no longer) approved
 #   build   the agent's time: no passing check for this code, or "## Built" empty
@@ -365,8 +365,14 @@ item_phase() {
 			WHYCODE=approval
 		fi
 	else
+		# Open tasks come first: the builder works them in order (task done ticks them).
+		_t=$(task_rows | awk -F '\t' '$2 == "open" && !f { f = $1 "\t" $3 } END { if (f != "") print f "\t" NR }')
 		MISSING=$(missing_sections "$IFILE" built)
-		if [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
+		if [ -n "$_t" ]; then
+			PHASE=build
+			WHY="task $(tsv 1 "$_t") of $(tsv 3 "$_t"): $(tsv 2 "$_t")"
+			WHYCODE=task
+		elif [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
 			PHASE=build
 			WHY="no passing check for the current code"
 			WHYCODE=check
@@ -409,7 +415,7 @@ task_rows() {
 					if (name[j] == "files") files = val[j]; else if (name[j] == "test") test = val[j]; else expect = val[j]
 				}
 			}
-			sub(/[ ,]+$/, "", what)
+			sub(/(,? FR-[0-9]+\.[0-9]+)+[ ,]*$/, "", what); sub(/[ ,]+$/, "", what)
 			print $2, $3, what, files, test, expect, frs
 		}'
 }
