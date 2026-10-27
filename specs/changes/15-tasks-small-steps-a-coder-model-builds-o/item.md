@@ -97,8 +97,40 @@ each against its commit.
 - [x] T-15.5 Template, plan prompt, help and design, FR-15.8 (files: .sdd/core/templates/feature.md, .sdd/core/prompts/plan.md, specs/design.md)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-15.1 (task attributes): `task_rows` (`.sdd/core/lib/common.sh:395`) reads each task's
+  files, test, `expect` and the FRs it names from a final `(files: …; test: …; expect: fail)`;
+  a value runs to the next `; <key>:`, so a test may contain `;` and parentheses. Test:
+  tests/t_task.sh (`sdd task` output).
+- FR-15.2, FR-15.3 (`task done`): `.sdd/core/cmd/task.sh`. It refuses before running anything
+  unless the plan is approved and unchanged (`task.sh:34`), runs the task's test from the repo
+  root (the check when it names none), treats exit 126/127 as "could not run" even with
+  `expect: fail`, ticks the box and prints the commit message. Test: t_task.sh (unapproved,
+  unknown, already ticked, a red task that passes, a failing test, no test → check).
+- FR-15.4 (ticks do not void approval): `plan_hash` (`common.sh:182`) counts every box as
+  unticked. Test: t_task.sh. Approved items keep their hash (their boxes were unticked).
+- FR-15.5 (the current task): `item_phase` gives reason code `task` with "task T of N: …"
+  (`common.sh:374`); `next.sh:28` prints the task, its files, test, expectation and the FRs it
+  serves with their examples, then the steps. `summary` shows it as "building: task …". Test:
+  t_task.sh.
+- FR-15.6 (`sdd task`): lists boxes, test, FRs and the commit naming each (`task_commit`,
+  `common.sh:425`: whole IDs in the subject, so T-4.1 is not T-4.10). Test: t_task.sh.
+- FR-15.7 (ship): `ship.sh:194` refuses ticked tasks no commit names (every profile) and applies
+  the `tasks` gate (`core/config`: feature only; lite warn, standard and strict block). Test:
+  t_task.sh (refused in lite, blocked in standard until the last task is ticked, then shipped).
+- FR-15.8: `templates/feature.md` `## Tasks (optional)` with the line format; `prompts/plan.md`
+  asks for small, ordered tasks with a test of their own. Test: t_task.sh.
+- Also: help, design §7 (task grammar), §8 (`task`), §16 (the agreed roadmap order: 12, 15,
+  then model roles + usage, multi-item plans, contracts, the experiment; team mode later).
+- Dogfooding (DOD-15.2): this item's five tasks were ticked with `sdd task done`, each tick
+  committed naming its task; `sdd task` shows a commit for every one.
+
+Deviations:
+- All five of this item's tasks share one test file (my planning mistake), so none could pass
+  `task done` before the whole feature worked: they were built in order, each committed under its
+  ID, and ticked at the end. The plan prompt and template now ask for a test of each task's own.
+- tests/t_query.sh hand-ticks a task: its commit now names that task, because ship refuses an
+  unproven tick (FR-15.7). No assertion was dropped.
+- Found while dogfooding: `sdd task` printed a commit hash twice; fixed and tested.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
