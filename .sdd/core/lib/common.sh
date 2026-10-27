@@ -66,6 +66,26 @@ cfg_every() {
 	return 0
 }
 
+# tier_file <tier>: the one config file that defines the tier (sets its agent), the developer's
+# own first, then the project's. A tier is read whole from that file: a project's args for one
+# agent never reach a developer who maps the tier to another (D-16.1).
+tier_file() {
+	for _f in "$(user_config)" "$SDD_HOME/config" "$SDD_HOME/core/config"; do
+		[ -f "$_f" ] && git config -f "$_f" --get "tier.$1.agent" >/dev/null && { printf '%s\n' "$_f"; return 0; }
+	done
+	return 1
+}
+
+# tier_get <tier> <key>: one setting of the tier, from its file (tier_file).
+tier_get() { _tf=$(tier_file "$1") && git config -f "$_tf" --get "tier.$1.$2"; }
+
+# tier_ok <agent> <model>: names safe to use as a file name and inside YAML: an agent is a word,
+# a model has no spaces, quotes or newlines.
+tier_ok() {
+	case $1 in '' | *[!a-z0-9-]*) return 1 ;; esac
+	case $2 in '' | *[!A-Za-z0-9._:/@[\]-]*) return 1 ;; esac
+}
+
 # cfg_mine <key> [default]: a tier or agent setting, the developer's own config first, then the
 # project's: the team names roles, each developer chooses the agent and model behind them.
 cfg_mine() {
@@ -338,7 +358,8 @@ check_passed_here() {
 	grep -qx "fp=$_fp" "$_rec" && grep -qx 'result=pass' "$_rec"
 }
 
-# item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), WHYCODE (the same
+# item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), TASK (the current task,
+# in build), WHYCODE (the same
 # as a stable word for programs: frontmatter|status|fill|approval|changed|task|check|built|ready)
 # and MISSING.
 #   plan    the human's time: header not closed, plan empty, or not (or no longer) approved
@@ -346,6 +367,7 @@ check_passed_here() {
 #   review  the human's time: verified and written up
 item_phase() {
 	WHY=
+	TASK=
 	WHYCODE=
 	MISSING=$(missing_sections "$IFILE" plan)
 	if ! fm_closed "$IFILE"; then
@@ -381,6 +403,7 @@ item_phase() {
 			PHASE=build
 			WHY="task $(tsv 1 "$_t") of $(tsv 3 "$_t"): $(tsv 2 "$_t")"
 			WHYCODE=task
+			TASK=$(tsv 1 "$_t")
 		elif [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
 			PHASE=build
 			WHY="no passing check for the current code"

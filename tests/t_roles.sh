@@ -12,6 +12,9 @@ mkdir -p "$XDG_CONFIG_HOME/sdd"
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.agent narrow
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.model qwen3-coder-30b
 mkdir -p .claude/agents && printf -- '---\nname: sdd-reviewer\n---\nMine.\n' >.claude/agents/sdd-reviewer.md
+mkdir -p .sdd/local/prompts && echo "Plan {{id}} carefully." >.sdd/local/prompts/role-planner.md
+setcfg role.odd.tier weird && setcfg tier.weird.agent claude
+git config -f .sdd/config tier.weird.model "$(printf 'opus\npermissionMode: bypassPermissions')" && git commit -qam "test: odd tier"
 
 out=$(sdd sync claude 2>&1) || fail "sync failed: $out"
 # FR-16.2: a subagent for the Claude role only, with its tier's model; the developer's own file stays.
@@ -21,6 +24,9 @@ assert_eq "$(sed -n 2p "$a")" 'name: sdd-planner'
 grep -qx 'model: opus' "$a" || fail "planner subagent has no model: opus"
 assert_contains "$(cat "$a")" 'Run `.sdd/bin/sdd next`, do exactly the step it gives you'
 assert_no_file .claude/agents/sdd-builder.md
+assert_contains "$(cat "$a")" 'Plan the given item carefully.'
+assert_no_file .claude/agents/sdd-odd.md
+assert_contains "$out" 'skipped role odd: tier weird needs a model name'
 assert_eq "$(sed -n 4p .claude/agents/sdd-reviewer.md)" 'Mine.'
 grep -qx '/.claude/agents/sdd-planner.md' "$(git rev-parse --git-common-dir)/info/exclude" || fail "subagent not excluded"
 s=.claude/settings.local.json
@@ -54,4 +60,8 @@ assert_eq "$(tail -n 1 "$log" | cut -f3-10,13,14)" "$(printf '1\tplanner\tclaude
 hook subagent-start "{\"cwd\":\"$R\",\"agent_id\":\"a2\",\"agent_type\":\"Explore\"}"
 hook subagent-stop "{\"cwd\":\"$R\",\"agent_id\":\"a2\",\"agent_type\":\"Explore\",\"agent_transcript_path\":\"$T/agent.jsonl\"}"
 assert_eq "$(grep -vc '^#' "$log")" 1
+# Narrow has no reply format of its own: its stop hook still blocks the plain way (exit 2).
+echo code >code.txt
+sdd hook stop --agent narrow </dev/null >/dev/null 2>&1
+assert_eq $? 2 "(narrow stop hook)"
 exit 0

@@ -14,14 +14,16 @@ tier=$(cfg "role.$role.tier") ||
 	usage_die "no tier for role $role; add to $DIRNAME/config:
 [role \"$role\"]
 	tier = <name, e.g. small>"
-agent=$(cfg_mine "tier.$tier.agent")
-model=$(cfg_mine "tier.$tier.model")
+# The tier is read whole from one file: yours if you define it, else the project's (tier_file).
+agent=$(tier_get "$tier" agent)
+model=$(tier_get "$tier" model)
 [ -n "$agent" ] && [ -n "$model" ] ||
 	usage_die "tier $tier has no agent or model; add to $(user_config) (yours) or $DIRNAME/config:
 [tier \"$tier\"]
 	agent = <claude|narrow>
 	model = <model name>"
-args=$(cfg_mine "tier.$tier.args" '')
+tier_ok "$agent" "$model" || usage_die "tier $tier: agent must be a word and model a name without spaces or quotes (got: $agent, $model)"
+args=$(tier_get "$tier" args)
 bin=$(cfg_mine "agent.$agent.bin" "$agent")
 adapter=$(sdd_path "agents/$agent.sh") || usage_die "unknown agent: $agent (agents: $(agents | paste -sd ' ' -))"
 # shellcheck source=/dev/null
@@ -30,9 +32,12 @@ command -v agent_run >/dev/null 2>&1 || die "$agent cannot run headless from $NA
 
 # What the role is to do: the item's next step, plus the role's own prompt if the project has one.
 item_phase
+# A role works the agent's phases only: approving, reviewing and shipping are the human's.
+case $WHYCODE in
+approval | changed | ready | pr | status) usage_die "item $ID is waiting for the human ($WHY): no role runs now" ;;
+esac
 phase=$PHASE
-task=
-[ "$WHYCODE" != task ] || task=$(task_rows | awk -F '\t' '$2 == "open" { print $1; exit }')
+task=$TASK
 run_slot
 n=$RUN
 dir=$RUNDIR
@@ -45,8 +50,11 @@ fi
 echo "run $n · $role · $agent $model · item $ID${task:+ $task} · started"
 start=$(date +%s)
 started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+# args are split on spaces, as written in the tier (no quoting), and never glob-expanded.
+set -f
 agent_run "$bin" "$model" "$dir/prompt.md" "$dir/out" "$args" 2>"$dir/stderr"
 rc=$?
+set +f
 secs=$(($(date +%s) - start))
 use=$(agent_usage "$dir/out")
 [ "$rc" -ne 127 ] || use=$(printf '\t\t\t%s not found' "$bin")
