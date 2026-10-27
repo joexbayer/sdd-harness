@@ -4,6 +4,7 @@ type: feature
 title: Git forge: worktrees, landing and cleanup
 status: open
 created: 2026-10-27
+---
 # 7 Git forge: worktrees, landing and cleanup
 
 ## Why
