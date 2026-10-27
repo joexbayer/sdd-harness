@@ -4,7 +4,7 @@ type: feature
 title: Model roles and usage tracking
 status: open
 created: 2026-10-27
-approved: 8c0ebd953d5cc1e68d88ccb9515543b761611126 2026-10-27 joexbayer
+approved: 04692f78716df8b7699a9cb4a114c4b29ee3c27f 2026-10-27 joexbayer
 ---
 # 16 Model roles and usage tracking
 
