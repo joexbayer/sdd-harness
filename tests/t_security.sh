@@ -1,6 +1,7 @@
 # FR-12.1 a required Security section in feature, fix and chore; FR-12.2 and FR-12.3 the plan
 # and build rules; FR-12.4 the security pass before finishing; FR-12.5 review lists sensitive
-# files, the Security section and a checklist; FR-12.6 init adds gitleaks when installed.
+# files (also by unusual names; project globs add up), the Security section and a checklist;
+# FR-12.6 init adds gitleaks when installed.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -41,18 +42,24 @@ assert_contains "$out" 'run a security pass over this item'"'"'s diff, in a fres
 # not ordinary code, then the Security section and the checklist.
 mkdir -p .github/workflows src
 echo "on: push" >.github/workflows/ci.yml && echo '{}' >package-lock.json && echo x >src/app.js
+echo "on: push" >".github/workflows/dé.yml"   # a name git would quote
+printf 'on: push\n' >"$(printf '.github/workflows/a\tb.yml')"   # one it quotes even then
 echo "# tweak" >>.sdd/config
 git add -A && git commit -qm "feat(1): code"
 out=$(sdd review)
 assert_contains "$out" 'Sensitive files changed (read these diffs in full)'
 assert_contains "$out" '  .github/workflows/ci.yml'
 assert_contains "$out" '  package-lock.json'
+assert_contains "$out" '  .github/workflows/dé.yml'
+assert_contains "$out" '  ".github/workflows/a\tb.yml"'
 assert_contains "$out" '  .sdd/config'
 assert_not_contains "$(printf '%s\n' "$out" | sed -n '/^Sensitive/,/^$/p')" 'src/app.js'
 assert_contains "$out" 'Security (from the plan)'
 assert_contains "$out" '[ ] new dependencies are real, needed and pinned'
 setcfg --add review.sensitive 'src/*'
-assert_contains "$(sdd review | sed -n '/^Sensitive/,/^$/p')" 'src/app.js'
+out=$(sdd review | sed -n '/^Sensitive/,/^$/p')
+assert_contains "$out" 'src/app.js'
+assert_contains "$out" 'package-lock.json'   # project globs add to the defaults
 git switch -q main
 
 # FR-12.6: init adds gitleaks when it is on PATH, and gives a tip when it is not.

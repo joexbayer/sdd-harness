@@ -92,8 +92,36 @@ DOD-12.2 This item's own `sdd review` lists its `.sdd/` changes as sensitive and
 Security section; a new feature item in this repo has the section.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-12.1 (a required Security section): `.sdd/core/templates/{feature,fix,chore}.md`, with the
+  six questions and the "none: <why>" / risk → response form. The existing `planned` gate makes
+  an empty one block or warn per profile. Test: tests/t_security.sh (feature, fix, chore have
+  it, refactor not; empty → "to fill: Security").
+- FR-12.2 (plan rules): `.sdd/core/prompts/plan.md`, one bullet. FR-12.3 (build rules) and
+  FR-12.4 (the security pass before finishing): `.sdd/core/prompts/build.md`. Test:
+  t_security.sh (each rule in `next` output).
+- FR-12.5 (review): `.sdd/core/cmd/review.sh` lists changed files matching `[review] sensitive`
+  (22 defaults in `.sdd/core/config`; core, user and project lists add up via the new
+  `cfg_every`), the tool's own folder, and any name git still quotes; then the Security section
+  and a six-line checklist. Test: t_security.sh (workflow, lockfile, `.sdd/config`, non-ASCII
+  and tab names listed, plain code not; a project glob adds to the defaults).
+- FR-12.6 (gitleaks): `init.sh` adds `gitleaks dir . --no-banner` when it is on PATH, else a tip.
+  Test: t_security.sh (stub gitleaks, and a PATH without it).
+- Security pass (fresh-context subagent on this diff): one finding, fixed. git quoted unusual
+  names (`".github/workflows/d\303\251.yml"`), so a workflow named that way slipped past the
+  sensitive list. Now `core.quotePath=false`, and a name git still quotes always counts. It also
+  noted that one project glob replaced the defaults: fixed with `cfg_every`.
+- Also: the kb note specs/kb/security-practices.md (35 sources, the research behind this item).
+
+Deviations:
+- tests/t_init.sh and tests/t_phase.sh: t_init ignores a `gitleaks` check line (it appears when
+  gitleaks is installed on the machine running the suite), t_phase expects "Security" in the
+  list of sections to fill. Both follow from FR-12.1 and FR-12.6; no assertion was dropped.
+- `case $p in ($g)`: the leading `(` is needed because macOS /bin/sh (bash 3.2) misreads a
+  pattern's `)` inside `$(...)`.
+
+Follow-ups:
+- Scanner tiers per profile (osv-scanner, Semgrep) and a starter constitution (kb note).
+- This repo's own check could add `gitleaks dir .` (it runs in 0.07 s with no findings today).
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

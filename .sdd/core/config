@@ -70,8 +70,8 @@
 [constitution]
 	max-articles = 30
 # Files whose diffs the human reads in full in `review`: dependencies, CI and agent config change
-# what runs, with what, and who decides (shell patterns, * matches /; add your own in .sdd/config).
-# The tool's own folder always counts.
+# what runs, with what, and who decides (shell patterns, * matches /). Lines in .sdd/config add
+# to these; the tool's own folder always counts.
 [review]
 	sensitive = *package-lock.json
 	sensitive = *yarn.lock

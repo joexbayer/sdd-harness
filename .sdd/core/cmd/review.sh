@@ -42,17 +42,20 @@ git diff --stat=100 "$mb" -- . ":(exclude)$SPECS" | sed 's/^/ /'
 git ls-files --others --exclude-standard | grep -v "^$SPECS/" | sed 's/^/  untracked: /'
 
 # Sensitive files: dependencies, CI and agent config change what runs, with what, and who
-# decides, so the human reads these diffs in full. Globs: [review] sensitive; this tool's own
-# folder always counts.
-globs=$(cfg_all review.sensitive)
-sens=$({ git diff --name-only "$mb"; git ls-files --others --exclude-standard; } | sort -u |
-	while IFS= read -r p; do
-		set -f
-		for g in $globs "$DIRNAME/*"; do
-			# shellcheck disable=SC2254 # $g is a pattern on purpose
-			case $p in ($g) echo "$p" && break ;; esac
-		done
-	done)
+# decides, so the human reads these diffs in full. Globs: [review] sensitive (core, user and
+# project lists add up); this tool's own folder always counts. Names git still quotes (tabs,
+# quotes, newlines) always count too: a hidden workflow must not slip past by its name.
+globs=$(cfg_every review.sensitive)
+sens=$({
+	git -c core.quotePath=false diff --name-only "$mb"
+	git -c core.quotePath=false ls-files --others --exclude-standard
+} | sort -u | while IFS= read -r p; do
+	set -f
+	for g in '"*' $globs "$DIRNAME/*"; do
+		# shellcheck disable=SC2254 # $g is a pattern on purpose
+		case $p in ($g) echo "$p" && break ;; esac
+	done
+done)
 if [ -n "$sens" ]; then
 	echo
 	echo "Sensitive files changed (read these diffs in full)"
