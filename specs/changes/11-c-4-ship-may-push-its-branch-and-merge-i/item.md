@@ -46,8 +46,10 @@ C-4 allows only `tidy --remote` to push.
 - "Any verb may push when the human runs it": broader than the two cases planned.
 
 ## Built
-<!-- The constitution diff as applied, and confirmation that every check article passes. -->
-
+- specs/constitution.md C-4: replaced with the Proposed text, word for word.
+- specs/design.md §8: names both exceptions (`tidy --remote`, `ship` with `forge = github`).
+- `tests/constitution/c4-commits.sh` is unchanged and stricter than the new text (only
+  tidy's marked delete may push); item 10 (GitHub adapter) extends it.
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->

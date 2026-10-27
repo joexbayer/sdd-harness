@@ -16,8 +16,10 @@ C-3 IDs never change and are never reused; gaps are fine.
   Why: every reference (tests, commits, other items) depends on them staying put.
   Enforced: review
 
-C-4 Only new, approve and ship create commits. No verb pushes, except `tidy --remote`, which
-  only deletes remote branches of items already shipped or dropped on the base branch.
-  Why: the human decides what lands and what leaves the machine; `tidy --remote` is
-  human-only (an ask rule) and removes only work the base already holds.
+C-4 Only new, approve and ship create commits. No verb pushes, except two human-only ones:
+  `tidy --remote` deletes remote branches of items already shipped or dropped on the base, and
+  `ship` with `forge = github` pushes its own item branch and merges that branch's PR. No verb
+  pushes the base branch.
+  Why: the human decides what lands and what leaves the machine; both run behind an ask rule,
+  and the base changes only through a merge the human started.
   Enforced: check sh tests/constitution/c4-commits.sh

@@ -200,7 +200,8 @@ readers ignore keys they do not know.
 | 5 strict | `trust`, env allowlist, role profiles, `upgrade` with checksums |
 
 Every verb prints a few lines and ends with the next command to run. Only `new`, `approve`
-and `ship` create commits (constitution C-4). No verb pushes, except `tidy --remote`, which deletes remote branches of shipped items.
+and `ship` create commits (constitution C-4). No verb pushes, except `tidy --remote` (deletes remote branches of shipped
+items) and `ship` with `forge = github` (pushes its item branch, merges its PR); none pushes the base.
 
 ## 9. Verification ladder
 
