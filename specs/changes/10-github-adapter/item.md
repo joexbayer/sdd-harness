@@ -4,6 +4,7 @@ type: feature
 title: GitHub adapter
 status: open
 created: 2026-10-27
+approved: fb71ec60ff933829311d0e8ba7ecd0a49f1cc336 2026-10-27 joexbayer
 ---
 # 10 GitHub adapter
 
