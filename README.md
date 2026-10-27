@@ -3,13 +3,19 @@
 Spec-driven changes for people working with coding agents. Humans plan and review; agents
 build. One short file per change, plain shell scripts, and any agent.
 
+You talk to your agent; the agent runs sdd. In Claude Code:
+
 ```
-$ .sdd/bin/sdd new feature "Pagination for the orders page"
-1 feature · Pagination for the orders page
-branch  feature/1-pagination-for-the-orders-page
-item    specs/changes/1-pagination-for-the-orders-page/item.md
-next    fill in the item, then: .sdd/bin/sdd next
+you    /sdd-new pagination for the orders page
+agent  That's a feature: "Pagination for the orders page". Start it?
+you    yes
+agent  Opened item 1 on branch feature/1-pagination-for-the-orders-page. Before any code:
+       who uses the orders page today, and how many orders does a big customer have?
 ```
+
+Underneath, the agent ran `.sdd/bin/sdd new feature "Pagination for the orders page"`; every
+step is a plain shell command (see [Commands](#commands)), so any agent, or a person, can do
+the same by hand.
 
 ## How a change moves
 
@@ -71,8 +77,11 @@ Changes under about 20 lines with no behaviour change need no item: commit them 
 
 ```sh
 /path/to/swe-harness/.sdd/bin/sdd init    # copies .sdd/, writes .sdd/config, adds an AGENTS.md block
-.sdd/bin/sdd sync claude                  # optional: hooks and skills for your agent (claude, codex)
+.sdd/bin/sdd sync claude                  # each developer, once: skills (/sdd-new …), hooks, confirmations
 ```
+
+`sync` writes per-developer files kept out of git: the step skills, the hooks, and the rules
+that make Claude Code ask before `approve`, `ship` and `tidy --remote`. Use `sync codex` for Codex.
 
 Requirements: POSIX `sh`, `git` ≥ 2.31, awk, grep and sed. `jq` is needed only for `sync`
 and the hooks. Windows works through WSL or Git Bash.
@@ -132,7 +141,9 @@ MCP server that shows open items across branches and repos.
 An agent reads the `AGENTS.md` block, runs `.sdd/bin/sdd next` and follows it. With
 `sdd sync claude` (or `codex`) each developer also gets:
 
-- **one skill per step:** `sdd-new`, `sdd-plan`, `sdd-build`, `sdd-review`, `sdd-ship`;
+- **one skill per step:** `/sdd-new <what you want>` picks the change type and a title and
+  confirms them with you; `sdd-plan`, `sdd-build`, `sdd-review` and `sdd-ship` then trigger
+  on plain requests ("build it", "walk me through it", "ship it");
 - **hooks:** the session starts with the current status; an agent that tries to stop with
   unverified code changes is refused once, then told to report it;
 - **ask rules (Claude Code):** `approve`, `ship` and `tidy --remote` always need the human's
