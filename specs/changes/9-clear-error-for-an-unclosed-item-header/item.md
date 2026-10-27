@@ -49,7 +49,6 @@ and `ship`; `fm_set` exits non-zero from awk when the block never closes.
 
 Deviations: none. Follow-up: a file with no frontmatter at all (no --- on line 1) gets the
 same message; good enough, since `new` always writes one.
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
