@@ -8,41 +8,69 @@ created: 2026-10-27
 # 17 Task batches and the build loop
 
 ## Why
-<!-- The problem in plain words: who hurts, and how. 2-4 lines. -->
+With tasks (item 15) and roles as subagents (item 16), building still means telling the agent
+what to do task by task. The human wants to say "now let's build" and have the agent work the
+whole item, giving builder subagents the work without paying a subagent's start-up and context
+for every tiny task.
 
 ## What changes
-<!-- User-visible behaviour. One requirement per entry, each with a concrete example:
-    US-17.1 As a <role> I <action>, so that <outcome>.
-    FR-17.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-      e.g. <input> → <output>
-Start each entry at the beginning of its line, ID first. IDs never change; leave gaps. -->
+US-17.1 As a developer I say "now let's build", so that my agent works through every task with
+builder subagents, small tasks together and bigger ones alone, and stops when something fails.
+FR-17.1 WHEN a task says `size: S|M|L` THE SYSTEM SHALL read it (no size counts as M), and the
+template and plan prompt SHALL ask the planner to size each task.
+  e.g. `- [ ] T-4.1 Add the page field, FR-4.1 (files: src/orders.js; test: npm test -- orders; size: S)`
+FR-17.2 WHEN `sdd task next` runs THE SYSTEM SHALL print the next batch: the first open task,
+joined by the open `size: S` tasks right after it while it is small too, up to `[build] batch`
+(default 3); M and L tasks run alone.
+  e.g. T-4.1 S, T-4.2 S, T-4.3 L, T-4.4 S → batches: T-4.1 + T-4.2, then T-4.3, then T-4.4
+FR-17.3 WHEN the builder works an item THE SYSTEM SHALL show it the current batch in `next` (each
+task as today), and `sdd run builder` (item 16) SHALL run on that batch.
+FR-17.4 WHEN the human says to build ("now let's build", the sdd-build skill) THE SYSTEM SHALL
+have the main agent loop: `sdd task next`, one builder subagent (or `sdd run builder`) for that
+batch, `sdd task done` for each of its tasks and a commit naming them, until no task is open; on
+the first failure it stops and reports; then the check and Built, as today.
+  e.g. "now let's build" → batch 1 (T-4.1, T-4.2) ticked and committed → batch 2 (T-4.3) → …
 
 ## Not in scope (optional)
-<!-- What this deliberately leaves out, and where it went. -->
+Parallel tasks (independent tasks in separate worktrees), building across items (the
+multi-item plans item).
 
 ## How
-<!-- What a reviewer needs: an ASCII sketch of the moving parts, key types or signatures,
-and the decisions they would question, each at the start of its line:
-    D-17.1 <decision>, because <reason>. -->
+```
+ plan: - [ ] T-n.m … (…; size: S) ─▶ task_rows reads size ─▶ sdd task next = the next batch
+ "now let's build" ─▶ sdd-build skill (main agent):
+     loop { batch = sdd task next; subagent sdd-builder (or sdd run builder) on it;
+            sdd task done each; commit "feat(n): T-n.a T-n.b …" } until none open; stop on failure
+```
+- `lib/common.sh`: `task_rows` reads `size`, `task_batch` groups; `cmd/task.sh` gains `next`;
+  `cmd/next.sh` shows the batch; `agents/skills/build.md` (+ `build.claude.md`) is the loop;
+  `templates/feature.md`, `prompts/plan.md` ask for sizes; `core/config` `[build] batch = 3`.
+- Builds on item 16 (subagents, `sdd run`): this item's build starts after 16 ships.
+D-17.1 The planner judges size and the human approves it with the plan; sdd only groups by it,
+because scripts decide and agents judge (design §2), and a batch must be the same every run.
+D-17.2 The loop lives in the skill, not a verb: the main agent spawns subagents, which a shell
+command cannot.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-17.4 rejects non-images and files over 5 MB -->
+No new commands run: the loop uses `task done` (approved tests only, item 15) and subagents or
+`sdd run` (item 16 rules). Risk: an unattended loop does more than intended → it stops at the
+first failure, and approve, ship and `tidy --remote` stay human-only. No new dependency.
 
 ## Questions (optional)
-<!-- Q-17.1 <question> → recommend: <answer>. Resolve before building. -->
+Q-17.1 How does "now let's build" hand out the work? → recommend: one task per subagent, in
+order. → decided: by complexity, to avoid overhead on very small tasks (joexbayer, 2026-10-27);
+so the planner sizes tasks and consecutive small ones share a subagent (D-17.1).
 
 ## Done when
-<!-- DOD-17.1 <observable outcome>, e.g. "works against staging". -->
+DOD-17.1 `sdd check` passes, with a test naming each FR, under /bin/sh and dash.
+DOD-17.2 On a scratch repo, "now let's build" on an item with S, S, L tasks runs two builder
+subagents (one per batch), ticks all three tasks and stops at review.
 
 ## Tasks (optional)
-<!-- Small, ordered steps the builder does one at a time, each in one sitting, each with a test
-of its own (so it can pass before the next task exists):
-    - [ ] T-17.1 Page the orders query, FR-17.1 (files: src/orders.js; test: npm test -- orders)
-Add `; expect: fail` for a test written first (it must fail); without `test:` the full check
-runs. `.sdd/bin/sdd task done T-17.1` ticks a task when its test passes. -->
+- [ ] T-17.1 Task sizes and `sdd task next`, FR-17.1, FR-17.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/config, .sdd/core/prompts/plan.md, .sdd/core/templates/feature.md, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh; size: M)
+- [ ] T-17.2 The batch in `next` and `sdd run builder`, FR-17.3 (files: .sdd/core/cmd/next.sh, .sdd/core/cmd/run.sh, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh; size: S)
+- [ ] T-17.3 The build loop in the sdd-build skill, FR-17.4 (files: .sdd/core/agents/skills/build.md, .sdd/core/agents/skills/build.claude.md, tests/t_build_loop.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_build_loop.sh; size: M)
+- [ ] T-17.4 Help, design and README (files: .sdd/core/cmd/help.sh, specs/design.md, README.md; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
