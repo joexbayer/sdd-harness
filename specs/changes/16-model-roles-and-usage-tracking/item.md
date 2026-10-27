@@ -137,6 +137,12 @@ DOD-16.2 On a scratch repo, a planner subagent (Opus) and a builder run through 
   skill, which spawned the sdd-planner subagent (Opus): it drafted item 2 with five questions and
   recommendations; the hooks logged 329k in / 8k out, 1m 23s, model claude-opus-5-5.
 
+- Q-16.7 (usage tracking off by default, T-16.8): `usage_on` (`[usage] track`, the developer's
+  config first; `core/config` says false). Off, `sdd run` still prints its summary but logs
+  nothing and removes the agent's output (kept when the run failed); `sync claude` installs no
+  subagent hooks and removes sdd's own; `sdd usage` says how to switch it on. Test:
+  tests/t_usage_off.sh; the logging tests switch it on.
+
 Deviations:
 - The claude `agent_run` sends the prompt on stdin; narrow takes it as `-p` text.
 - Tasks were built in order with a test each, ticked through `task done` (item 15's lesson).
