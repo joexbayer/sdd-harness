@@ -2,9 +2,10 @@
 id: 9
 type: fix
 title: Clear error for an unclosed item header
-status: open
+status: shipped
 created: 2026-10-27
 approved: fe5d615f0b4d18da5144322c552e0106444c482a 2026-10-27 joexbayer
+shipped: 2026-10-27
 ---
 # 9 Clear error for an unclosed item header
 
