@@ -4,6 +4,7 @@ type: feature
 title: Security in every phase
 status: open
 created: 2026-10-27
+approved: d9b1b4b7dffbe771948581560f2c58178a33fd0c 2026-10-27 joexbayer
 ---
 # 12 Security in every phase
 
