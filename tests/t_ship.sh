@@ -1,5 +1,6 @@
 # FR-1.8 ship: gates, archive, fast-forward base (checked out elsewhere or not), rollback on
 # failure, never push. FR-1.9 a spike lands only its item. FR-1.13 no code before approval.
+# FR-7.4 a branch pushed before the rebase is still deleted.
 . "$SRC/tests/lib.sh"
 new_repo
 git init -q --bare "$T/remote.git"
@@ -86,7 +87,7 @@ echo "main moved" >"$R/moved.txt"
 git -C "$R" add moved.txt && git -C "$R" commit -qm "unrelated"
 out=$(sdd ship 2>&1) || fail "worktree ship failed: $out"
 assert_contains "$out" 'rebased onto main'
-assert_contains "$out" 'git worktree remove'
+assert_contains "$out" 'this worktree and branch feature/4-wider stay until tidy'   # FR-7.5
 assert_file "$R/wide.txt"
 assert_file "$R/moved.txt"
 assert_file "$R/specs/archive/4-wider/item.md"
@@ -124,4 +125,18 @@ git switch -q main
 assert_not_contains "$(sdd status)" 'Try queue'
 
 assert_eq "$(git ls-remote origin)" "$remote_before" "(ship must never push)"
+
+# --- FR-7.4: a branch pushed before ship rebased it differs from its pushed copy (git branch -d
+# would refuse), yet every commit is on main, so ship deletes it.
+new_repo pushed
+git init -q --bare "$T/pushed.git" && git remote add origin "$T/pushed.git" && git push -q origin main
+planned_item fix "Pushed early"
+echo fixed >fix.txt && git add fix.txt && git commit -qm "fix(1): code"
+fill "$ITEM" built && git commit -qam "docs(1): built" && git push -q -u origin HEAD
+git switch -q main && echo other >other.txt && git add other.txt && git commit -qm "main moves"
+git switch -q fix/1-pushed-early
+out=$(sdd ship 2>&1) || fail "ship failed: $out"
+assert_contains "$out" "rebased onto main"
+assert_contains "$out" "branch fix/1-pushed-early deleted"
+git rev-parse -q --verify refs/heads/fix/1-pushed-early >/dev/null && fail "pushed branch should be deleted"
 exit 0

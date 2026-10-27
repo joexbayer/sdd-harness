@@ -179,6 +179,24 @@ plan_frs() {
 
 current_branch() { git symbolic-ref --quiet --short HEAD 2>/dev/null; }
 
+# main_root: the main checkout's folder (first in `git worktree list`), from any worktree.
+main_root() { git worktree list --porcelain | awk '/^worktree / { print substr($0, 10); exit }'; }
+
+# worktree_of <branch>: the folder where <branch> is checked out, if any.
+worktree_of() {
+	git worktree list --porcelain | awk -v b="refs/heads/$1" '
+		/^worktree / { w = substr($0, 10) } $0 == "branch " b { print w; exit }'
+}
+
+# worktree_path <id>: where an item's worktree goes: ../<repo>.<id>, next to the main checkout.
+worktree_path() { _m=$(main_root) && printf '%s/%s.%s\n' "$(dirname "$_m")" "$(basename "$_m")" "$1"; }
+
+# sync_here: give this (new) worktree the agents synced in the clone, as `sync` would.
+sync_here() {
+	[ -f "$ST/agents" ] || return 0
+	while IFS= read -r _a; do sync_agent "$_a" >/dev/null || warn "sync $_a failed in $(pwd)"; done <"$ST/agents"
+}
+
 # id_of <branch-or-dir>: the item id from "<anything>/<id>-<slug>", else fails.
 id_of() {
 	_last=${1##*/}

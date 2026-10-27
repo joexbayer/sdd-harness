@@ -60,8 +60,8 @@ This repo tracks changes with $NAME (\`$DIRNAME/\`). Before changing code, run \
 - One change = one item: \`$SPECS/changes/<id>-<slug>/item.md\` on its own branch.
 - Humans plan and review; agents build. Plan with the human (no code), the human approves
   (\`$CMD approve\`), then build hands-off until \`$CMD check\` passes and \`## Built\` is written,
-  then walk the human through \`$CMD review\`. Only the human approves and ships: run
-  \`$CMD approve\` or \`$CMD ship\` only when they ask you to.
+  then walk the human through \`$CMD review\`. Only the human approves, ships and deletes
+  remote branches: run \`$CMD approve\`, \`$CMD ship\` or \`$CMD tidy --remote\` only when they ask.
 - Start: \`$CMD new <$(types | paste -sd '|' -)> "title"\`
 - Small changes (under ~20 lines, no behaviour change) need no item.
 - Talking to the human: give every ID its name ("item 3 (constitution)", "FR-3.6 (feature

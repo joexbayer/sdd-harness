@@ -193,10 +193,10 @@ readers ignore keys they do not know.
 
 | step | verbs |
 |---|---|
-| 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary` |
+| 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary`, `open`, `tidy` |
 | 2 standard | `approve`, `task red/done`, `trace`, `run <role>`, `drop` |
 | 3 team | team IDs, `ship` via PR, `sdd-server` (MCP), CI job |
-| 4 knowledge | `kb search/links/add/accept`, `tidy`, `explain` |
+| 4 knowledge | `kb search/links/add/accept/tidy`, `explain` |
 | 5 strict | `trust`, env allowlist, role profiles, `upgrade` with checksums |
 
 Every verb prints a few lines and ends with the next command to run. Only `new`, `approve`
@@ -305,7 +305,7 @@ a diff, which is the main defence against memory poisoning.
 type: research | decision | concept | lesson
 status: active | superseded
 supersedes: [other-note]
-review_by: 2027-04-26          # tidy flags it after this date
+review_by: 2027-04-26          # kb tidy flags it after this date
 sources:
   - https://…  (retrieved 2026-10-26)
 trust: untrusted | reviewed     # untrusted until a human has read it
@@ -365,7 +365,8 @@ automated behind gates, and every change leaves the code easy to change again.
 | 3 | constitution + `amendment` type | ground truths that are hard to change, enforced, not prose |
 | 4 | AI driver: one skill per step (`sdd-new`, `-plan`, `-build`, `-review`, `-ship`) installed by `sync`, and `ask` permission rules so the human confirms `approve` and `ship` | an AI drives sdd most of the time; the human's two decisions need the human's click |
 | 5 | `sdd summary`: recent work as a table (item, state, who, when), `--md` for PRs and chat | a lead sees what moved and what waits for whom at a glance |
-| next | git and GitHub forge: scripted worktrees for any item (`sdd open <id> [--worktree]`), landing and cleanup (ship removes its worktree and branches, `sdd tidy` for leftovers), and a GitHub adapter (`core/forges/github.sh`, via `gh`, on automatically when `origin` is github.com and `gh` is logged in): `ship` pushes and opens a PR with the brief as body, PR and CI state in `status`/`ls`/`review`, the PR review as approval in team mode | every git procedure an agent would otherwise improvise is a script, so it is correct every time |
+| 7 | git forge: `sdd open <id> [--worktree]` (any item, a teammate's too), ship deletes a branch whose commits are all on the base, `sdd tidy` removes what shipped items left, `tidy --remote` deletes their remote branches (C-4, item 8) | every git procedure an agent would otherwise improvise is a script, so it is correct every time |
+| next | GitHub adapter (item 9): `core/forges/github.sh` via `gh`, on when `origin` is github.com and `gh` is logged in: `ship` opens a PR with the brief as body (needs its own C-4 amendment), PR and CI state in `status`/`ls`/`review`, the PR review as approval in team mode | the team works in PRs; sdd should meet them there |
 | next | model roles: `sdd run <role> <id>` renders a role's prompt and runs it on each developer's own agent and model (§10); narrow as an adapter (`agents/narrow.sh`, `sdd sync narrow`) | plan big, build small: a large model plans, a small local one builds behind the gates (kb/narrow-lessons.md) |
 | next | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | next | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model); a contract item lands only the contract; items name `Contract:` and approval pins its hash, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |

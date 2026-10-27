@@ -98,9 +98,49 @@ DOD-7.2 On this repo, `sdd tidy` removes the leftover local branches of items 2-
 `sdd tidy --remote` (confirmed by the human) deletes their GitHub copies.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-7.1 (open switches, tracking a teammate's remote branch): `.sdd/core/cmd/open.sh:29,56`,
+  using `item_sources` from item 2. Test: tests/t_open.sh (local branch; `origin/feature/2-…`
+  of a teammate's clone becomes a tracking branch).
+- FR-7.2 (`open --worktree`): `open.sh:39`; the path comes from the new `worktree_path`
+  (`lib/common.sh:192`), next to the main checkout even when run from another worktree;
+  `sync_here` (`common.sh:195`) syncs agents as `new --worktree` does. An already checked out
+  branch prints its folder (`open.sh:32`). Test: t_open.sh.
+- FR-7.3 (refusals): unknown id, shipped or dropped, dirty tree, bad usage (`open.sh:19,25`).
+  Test: t_open.sh.
+- FR-7.4 (ship deletes a fully landed branch): `.sdd/core/cmd/ship.sh:128`, ancestry against
+  the base instead of `git branch -d`. Test: tests/t_ship.sh (pushed, then rebased by ship).
+- FR-7.5 (ship in a worktree keeps it): `ship.sh:118-122`. Tests: t_ship.sh, tests/t_tidy.sh.
+- FR-7.6, FR-7.7 (tidy removes the safe, keeps the rest with reason and command):
+  `.sdd/core/cmd/tidy.sh:38`. Kept: the main checkout's branch, the worktree you are in, a
+  spike's code, commits not on the base, uncommitted changes. Test: t_tidy.sh (two worktrees,
+  a spike, an open item that is never touched, `--dry-run`).
+- FR-7.8, FR-7.9 (remote branches listed; `--remote` deletes, unless `git cherry` finds changes
+  the base lacks): `tidy.sh:70-90`. Test: t_tidy.sh (a teammate pushes to a shipped item's
+  branch after the ship: kept; the other one is gone from the bare origin).
+- FR-7.10 (ask rule): `.sdd/core/agents/claude.sh:33` adds `tidy --remote` for every spelling
+  (18 rules now). Test: tests/t_agents.sh. FR-7.11 (`--remote` first only): `tidy.sh:8,12`.
+  Test: t_tidy.sh.
+- C-4 enforcement: `tests/constitution/c4-commits.sh` now catches `git push` anywhere in code
+  (it only caught lines starting with it, so `if git push` slipped by), except messages and
+  tidy's `--delete`. Verified it flags an `if git push origin main` in a verb.
+- Also: AGENTS.md block, the ship skill, help, README and design §8/§16 name `open`, `tidy` and
+  `tidy --remote` as human-only; kb note specs/kb/git-cleanup.md; dev skill gotchas.
 
+Deviations:
+- `new --worktree` now uses `worktree_path` too: from inside a worktree it used to create
+  `../app.7.9`; now `../app.9`, as `open` does.
+- The old t_ship.sh assertion on the printed `git worktree remove` hint now asserts the FR-7.5
+  message instead: the hint was replaced on purpose.
+- The knowledge step's planned `tidy` (stale kb notes) is renamed `kb tidy` in design §8/§12,
+  so the names do not clash.
+- When `ship` runs in the main checkout while the base is checked out in a worktree, the branch
+  is kept and it prints `git switch --detach && sdd tidy` (the plan did not cover this case).
+
+Follow-ups:
+- Commands printed by tidy do not quote paths; a checkout path with spaces needs hand quoting.
+- Remote branches of items 3-5 here had rebase conflicts resolved at ship, so their patches
+  differ and `tidy --remote` will keep them (with the command to delete by hand).
+- The missing-frontmatter trap (approve says "could not commit"): a fix item.
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->

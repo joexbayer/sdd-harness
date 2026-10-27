@@ -52,6 +52,17 @@ refuses a dirty tree), and `fill`.
   the pre-run fingerprint and then look stale. `run_check` fingerprints again after the run
   and `check` lists what changed (`CHECK_DIRTIED`). Exit 126/127 sets `CHECK_NOTRUN`, which
   is a config problem, not a test failure.
+- Worktree paths: `git worktree list` prints real paths, so on macOS a test's `$T` (/var/…)
+  shows up as /private/var/…. Compare with `$(cd "$T/app.1" && pwd -P)` or assert on a
+  suffix. Use `main_root`, `worktree_of` and `worktree_path` (lib/common.sh), not `$ROOT`,
+  which is the current worktree.
+- Item files: the frontmatter must close with `---`. Without it `fm_set` adds nothing and
+  `approve` fails with "could not commit". When rewriting an item with awk/head, keep line 7.
+- A teammate clone in a test picks its id from what it can see: push the local item
+  branches first, or both clones choose the same id (team IDs are a roadmap item).
+- Pushes: `tests/constitution/c4-commits.sh` flags `git push` anywhere in code except a
+  message (echo/say/warn/die) and `tidy.sh`'s `--delete`. Messages that tell the human what
+  to run are fine.
 
 ## Evaluating sdd with a real agent (narrow + qwen)
 Unit tests don't show whether a mid-size model can follow sdd. To find out, run narrow headless:

@@ -32,7 +32,7 @@ branch=$(printf '%s\n' "$branch" | sed "s/{type}/$type/g; s/{id}/$id/g; s/{slug}
 dir="$SPECS/changes/$id-$slug"
 
 if [ $wt -eq 1 ]; then
-	where="$(dirname "$ROOT")/$(basename "$ROOT").$id"
+	where=$(worktree_path "$id")
 	git worktree add -q -b "$branch" "$where" "$base" || die "could not create worktree $where"
 	cd "$where" || exit 1
 else
@@ -45,9 +45,7 @@ render "$tpl" "$id" "$title" "$type" >"$dir/item.md"
 git add -- "$dir/item.md" || die "could not add $dir/item.md"
 git commit -q -m "docs($id): open $type \"$title\"" -- "$dir/item.md" || die "could not commit $dir/item.md"
 
-if [ -n "$where" ] && [ -f "$ST/agents" ]; then
-	while IFS= read -r a; do sync_agent "$a" >/dev/null || warn "sync $a failed in $where"; done <"$ST/agents"
-fi
+[ -z "$where" ] || sync_here
 
 echo "$id $type · $title"
 echo "branch  $branch${where:+   (worktree $where)}"

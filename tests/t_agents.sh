@@ -38,13 +38,16 @@ assert_contains "$(cat .claude/skills/sdd-new/SKILL.md)" 'sdd-plan skill now'
 assert_contains "$(cat .claude/skills/sdd-plan/SKILL.md)" 'AskUserQuestion'
 assert_contains "$(cat .claude/skills/sdd-plan/SKILL.md)" 'Run `.sdd/bin/sdd next`'
 
-# Ask rules: the human confirms approve and ship, however the call is spelled; no duplicates.
-assert_eq "$(jq '[.permissions.ask[] | select(test("sdd (approve|ship)"))] | length' "$s")" 12
+# Ask rules: the human confirms approve, ship and (FR-7.10) tidy --remote, however the call is
+# spelled; no duplicates.
+assert_eq "$(jq '[.permissions.ask[] | select(test("sdd (approve|ship|tidy --remote)"))] | length' "$s")" 18
 asks=$(jq -r '.permissions.ask | join(" ")' "$s")
 assert_contains "$asks" 'Bash(.sdd/bin/sdd approve:*)'
 assert_contains "$asks" 'Bash(bash .sdd/bin/sdd ship:*)'
 assert_contains "$asks" "Bash($(git rev-parse --show-toplevel)/.sdd/bin/sdd approve:*)"
 assert_contains "$asks" 'Bash(sdd ship:*)'
+assert_contains "$asks" 'Bash(.sdd/bin/sdd tidy --remote:*)'
+assert_contains "$asks" 'Bash(sh .sdd/bin/sdd tidy --remote:*)'
 assert_contains "$asks" 'Bash(rm:*)'
 
 # Re-sync replaces only sdd's own skills: an edited managed skill comes back, the user's stays.
@@ -54,7 +57,7 @@ out=$(sdd sync claude 2>&1)
 assert_contains "$out" 'left .claude/skills/sdd-build/SKILL.md alone'
 assert_not_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'edited'
 assert_eq "$(sed -n 5p .claude/skills/sdd-build/SKILL.md)" 'My own build skill.'
-assert_eq "$(jq '.permissions.ask | length' "$s")" 13
+assert_eq "$(jq '.permissions.ask | length' "$s")" 19
 
 sdd sync codex >/dev/null 2>&1 || fail "sync codex failed"
 assert_eq "$(jq '.hooks.Stop | length' .codex/hooks.json)" 1

@@ -25,8 +25,7 @@ fail() {
 ff_base() {
 	_old=$(git rev-parse "refs/heads/$base") || fail "base branch $base not found"
 	git merge-base --is-ancestor "$_old" "$1" || fail "$base moved while shipping; run $CMD ship again"
-	_wt=$(git worktree list --porcelain | awk -v b="refs/heads/$base" '
-		/^worktree / { w = substr($0, 10) } $0 == "branch " b { print w; exit }')
+	_wt=$(worktree_of "$base")
 	if [ -n "$_wt" ]; then
 		git -C "$_wt" merge -q --ff-only "$1" || fail "could not fast-forward $base in $_wt (uncommitted changes there?)"
 	else
@@ -113,15 +112,23 @@ git add -- "$archive" || fail "could not stage $archive"
 git commit -q -m "docs($ID): ship $ITYPE \"$title\"" || fail "could not commit the archive move"
 
 ff_base "$(git rev-parse HEAD)"
-if ! git worktree list --porcelain | grep -qx "branch refs/heads/$base"; then
+# Cleanup. In a linked worktree, keep it: removing it would leave this shell (or an agent)
+# in a deleted folder; tidy removes it from the main checkout. Here, the branch goes when every
+# commit on it is on the base, even if its pushed copy differs (git branch -d would refuse).
+main=$(main_root)
+wt=$(worktree_of "$base")
+if [ "$ROOT" != "$main" ]; then
+	echo "✓ shipped $ID into $base (local); this worktree and branch $BRANCH stay until tidy"
+	echo "cleanup cd $main && $CMD tidy"
+elif [ -n "$wt" ]; then
+	echo "✓ shipped $ID into $base (local); branch $BRANCH kept ($base is checked out in $wt)"
+	echo "cleanup git switch --detach && $CMD tidy"
+else
 	git switch -q "$base" || die "shipped, but could not switch to $base"
-	if git branch -q -d "$BRANCH" 2>/dev/null; then
+	if git merge-base --is-ancestor "$BRANCH" "$base" && git branch -q -D "$BRANCH"; then
 		echo "✓ shipped $ID into $base (local); branch $BRANCH deleted"
 	else
 		echo "✓ shipped $ID into $base (local); branch $BRANCH kept (delete with: git branch -D $BRANCH)"
 	fi
-else
-	echo "✓ shipped $ID into $base (local)"
-	echo "cleanup git worktree remove $ROOT && git branch -d $BRANCH"
 fi
 echo "next    git push origin $base"

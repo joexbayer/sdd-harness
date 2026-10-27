@@ -45,7 +45,7 @@ flowchart LR
 - **review.** `sdd review` walks the human through the commits, diff, FRs and check. Notes
   go under `## Review`, and the agent works through them.
 - **ship.** Runs the gates again, archives the item, and fast-forwards `main` locally.
-  Pushing stays with you.
+  Pushing stays with you. `sdd tidy` then removes the branches and worktrees shipped items left.
 
 `sdd next` always says what to do in the current phase. That is the one command an agent
 needs to know.
@@ -86,6 +86,8 @@ and the hooks. Windows works through WSL or Git Bash.
 | `sdd check` | run your tests and linters (exit 0 pass, 1 fail, 3 no tests ran) |
 | `sdd review` | walk through what was built |
 | `sdd ship` | gates, archive the item, fast-forward the base branch |
+| `sdd open <id> [--worktree]` | switch to an item's branch (a teammate's too), or open it in `../<repo>.<id>` |
+| `sdd tidy [--remote] [--dry-run]` | remove what shipped items left; `--remote` deletes their remote branches |
 | `sdd ls [--all] [--json]` | every item and its progress, across all branches |
 | `sdd show <id> [--json]` | one item's stories, requirements, tasks, decisions, questions |
 | `sdd summary [--since <when>] [--last <n>] [--mine] [--md]` | recent work as a table |
@@ -128,8 +130,8 @@ An agent reads the `AGENTS.md` block, runs `.sdd/bin/sdd next` and follows it. W
 - **one skill per step:** `sdd-new`, `sdd-plan`, `sdd-build`, `sdd-review`, `sdd-ship`;
 - **hooks:** the session starts with the current status; an agent that tries to stop with
   unverified code changes is refused once, then told to report it;
-- **ask rules (Claude Code):** `approve` and `ship` always need the human's click, however
-  the agent spells the command.
+- **ask rules (Claude Code):** `approve`, `ship` and `tidy --remote` always need the human's
+  click, however the agent spells the command.
 
 Gates are scripts, not prose. In testing with a small local model (qwen3-coder 30B), the
 model ignored written rules but obeyed the gates (see `specs/kb/narrow-lessons.md`).
@@ -142,8 +144,10 @@ by the human at every review. Articles change only through an `amendment` item, 
 branch that edits the constitution any other way fails `check` and `ship`.
 
 ```
-C-4 Only new, approve and ship create commits, and no verb pushes.
-  Why: the human decides what lands and what leaves the machine.
+C-4 Only new, approve and ship create commits. No verb pushes, except `tidy --remote`, which
+  only deletes remote branches of items already shipped or dropped on the base branch.
+  Why: the human decides what lands and what leaves the machine; `tidy --remote` is
+  human-only (an ask rule) and removes only work the base already holds.
   Enforced: check sh tests/constitution/c4-commits.sh
 ```
 
