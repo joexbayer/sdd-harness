@@ -5,6 +5,7 @@
 [ $# -eq 0 ] || usage_die "usage: $NAME ship"
 need_repo
 current_item || die "not on an item branch (see: $CMD status)"
+fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
 [ "$(fm_get status "$IFILE")" = open ] || die "item $ID is not open"
 [ -z "$(git status --porcelain)" ] || die "commit, stash or ignore your changes first (ship checks exactly what it lands)"
 

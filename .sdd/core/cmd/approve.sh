@@ -5,6 +5,7 @@
 [ $# -eq 0 ] || usage_die "usage: $NAME approve"
 need_repo
 current_item || die "not on an item branch (see: $CMD status)"
+fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
 [ "$(fm_get status "$IFILE")" = open ] || die "item $ID is not open"
 
 missing=$(missing_sections "$IFILE" plan)

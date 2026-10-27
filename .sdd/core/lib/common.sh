@@ -109,7 +109,12 @@ fm_get() {
 	' "${2:--}"
 }
 
-# fm_set <file> <key> <value>: set (or add) a frontmatter key in place.
+# fm_closed <file>: the file starts with a frontmatter block that a second --- closes.
+fm_closed() { awk 'NR == 1 { if ($0 != "---") exit 1; next } $0 == "---" { ok = 1; exit } END { exit !ok }' "$1"; }
+FM_OPEN="the --- block at the top is not closed; add --- after its last key"
+
+# fm_set <file> <key> <value>: set (or add) a frontmatter key in place. Fails, leaving the
+# file as it was, when the block is not closed (a new key would have nowhere to go).
 fm_set() {
 	_tmp="$1.tmp.$$"
 	K=$2 V=$3 awk '
@@ -117,7 +122,8 @@ fm_set() {
 	infm && $0 == "---" { if (!done) print ENVIRON["K"] ": " ENVIRON["V"]; infm = 0; print; next }
 	infm { i = index($0, ":"); if (i && substr($0, 1, i - 1) == ENVIRON["K"]) { print ENVIRON["K"] ": " ENVIRON["V"]; done = 1; next } }
 	{ print }
-	' "$1" >"$_tmp" && mv "$_tmp" "$1"
+	END { if (infm) exit 3 }
+	' "$1" >"$_tmp" && mv "$_tmp" "$1" || { rm -f "$_tmp"; return 1; }
 }
 
 # uncomment [file]: the text with HTML comments (template guidance) removed.
@@ -302,15 +308,20 @@ check_passed_here() {
 }
 
 # item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), WHYCODE (the same
-# as a stable word for programs: status|fill|approval|changed|check|built|ready) and MISSING.
-#   plan    the human's time: plan sections empty, or not (or no longer) approved
+# as a stable word for programs: frontmatter|status|fill|approval|changed|check|built|ready)
+# and MISSING.
+#   plan    the human's time: header not closed, plan empty, or not (or no longer) approved
 #   build   the agent's time: no passing check for this code, or "## Built" empty
 #   review  the human's time: verified and written up
 item_phase() {
 	WHY=
 	WHYCODE=
 	MISSING=$(missing_sections "$IFILE" plan)
-	if [ "$(fm_get status "$IFILE")" != open ]; then
+	if ! fm_closed "$IFILE"; then
+		PHASE=plan
+		WHY="item.md: $FM_OPEN"
+		WHYCODE=frontmatter
+	elif [ "$(fm_get status "$IFILE")" != open ]; then
 		PHASE='done'
 		WHY="status: $(fm_get status "$IFILE")"
 		WHYCODE=status

@@ -37,7 +37,18 @@ as they were (FR-9.2); `fm_set` on it fails and leaves the file unchanged (FR-9.
 How: a helper `fm_closed <file>` in `lib/common.sh`, checked first in `item_phase`, `approve`
 and `ship`; `fm_set` exits non-zero from awk when the block never closes.
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
+- FR-9.1 (the reason in next, status, ls, show): `fm_closed` and `FM_OPEN` in
+  `.sdd/core/lib/common.sh`, checked first in `item_phase` (reason code `frontmatter`).
+  Test: tests/t_frontmatter.sh (`next`, `status`, `ls --json`).
+- FR-9.2 (approve and ship refuse first): `.sdd/core/cmd/approve.sh:8`, `.sdd/core/cmd/ship.sh:8`.
+  Test: t_frontmatter.sh (exit 1, the message, no new commit, file untouched).
+- FR-9.3 (`fm_set` fails): awk exits 3 when the block never closes; the temp file is removed
+  and the item is left as it was. Test: t_frontmatter.sh (sources common.sh, calls fm_set).
+- Must not change: every existing test passes unchanged under sh and dash.
+- The failing test was committed first (test(9) commit), then the fix.
+
+Deviations: none. Follow-up: a file with no frontmatter at all (no --- on line 1) gets the
+same message; good enough, since `new` always writes one.
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 
 ## Review (optional)
