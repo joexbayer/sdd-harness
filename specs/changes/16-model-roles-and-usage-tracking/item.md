@@ -104,8 +104,43 @@ DOD-16.2 On a scratch repo, a planner subagent (Opus) and a builder run through 
 - [x] T-16.7 Help, design §8 and §10, README (files: .sdd/core/cmd/help.sh, specs/design.md, README.md)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-16.1 (a role's tier, agent and model): `cfg_mine` (`lib/common.sh:71`) reads tier and agent
+  settings from the developer's config first; `cmd/run.sh` refuses with the lines to add.
+  Test: tests/t_run.sh.
+- FR-16.2 (subagents): `install_subagents` (`agents/claude.sh:30`) writes
+  `.claude/agents/sdd-<role>.md` for each role on a Claude tier (its model; "run `sdd next`, do
+  that step"), kept out of git; a developer's own file stays, a role moved off Claude loses its
+  file. Test: tests/t_roles.sh.
+- FR-16.3 (the sdd-run skill): `agents/skills/run.md` (+ `run.claude.md`): a subagent when there
+  is one, `sdd run` otherwise; never approve or ship. Test: t_roles.sh.
+- FR-16.4 (`sdd run`): `cmd/run.sh`, `agent_run` in `agents/claude.sh:100` and
+  `agents/narrow.sh:19`, the prompt = `sdd next` (+ `prompts/role-<role>.md`), only the tier's
+  args. Test: t_run.sh (no yolo unless configured; the role prompt reaches the agent).
+- FR-16.5 (one log line per run): `run_slot`, `run_log` (`common.sh:447,457`) write
+  `.git/sdd/runs.tsv`; `agent_usage` reads claude's result line and narrow's finish event with
+  `json_num`/`json_str` (sed, `common.sh:550`). Test: tests/t_agent_usage.sh, t_run.sh.
+- FR-16.6 (subagent runs logged): `subagent_hooks` (`agents/claude.sh:111`) adds SubagentStart
+  and SubagentStop hooks for `sdd-.*`; `cmd/hook.sh:29` notes the start and, at the stop, sums the
+  transcript (`agent_transcript_usage`, `agents/claude.sh:87`, jq, each message once). Test:
+  t_roles.sh, t_agent_usage.sh.
+- FR-16.7 (`sdd usage`): `cmd/usage.sh`, plain or `--md`. Test: tests/t_usage.sh.
+- FR-16.8 (failures logged): t_run.sh (an agent exiting 3 is logged, sdd exits 1).
+- DOD-16.2, real runs on a scratch repo (2026-10-27): `sdd run builder 1` with narrow and
+  qwen3-coder-30b: qwen wrote greet.sh and its test and ran `sdd task done` itself; logged
+  150k in / 2k out, 18s, passed. A `claude -p` session (Sonnet, $0.52 in all) used the sdd-run
+  skill, which spawned the sdd-planner subagent (Opus): it drafted item 2 with five questions and
+  recommendations; the hooks logged 329k in / 8k out, 1m 23s, model claude-opus-5-5.
+
+Deviations:
+- The claude `agent_run` sends the prompt on stdin; narrow takes it as `-p` text.
+- Tasks were built in order with a test each, ticked through `task done` (item 15's lesson).
+
+Found in the real runs, for later items:
+- qwen ticked its task but did not commit: the builder role prompt should insist on the commit.
+- The planner found a real dependency: item 2's branch lacks item 1's code while the check
+  already tests it, so item 2 cannot pass its check until item 1 lands (multi-item plans).
+- A task attribute sdd does not know (`size:` before item 17) is read as part of the previous
+  value; item 17 should refuse unknown attributes.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
