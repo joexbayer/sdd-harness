@@ -2,9 +2,10 @@
 id: 8
 type: amendment
 title: C-4: tidy may delete remote branches of shipped items
-status: open
+status: shipped
 created: 2026-10-27
 approved: 581577fe8d9c653e4430ff6bdcac841043c3b6f1 2026-10-27 joexbayer
+shipped: 2026-10-27
 ---
 # 8 C-4: tidy may delete remote branches of shipped items
 
