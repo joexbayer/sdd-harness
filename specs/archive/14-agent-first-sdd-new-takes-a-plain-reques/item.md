@@ -2,8 +2,9 @@
 id: 14
 type: chore
 title: Agent first: /sdd-new takes a plain request
-status: open
+status: shipped
 created: 2026-10-27
+shipped: 2026-10-27
 ---
 # 14 Agent first: /sdd-new takes a plain request
 
