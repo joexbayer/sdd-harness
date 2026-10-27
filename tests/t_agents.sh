@@ -28,6 +28,9 @@ for st in new plan build review ship; do
 	grep -qx "/.claude/skills/sdd-$st" "$ex" || fail "sdd-$st not excluded"
 done
 assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" "let's build X"
+# /sdd-new <request>: the skill picks the type and a title and confirms them before `new`.
+assert_contains "$(cat .claude/skills/sdd-new/SKILL.md)" 'Start it?'
+assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" 'types /sdd-new followed by what they want'
 assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" 'fix this bug'
 assert_contains "$(sed -n 3p .claude/skills/sdd-review/SKILL.md)" 'wants to review it'
 # Strict YAML: no ": " inside a description's plain value.
