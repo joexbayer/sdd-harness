@@ -217,15 +217,26 @@ id_of() {
 }
 
 # current_item: the item comes from the branch name only (no pointer file).
-# Sets ID, IDIR, IFILE, BRANCH, ITYPE.
+# Sets ID, IDIR, IFILE, BRANCH, ITYPE, and IPR when the item was shipped into a PR: archived on
+# this branch (by ship with a forge) but not yet on the base.
 current_item() {
 	BRANCH=$(current_branch) || return 1
 	ID=$(id_of "$BRANCH") || return 1
+	IPR=
 	for _d in "$SPECS/changes/$ID"-*; do
 		if [ -f "$_d/item.md" ]; then
 			IDIR=$_d
 			IFILE=$_d/item.md
 			ITYPE=$(fm_get type "$IFILE")
+			return 0
+		fi
+	done
+	for _d in "$SPECS/archive/$ID"-*; do
+		if [ -f "$_d/item.md" ] && ! git cat-file -e "$(cfg sdd.base main):$_d/item.md" 2>/dev/null; then
+			IDIR=$_d
+			IFILE=$_d/item.md
+			ITYPE=$(fm_get type "$IFILE")
+			IPR=1
 			return 0
 		fi
 	done
@@ -321,6 +332,10 @@ item_phase() {
 		PHASE=plan
 		WHY="item.md: $FM_OPEN"
 		WHYCODE=frontmatter
+	elif [ -n "${IPR:-}" ]; then
+		PHASE='pr'
+		WHY="shipped into a pull request, waiting to merge: $CMD ship merges it"
+		WHYCODE='pr'
 	elif [ "$(fm_get status "$IFILE")" != open ]; then
 		PHASE='done'
 		WHY="status: $(fm_get status "$IFILE")"
@@ -447,10 +462,54 @@ exclude() {
 # Every reader (ls, show, and later the MCP server through `--json`) goes through these, so
 # the item grammar is parsed in one place. Items are read with `git show`, never a checkout.
 
+# forge_load: load core/forges/<forge>.sh when the project sets `forge` under [sdd]; fails when
+# none is set. The forge file defines forge_ready, forge_pr_list, forge_pr_state and the rest.
+forge_load() {
+	_fg=$(cfg sdd.forge) || return 1
+	_ff=$(sdd_path "forges/$_fg.sh") || die "unknown forge: $_fg (set under [sdd] in $DIRNAME/config)"
+	# shellcheck source=/dev/null
+	. "$_ff"
+}
+
+# pr_words <number> <state> <review> <ci>: a PR line's facts for people, e.g.
+# "PR #12 open: approved, CI passing".
+pr_words() {
+	_rv="no review yet"
+	case $3 in APPROVED) _rv=approved ;; CHANGES_REQUESTED) _rv="changes requested" ;; REVIEW_REQUIRED) _rv="review required" ;; esac
+	case $4 in none) _ci="no CI" ;; *) _ci="CI $4" ;; esac
+	printf 'PR #%s %s: %s, %s\n' "$1" "$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')" "$_rv" "$_ci"
+}
+
+# tsv <n> <line>: field n of a tab-separated line. Not `IFS=<tab> read`: tabs count as
+# whitespace there, so an empty field (a PR with no review yet) would shift the rest.
+tsv() { printf '%s\n' "$2" | cut -f "$1"; }
+
+# pr_note <branch>: the branch's PR in words with its URL, "PR state unknown: …" when the forge
+# cannot be asked, or nothing without a forge or a PR.
+pr_note() {
+	forge_load || return 0
+	_why=$(forge_ready) || { echo "PR state unknown: $_why"; return 0; }
+	_l=$(forge_pr_state "$1" 2>/dev/null) || { echo "PR state unknown: $FORGE_NAME did not answer"; return 0; }
+	[ -n "$_l" ] || return 0
+	echo "$(pr_words "$(tsv 2 "$_l")" "$(tsv 3 "$_l")" "$(tsv 4 "$_l")" "$(tsv 5 "$_l")")   $(tsv 6 "$_l")"
+}
+
+# pr_table: every PR as "<branch>\t<words>\t<number>\t<state>\t<review>\t<ci>\t<url>", newest
+# first (one forge call for all items); fails, saying why, when the forge cannot be asked.
+pr_table() {
+	_why=$(forge_ready) || { echo "$_why"; return 1; }
+	_all=$(forge_pr_list 2>/dev/null) || { echo "$FORGE_NAME did not answer"; return 1; }
+	printf '%s\n' "$_all" | while IFS= read -r _l; do
+		[ -n "$_l" ] && printf '%s\t%s\t%s\n' "$(tsv 1 "$_l")" "$(pr_words "$(tsv 2 "$_l")" "$(tsv 3 "$_l")" "$(tsv 4 "$_l")" "$(tsv 5 "$_l")")" "$(tsv 2-6 "$_l")"
+	done
+	return 0
+}
+
 # AWK_JSON: awk functions to prepend to a program. esc(s) makes s safe inside a JSON string
 # (character by character, because gsub's backslash handling differs between awks; tabs never
-# reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$10)
-# as the JSON fields every reader sees, so a new column is added here and nowhere else.
+# reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$17,
+# plus $18..$22 = a PR's number, state, review, ci, url when ls joined one) as the JSON fields
+# every reader sees, so a new column is added here and nowhere else.
 AWK_JSON='function esc(s,   o, i, c) {
 	o = ""
 	for (i = 1; i <= length(s); i++) {
@@ -464,7 +523,9 @@ function row_json() {
 		$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10)) \
 		sprintf(",\"questions_open\":%d,\"approved_by\":\"%s\",\"opened_by\":\"%s\",\"shipped\":\"%s\",\"active\":\"%s\",\"reason\":\"%s\"", \
 		$11, esc($12), esc($13), esc($14), esc($15), esc($16)) \
-		sprintf(",\"reason_code\":\"%s\"", esc($17))
+		sprintf(",\"reason_code\":\"%s\"", esc($17)) \
+		($18 == "" ? "" : sprintf(",\"pr\":{\"number\":%d,\"state\":\"%s\",\"review\":\"%s\",\"ci\":\"%s\",\"url\":\"%s\"}", \
+			$18, esc($19), esc($20), esc($21), esc($22)))
 }
 '
 
@@ -481,7 +542,9 @@ item_sources() {
 			git for-each-ref --format='%(refname:short)' "refs/$_kind" | while IFS= read -r _b; do
 				case $_b in */HEAD | HEAD) continue ;; esac
 				_bid=$(id_of "$_b") || continue
-				git ls-tree --name-only "$_b" -- "$SPECS/changes/" 2>/dev/null | grep "^$SPECS/changes/$_bid-" |
+				# An item's own branch carries it under changes/, or under archive/ once shipped into a PR.
+				git ls-tree --name-only "$_b" -- "$SPECS/changes/" "$SPECS/archive/" 2>/dev/null |
+					grep -e "^$SPECS/changes/$_bid-" -e "^$SPECS/archive/$_bid-" |
 					while IFS= read -r _d; do
 						git cat-file -e "$_b:$_d/item.md" 2>/dev/null || continue
 						printf '%s\t%s\t%s\n' "$([ $_kind = heads ] && echo local || echo remote)" "$_b" "$_d/item.md"
@@ -502,6 +565,7 @@ item_sources() {
 # ref's committed code, so item_phase judges that code instead of the working tree.
 item_load() {
 	ITMP=
+	IPR=
 	PHASE_FP=
 	if [ "$1" = worktree ]; then
 		IFILE=$3
@@ -511,6 +575,8 @@ item_load() {
 		IFILE=$ITMP
 		PHASE_FP=$(git ls-tree "$2" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
 	fi
+	# An item archived on a branch but not on the base was shipped into a PR (see current_item).
+	case $1:$3 in archive:*) ;; *:"$SPECS/archive/"*) IPR=1 ;; esac
 	# The id comes from the folder name, like everywhere else; the frontmatter repeats it.
 	ID=$(id_of "${3%/item.md}")
 	ITYPE=$(fm_get type "$IFILE")

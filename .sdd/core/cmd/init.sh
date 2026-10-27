@@ -82,4 +82,11 @@ else
 	echo "added the $NAME block to AGENTS.md"
 fi
 
+# A GitHub origin: suggest shipping through pull requests (the team decides, in the committed config).
+case $(git remote get-url origin 2>/dev/null) in
+*github.com[:/]*)
+	git config -f "$target/config" --get sdd.forge >/dev/null ||
+		echo "tip     origin is on GitHub: add 'forge = github' under [sdd] in $DIRNAME/config to ship through pull requests"
+	;;
+esac
 echo "next: $CMD new <type> \"title\"   (optional: $CMD sync <$(agents | paste -sd '|' -)>)"

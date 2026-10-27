@@ -60,9 +60,15 @@ refuses a dirty tree), and `fill`.
   `approve` fails with "could not commit". When rewriting an item with awk/head, keep line 7.
 - A teammate clone in a test picks its id from what it can see: push the local item
   branches first, or both clones choose the same id (team IDs are a roadmap item).
-- Pushes: `tests/constitution/c4-commits.sh` flags `git push` anywhere in code except a
-  message (echo/say/warn/die) and `tidy.sh`'s `--delete`. Messages that tell the human what
-  to run are fine.
+- Pushes: `tests/constitution/c4-commits.sh` flags `git push` in code (quoted text and comments
+  are dropped first, so messages telling the human what to run are fine). Allowed only on lines
+  marked `# C-4: tidy --remote` (tidy.sh) and `# C-4: ship (forge)` (ship.sh).
+- Tab-separated fields with empties (a PR with no review): never `IFS=<tab> read`, because tab
+  is IFS whitespace and runs of tabs collapse, shifting later fields. Use `tsv <n> <line>`
+  (lib/common.sh, `cut -f`) or awk -F '\t'.
+- Forges: only `core/forges/<forge>.sh` calls `gh` (the C-4 check enforces it). Tests use a
+  stub `gh` on PATH over a bare origin (tests/t_forge.sh); the PR jq lives in `FORGE_JQ` and
+  can be tried offline with `jq -r ".[] | $FORGE_JQ" sample.json`.
 
 ## Evaluating sdd with a real agent (narrow + qwen)
 Unit tests don't show whether a mid-size model can follow sdd. To find out, run narrow headless:

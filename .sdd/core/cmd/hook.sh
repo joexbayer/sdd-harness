@@ -38,6 +38,7 @@ stop)
 		case $PHASE in
 		plan) msg="$NAME: item $ID has code changes but the plan is not ready ($WHY). Do not build before the human approves." ;;
 		build) msg="$NAME: item $ID is not finished: $WHY. Run $CMD next." ;;
+		pr) check_passed_here "$ID" || msg="$NAME: item $ID is in a pull request and has changes no check has passed. Run $CMD check." ;;
 		esac
 		[ -n "$msg" ] && level=$(cfg "type.$ITYPE.finish" || cfg "profile.$(cfg sdd.profile lite).finish" off)
 	fi

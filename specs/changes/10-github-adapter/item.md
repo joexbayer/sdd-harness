@@ -77,8 +77,44 @@ DOD-10.2 On this repo, with `forge = github`, the next item ships as a real PR (
 and a second `ship` merges it after CI; `git log main` shows the merge commit.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-10.1 (ship opens a PR): `.sdd/core/cmd/ship.sh:202` hands the archived item to `pr_push`
+  (`ship.sh:90`): push the branch, `forge_pr_create` with title `<type>(<id>): <title>` and the
+  item as body. `core/forges/github.sh` is the only file that calls `gh`; gh's built-in `--jq`
+  turns PRs into tab-separated lines (`FORGE_JQ`), so sdd needs no jq. Test: tests/t_forge.sh.
+- FR-10.2 (new commits go into the same PR): `pr_ship` (`ship.sh:107`) checks them (`check_gate`,
+  `ship.sh:52`), pushes and updates the body. Test: t_forge.sh (one PR, origin at HEAD).
+- FR-10.3 (ship again merges): `ship.sh:126`, `gh pr merge --merge --match-head-commit`, then the
+  remote branch is deleted, the base fast-forwarded from the remote, and `cleanup` (`ship.sh:70`,
+  shared with the local ship) deletes the branch. Test: t_forge.sh (merge commit on main, branch
+  gone locally and on origin; a teammate's push to the PR blocks the merge).
+- FR-10.4 (no merge while CI fails or is pending, or the PR is closed): `pr_ship`. Test:
+  t_forge.sh.
+- FR-10.5 (PR state in status, ls, review): `pr_note` and `pr_table` (`lib/common.sh:489,499`),
+  `pr_words` for the wording; `ls` makes one forge call and joins it by branch; `--json` gains
+  `pr` (`row_json`). An item shipped into a PR has phase `pr` (`common.sh:336`), found by
+  `current_item` and `item_sources` under `archive/` on its own branch. Test: t_forge.sh.
+- FR-10.6 (gh missing or logged out): `forge_ready`; ship stops, status/ls say "PR state unknown".
+  Test: t_forge.sh.
+- FR-10.7 (no forge: as today; init suggests it): `forge_load` fails without `forge`, so the
+  local path is unchanged (every t_ship.sh case passes as before); `init.sh` prints a tip for a
+  github.com origin. Test: t_forge.sh, t_ship.sh.
+- C-4 check: also scans `core/forges/`, allows pushes only on lines marked `# C-4: tidy --remote`
+  or `# C-4: ship (forge)`, and flags `gh` outside `core/forges/` (verified with planted lines).
+- Also: help, README, design §16, the dev skill (tab-separated gotcha, forge stub), this repo's
+  shellcheck list gains `core/forges/*.sh`; `prompts/pr.md` tells an agent what to do in a PR.
+- Verified against real gh: `FORGE_JQ` runs in gh's jq on live PRs (cli/cli, read-only).
+
+Deviations:
+- `summary` (item 5) also shows items in a PR, as "in a pull request, waiting to merge"; without
+  it, they vanished from the table while waiting.
+- The stop hook blocks in phase `pr` when changes have no passing check, as in build.
+- A spike still ships locally with a forge: its findings commit goes straight onto the base,
+  which a PR cannot express. Follow-up if teams need it.
+- The second ship re-runs only the check gate, not the plan gates: the plan was gated at the
+  first ship and is archived now.
+
+Follow-ups:
+- DOD-10.2 (a real PR on this repo) needs `forge = github` in this repo's config after this ships.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

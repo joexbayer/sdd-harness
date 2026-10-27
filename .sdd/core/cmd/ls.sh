@@ -12,10 +12,25 @@ for _a in "$@"; do
 done
 need_repo
 
-# Branches contribute open items only; shipped and dropped ones are read from the archive.
+# Branches contribute open items (and items shipped into a PR) only; shipped and dropped ones are
+# read from the archive.
 rows=$(item_sources | while IFS="$(printf '\t')" read -r o r p; do item_row "$o" "$r" "$p"; done |
-	A=$all awk -F '\t' '($10 == "archive" || $3 == "open") && (ENVIRON["A"] != "" || $3 != "dropped")' |
+	A=$all awk -F '\t' '($10 == "archive" || $3 == "open" || $17 == "pr") && (ENVIRON["A"] != "" || $3 != "dropped")' |
 	sort -t "$(printf '\t')" -k1,1n)
+
+# With a forge, each item branch's newest PR joins its row: fields 18-22 (number, state, review,
+# ci, url), then the words in 23. One forge call for all items.
+prs=
+prwhy=
+if forge_load; then
+	prs=$(pr_table) || { prwhy=$prs && prs=; }
+fi
+if [ -n "$prs" ] && [ -n "$rows" ]; then
+	rows=$(printf '%s\n' "$rows" | P=$prs awk -F '\t' '
+		BEGIN { n = split(ENVIRON["P"], l, "\n")
+			for (i = n; i >= 1; i--) { split(l[i], f, "\t"); pr[f[1]] = f[3] "\t" f[4] "\t" f[5] "\t" f[6] "\t" f[7] "\t" f[2] } }
+		{ b = ($10 == "remote") ? substr($9, index($9, "/") + 1) : $9; print $0 ((b != "" && (b in pr)) ? "\t" pr[b] : "") }')
+fi
 
 if [ -n "$json" ]; then
 	[ -z "$rows" ] || printf '%s\n' "$rows" | awk -F '\t' "$AWK_JSON"'{ print "{" row_json() "}" }'
@@ -28,6 +43,7 @@ if [ -z "$rows" ]; then
 fi
 printf '%s\n' "$rows" | awk -F '\t' '{
 	t = ($7 > 0) ? $6 "/" $7 : "-"
-	printf "%-4s %-9s %-8s %-8s FR %-3s T %-6s %s%s\n", $1, $2, $3, $4, $5, t, $8, ($9 == "" ? "" : "   " $9)
+	printf "%-4s %-9s %-8s %-8s FR %-3s T %-6s %s%s%s\n", $1, $2, $3, $4, $5, t, $8, ($9 == "" ? "" : "   " $9), ($23 == "" ? "" : " · " $23)
 }'
+[ -z "$prwhy" ] || echo "pr      state unknown: $prwhy"
 echo "next    $CMD show <id>"

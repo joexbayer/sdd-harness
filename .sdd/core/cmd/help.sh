@@ -18,6 +18,7 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
                                    recent work as a table: item, state, who, when
   $NAME review                      walkthrough of what was built: commits, diff, FRs, check
   $NAME ship                        gates, archive the item, fast-forward the base branch locally
+                                   (forge = github: push and open a PR; ship again merges it)
   $NAME open <id> [--worktree]      switch to an item's branch (teammates' too), or a worktree
   $NAME tidy [--remote] [--dry-run]
                                    clean up after shipped items: branches, worktrees, remotes

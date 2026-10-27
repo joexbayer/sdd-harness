@@ -27,7 +27,7 @@ me=$(git config user.name || true)
 [ -z "$mine" ] || [ -n "$me" ] || die "--mine needs your git user.name (git config user.name \"…\")"
 
 rows=$(item_sources | while IFS="$(printf '\t')" read -r o r p; do item_row "$o" "$r" "$p"; done |
-	awk -F '\t' '$10 == "archive" || $3 == "open"')
+	awk -F '\t' '$10 == "archive" || $3 == "open" || $17 == "pr"')
 
 # Pick the rows, then turn facts into the four cells: item, state, who, when. The fields are
 # item_row's (lib/common.sh): $1 id, $3 status, $4 phase, $6/$7 tasks, $8 title,
@@ -43,6 +43,7 @@ cells=$(printf '%s\n' "$rows" | TODAY=$(date +%F) SINCE=$since LAST=$last MINE=$
 	}
 	function plural(n, w) { return n " " w (n == 1 ? "" : "s") }
 	function state(   s, extra) {
+		if ($17 == "pr") return "in a pull request, waiting to merge"
 		if ($3 == "shipped") return "shipped"
 		if ($3 == "dropped") return "dropped"
 		if ($4 == "plan") {

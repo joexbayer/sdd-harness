@@ -14,10 +14,13 @@ if current_item; then
 	item_phase
 	echo "$ID $ITYPE · $(fm_get title "$IFILE") · $BRANCH"
 	echo "phase   $PHASE   ($WHY)"
+	pr=$(pr_note "$BRANCH")
+	[ -z "$pr" ] || echo "pr      $pr"
 	case $PHASE in
 	plan) echo "next    plan with the human in $IFILE ($CMD next)" ;;
 	build) echo "next    the agent builds hands-off ($CMD next)" ;;
 	review) echo "next    $CMD review, then $CMD ship" ;;
+	pr) echo "next    $CMD ship merges it once CI passes (the human runs it)" ;;
 	esac
 else
 	items=$(open_items)

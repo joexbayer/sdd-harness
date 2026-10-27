@@ -46,6 +46,8 @@ flowchart LR
   go under `## Review`, and the agent works through them.
 - **ship.** Runs the gates again, archives the item, and fast-forwards `main` locally.
   Pushing stays with you. `sdd tidy` then removes the branches and worktrees shipped items left.
+  With `forge = github` in `.sdd/config`, `ship` pushes the branch and opens a pull request
+  (the item is its description) instead, and shipping again merges it once CI passes.
 
 `sdd next` always says what to do in the current phase. That is the one command an agent
 needs to know.
@@ -118,9 +120,12 @@ Every verb exits `0` ok, `1` failed or refused, `2` usage error, `3` ran but pro
 - **Machine data stays local.** Check results and the ID counter live in `.git/sdd/`, shared
   by all worktrees of a clone and never committed.
 
-Planned (see the roadmap): unique IDs across clones, `ship` opening a PR with the item as
-its body, PR review as approval, and a read-only MCP server that shows open items across
-branches and repos.
+- **Pull requests.** With `forge = github`, `ship` opens a PR whose description is the item,
+  `status`, `ls` and `review` show its review and CI, and shipping again merges it (only if CI
+  passes and GitHub still has exactly the checked commit). Merges are merge commits.
+
+Planned (see the roadmap): unique IDs across clones, PR review as approval, and a read-only
+MCP server that shows open items across branches and repos.
 
 ## An AI drives, the human decides
 
@@ -144,10 +149,12 @@ by the human at every review. Articles change only through an `amendment` item, 
 branch that edits the constitution any other way fails `check` and `ship`.
 
 ```
-C-4 Only new, approve and ship create commits. No verb pushes, except `tidy --remote`, which
-  only deletes remote branches of items already shipped or dropped on the base branch.
-  Why: the human decides what lands and what leaves the machine; `tidy --remote` is
-  human-only (an ask rule) and removes only work the base already holds.
+C-4 Only new, approve and ship create commits. No verb pushes, except two human-only ones:
+  `tidy --remote` deletes remote branches of items already shipped or dropped on the base, and
+  `ship` with `forge = github` pushes its own item branch and merges that branch's PR. No verb
+  pushes the base branch.
+  Why: the human decides what lands and what leaves the machine; both run behind an ask rule,
+  and the base changes only through a merge the human started.
   Enforced: check sh tests/constitution/c4-commits.sh
 ```
 

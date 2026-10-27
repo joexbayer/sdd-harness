@@ -30,6 +30,8 @@ elif [ -f "$ST/checks/$ID" ]; then
 else
 	echo "check   never run; run: $CMD check"
 fi
+pr=$(pr_note "$BRANCH")
+[ -z "$pr" ] || echo "pr      $pr"
 
 echo
 echo "Commits"
