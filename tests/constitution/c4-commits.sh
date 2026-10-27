@@ -16,7 +16,7 @@ in_code() {
 }
 # Pushes only on the lines marked "# C-4: tidy --remote" (tidy.sh) or "# C-4: ship (forge)" (ship.sh).
 p=$(in_code 'git push' | grep -vE '^\.sdd/core/cmd/tidy\.sh:[0-9]+:.*# C-4: tidy --remote$' |
-	grep -vE '^\.sdd/core/cmd/ship\.sh:[0-9]+:.*# C-4: ship \(forge\)$')
+	grep -vE '^\.sdd/core/cmd/ship\.sh:[0-9]+:.*git push .*"\$BRANCH".*# C-4: ship \(forge\)$')
 [ -z "$p" ] || { echo "C-4: a verb pushes: $p"; exit 1; }
 # The forge (which can merge) is reached only through core/forges/.
 g=$(in_code '(^|[^[:alnum:]_.-])gh ' | grep -v '^\.sdd/core/forges/')

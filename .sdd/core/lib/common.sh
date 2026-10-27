@@ -471,18 +471,17 @@ forge_load() {
 	. "$_ff"
 }
 
-# pr_words <number> <state> <review> <ci>: a PR line's facts for people, e.g.
-# "PR #12 open: approved, CI passing".
-pr_words() {
-	_rv="no review yet"
-	case $3 in APPROVED) _rv=approved ;; CHANGES_REQUESTED) _rv="changes requested" ;; REVIEW_REQUIRED) _rv="review required" ;; esac
-	case $4 in none) _ci="no CI" ;; *) _ci="CI $4" ;; esac
-	printf 'PR #%s %s: %s, %s\n' "$1" "$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')" "$_rv" "$_ci"
-}
-
 # tsv <n> <line>: field n of a tab-separated line. Not `IFS=<tab> read`: tabs count as
 # whitespace there, so an empty field (a PR with no review yet) would shift the rest.
 tsv() { printf '%s\n' "$2" | cut -f "$1"; }
+
+# AWK_PR: an awk function for a forge's PR line (see core/forges/): pr_words() puts its facts
+# into words for people, e.g. "PR #12 open: approved, CI passing".
+AWK_PR='function pr_words(   rv, ci) {
+	rv = $4 == "APPROVED" ? "approved" : $4 == "CHANGES_REQUESTED" ? "changes requested" : $4 == "REVIEW_REQUIRED" ? "review required" : "no review yet"
+	ci = $5 == "none" ? "no CI" : "CI " $5
+	return "PR #" $2 " " tolower($3) ": " rv ", " ci
+}'
 
 # pr_note <branch>: the branch's PR in words with its URL, "PR state unknown: …" when the forge
 # cannot be asked, or nothing without a forge or a PR.
@@ -490,25 +489,23 @@ pr_note() {
 	forge_load || return 0
 	_why=$(forge_ready) || { echo "PR state unknown: $_why"; return 0; }
 	_l=$(forge_pr_state "$1" 2>/dev/null) || { echo "PR state unknown: $FORGE_NAME did not answer"; return 0; }
-	[ -n "$_l" ] || return 0
-	echo "$(pr_words "$(tsv 2 "$_l")" "$(tsv 3 "$_l")" "$(tsv 4 "$_l")" "$(tsv 5 "$_l")")   $(tsv 6 "$_l")"
+	printf '%s\n' "$_l" | awk -F '\t' "$AWK_PR"'NF { print pr_words() "   " $6 }'
 }
 
-# pr_table: every PR as "<branch>\t<words>\t<number>\t<state>\t<review>\t<ci>\t<url>", newest
-# first (one forge call for all items); fails, saying why, when the forge cannot be asked.
+# pr_table: every PR as "<branch>\t<number>\t<state>\t<review>\t<ci>\t<url>\t<words>", newest
+# first: the forge's PR line with the words in place of the head sha, so ls appends fields
+# 2-7 to a row as they are (row_json reads them as $18..$23). One forge call for all items;
+# fails, saying why, when the forge cannot be asked.
 pr_table() {
 	_why=$(forge_ready) || { echo "$_why"; return 1; }
 	_all=$(forge_pr_list 2>/dev/null) || { echo "$FORGE_NAME did not answer"; return 1; }
-	printf '%s\n' "$_all" | while IFS= read -r _l; do
-		[ -n "$_l" ] && printf '%s\t%s\t%s\n' "$(tsv 1 "$_l")" "$(pr_words "$(tsv 2 "$_l")" "$(tsv 3 "$_l")" "$(tsv 4 "$_l")" "$(tsv 5 "$_l")")" "$(tsv 2-6 "$_l")"
-	done
-	return 0
+	printf '%s\n' "$_all" | awk -F '\t' -v OFS='\t' "$AWK_PR"'NF { $7 = pr_words(); print }'
 }
 
 # AWK_JSON: awk functions to prepend to a program. esc(s) makes s safe inside a JSON string
 # (character by character, because gsub's backslash handling differs between awks; tabs never
 # reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$17,
-# plus $18..$22 = a PR's number, state, review, ci, url when ls joined one) as the JSON fields
+# plus $18..$23 = a PR's number, state, review, ci, url, words when ls joined one) as the fields
 # every reader sees, so a new column is added here and nowhere else.
 AWK_JSON='function esc(s,   o, i, c) {
 	o = ""

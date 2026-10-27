@@ -86,10 +86,29 @@ cleanup() {
 	fi
 }
 
+# pr_ready: what was checked is what lands. The branch must contain the remote base (GitHub
+# merges into it) and the local base must have nothing the remote lacks (it is fast-forwarded
+# after the merge).
+pr_ready() {
+	git fetch -q "$remote" "$base" || die "could not fetch $remote/$base"
+	git merge-base --is-ancestor "$base" "$remote/$base" ||
+		die "$base has commits $remote/$base lacks; push or reset $base first (PRs land on $remote/$base)"
+	git merge-base --is-ancestor "$remote/$base" HEAD ||
+		die "$BRANCH is behind $remote/$base: git merge $remote/$base (or rebase, if never pushed), then $CMD ship"
+}
+
+# pr_gates: the gates the local ship also applies to this code: the constitution and the check.
+pr_gates() {
+	guard=$(constitution_guard) || die "item $ID: $guard"
+	: >"$ST/checks/$ID.articles.log"
+	check_articles "$ST/checks/$ID.articles.log" || die "item $ID: $(printf '%s\n' "$CHECK_ARTICLES" | paste -sd ';' -)"
+	check_gate
+}
+
 # pr_push <message>: push the item branch and open its PR, or update the open one.
 pr_push() {
 	git push -q -u "$remote" "$BRANCH" || fail "could not push $BRANCH to $remote" # C-4: ship (forge)
-	_pr=$(forge_pr_state "$BRANCH")
+	_pr=$(forge_pr_state "$BRANCH") || die "pushed, but $FORGE_NAME did not answer; run $CMD ship again"
 	if [ "$(printf '%s\n' "$_pr" | cut -f3)" = OPEN ]; then
 		_n=$(printf '%s\n' "$_pr" | cut -f2)
 		forge_pr_edit "$_n" "$IFILE" || die "pushed, but could not update the body of PR #$_n"
@@ -106,28 +125,42 @@ pr_push() {
 # pushed; otherwise the PR is merged when CI allows and GitHub still has exactly this commit.
 pr_ship() {
 	[ -n "$forge" ] || die "item $ID was shipped into a pull request; set forge under [sdd] in $DIRNAME/config to merge it"
-	_pr=$(forge_pr_state "$BRANCH")
-	_n=$(tsv 2 "$_pr") _st=$(tsv 3 "$_pr") _ci=$(tsv 5 "$_pr") _url=$(tsv 6 "$_pr") _head=$(tsv 7 "$_pr")
+	_pr=$(forge_pr_state "$BRANCH") || die "$FORGE_NAME did not answer; run $CMD ship again"
+	_n=$(tsv 2 "$_pr") _st=$(tsv 3 "$_pr") _rv=$(tsv 4 "$_pr") _ci=$(tsv 5 "$_pr") _url=$(tsv 6 "$_pr") _head=$(tsv 7 "$_pr")
 	_here=$(git rev-parse HEAD)
 	case $_st in
-	'') check_gate && pr_push "pushed item $ID to" && return ;;
+	'') pr_ready && pr_gates && pr_push "pushed item $ID to" && return ;;
 	CLOSED) die "PR #$_n is closed: reopen it (gh pr reopen $_n) to ship it, or drop the item" ;;
-	MERGED) ;;
+	MERGED)
+		# Merged on GitHub (the button): fine, unless it left out newer commits from here.
+		git merge-base --is-ancestor HEAD "$_head" 2>/dev/null ||
+			die "PR #$_n was merged without the newest commits here ($(git log --format=%h "$_head..HEAD" 2>/dev/null | paste -sd ' ' -)): keep $BRANCH and ship them as a new item"
+		git push -q "$remote" --delete "$BRANCH" 2>/dev/null # C-4: ship (forge)
+		;;
 	*)
 		if [ "$_head" != "$_here" ]; then
 			git merge-base --is-ancestor "$_head" HEAD 2>/dev/null ||
 				die "PR #$_n has commits this branch lacks (a teammate pushed?): git pull $remote $BRANCH, then $CMD ship"
-			check_gate && pr_push "pushed new commits to" && return
+			pr_ready && pr_gates && pr_push "pushed new commits to" && return
 		fi
+		[ "$_rv" != CHANGES_REQUESTED ] || die "PR #$_n: changes requested; address the review, then $CMD ship ($_url)"
 		case $_ci in
 		failing* | pending*) die "PR #$_n: CI $_ci; ship again when it passes ($_url)" ;;
+		none)
+			# Right after a push GitHub has not registered the checks yet: no result is not a pass.
+			[ -z "$(git ls-tree -d HEAD .github/workflows)" ] ||
+				die "PR #$_n: CI has not reported yet (this branch has .github/workflows); ship again in a minute"
+			;;
 		esac
-		check_gate
+		pr_ready
+		pr_gates
 		forge_pr_merge "$_n" "$_here" || die "could not merge PR #$_n ($_url)"
 		git push -q "$remote" --delete "$BRANCH" || warn "merged, but could not delete $remote/$BRANCH" # C-4: ship (forge)
 		;;
 	esac
-	git fetch -q "$remote" "$base" || die "merged PR #$_n, but could not fetch $remote/$base"
+	git fetch -q "$remote" "$base" || die "PR #$_n is merged, but $remote/$base could not be fetched; run $CMD ship again"
+	git merge-base --is-ancestor "$base" "$remote/$base" ||
+		die "PR #$_n is merged, but $base has commits $remote/$base lacks; reconcile $base, then $CMD ship"
 	ff_base "$remote/$base"
 	cleanup "merged PR #$_n into $base (now at $(git rev-parse --short "$base"))"
 }
@@ -177,7 +210,11 @@ if [ "$(cfg "type.$ITYPE.lands" all)" = item ]; then
 	exit 0
 fi
 
-if ! git merge-base --is-ancestor "$base" HEAD; then
+# With a forge, GitHub merges into the remote base: the branch must already contain it (no
+# rebase, which would rewrite commits a PR or a teammate may already have).
+if [ -n "$forge" ]; then
+	pr_ready
+elif ! git merge-base --is-ancestor "$base" HEAD; then
 	git rebase -q "$base" >/dev/null 2>&1 || {
 		git rebase --abort >/dev/null 2>&1
 		die "rebase onto $base hit conflicts; resolve with: git rebase $base, then $CMD ship"

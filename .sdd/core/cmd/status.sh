@@ -14,7 +14,9 @@ if current_item; then
 	item_phase
 	echo "$ID $ITYPE · $(fm_get title "$IFILE") · $BRANCH"
 	echo "phase   $PHASE   ($WHY)"
-	pr=$(pr_note "$BRANCH")
+	# Only in a PR: status also runs at every agent session start, so no network call otherwise.
+	pr=
+	[ "$PHASE" != pr ] || pr=$(pr_note "$BRANCH")
 	[ -z "$pr" ] || echo "pr      $pr"
 	case $PHASE in
 	plan) echo "next    plan with the human in $IFILE ($CMD next)" ;;

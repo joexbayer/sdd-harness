@@ -18,8 +18,8 @@ rows=$(item_sources | while IFS="$(printf '\t')" read -r o r p; do item_row "$o"
 	A=$all awk -F '\t' '($10 == "archive" || $3 == "open" || $17 == "pr") && (ENVIRON["A"] != "" || $3 != "dropped")' |
 	sort -t "$(printf '\t')" -k1,1n)
 
-# With a forge, each item branch's newest PR joins its row: fields 18-22 (number, state, review,
-# ci, url), then the words in 23. One forge call for all items.
+# With a forge, each item branch's newest PR joins its row as fields 18-23 (number, state,
+# review, ci, url, words; see pr_table). One forge call for all items.
 prs=
 prwhy=
 if forge_load; then
@@ -28,7 +28,7 @@ fi
 if [ -n "$prs" ] && [ -n "$rows" ]; then
 	rows=$(printf '%s\n' "$rows" | P=$prs awk -F '\t' '
 		BEGIN { n = split(ENVIRON["P"], l, "\n")
-			for (i = n; i >= 1; i--) { split(l[i], f, "\t"); pr[f[1]] = f[3] "\t" f[4] "\t" f[5] "\t" f[6] "\t" f[7] "\t" f[2] } }
+			for (i = n; i >= 1; i--) { b = l[i]; sub(/\t.*/, "", b); r = l[i]; sub(/^[^\t]*\t/, "", r); pr[b] = r } }
 		{ b = ($10 == "remote") ? substr($9, index($9, "/") + 1) : $9; print $0 ((b != "" && (b in pr)) ? "\t" pr[b] : "") }')
 fi
 
