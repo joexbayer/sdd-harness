@@ -34,16 +34,18 @@ FR-16.4 WHEN `sdd run <role> <id>` runs THE SYSTEM SHALL require the item's bran
 role's agent the item's `sdd next` text (plus `prompts/role-<role>.md`) once, headless, through
 its adapter (`claude -p --output-format json --model …`; `narrow --json -m … -p …`), with only
 the tier's `args` added.
-FR-16.5 WHEN a run ends, through `sdd run` or a subagent THE SYSTEM SHALL append one line to this
+FR-16.5 WHEN a run ends, through `sdd run` or a subagent, and usage tracking is on (`[usage]
+track = true`, in your config or the project's; off by default) THE SYSTEM SHALL append one line to this
 clone's `.git/sdd/runs.tsv`: start time, item, role, agent, model, phase and task at the start,
 tokens in and out, cost (the agent's own figure, else empty), seconds, exit code and verdict;
 the agent's output stays in `.git/sdd/runs/<n>/`.
   e.g. `run 3 · builder · narrow qwen3-coder-30b · T-16.2 · 41k in / 3k out · 95s · exit 0 · passed`
-FR-16.6 WHEN a subagent named `sdd-<role>` starts and stops THE SYSTEM SHALL note its start
+FR-16.6 WHEN usage tracking is on and a subagent named `sdd-<role>` starts and stops THE SYSTEM
+SHALL note its start
 (SubagentStart hook) and, at its stop (SubagentStop hook), sum the tokens in its transcript,
-each message once, and log the run as in FR-16.5.
+each message once, and log the run as in FR-16.5. `sync claude` installs these hooks only while tracking is on.
 FR-16.7 WHEN `sdd usage [<id>] [--md]` runs THE SYSTEM SHALL sum the runs per item and role (per
-task too for one item): runs, tokens in and out, cost, seconds.
+task too for one item): runs, tokens in and out, cost, seconds. With tracking off it says how to switch it on.
 FR-16.8 WHEN an agent is missing or a run exits non-zero THE SYSTEM SHALL still log it with its
 exit code and say what failed (exit 1).
 
@@ -67,7 +69,8 @@ role with its own `prompts/role-human.md`).
 - Tests use stub `claude` and `narrow` on PATH, and a sample subagent transcript.
 D-16.1 sdd adds no permission-skipping flags: `args` in the tier config is where a developer puts
 `--yolo` or a permission mode, explicitly (design §13).
-D-16.2 The log is per clone and never committed (Q-16.3); `usage --md` is how numbers are shared.
+D-16.2 The log is per clone, never committed (Q-16.3), and off until someone opts in (Q-16.7);
+`usage --md` is how numbers are shared.
 D-16.3 A role only picks the model; what to do comes from `sdd next` for the item's phase.
 D-16.4 Subagent tokens come from its transcript, because no hook reports them; the transcript's
 layout is Claude Code's internal format (kb/claude-subagents.md), so its reader lives in
@@ -90,6 +93,8 @@ Q-16.4 Where does the cost come from? → recommend: the agent's figure, else a 
 decided: just the agent's figure; cost is for testing, not a feature (joexbayer, 2026-10-27)
 Q-16.5 How do roles run? → recommend: skills and subagents, `sdd run` for non-Claude models. →
 decided: most should run as subagents (joexbayer, 2026-10-27)
+Q-16.7 Is usage tracking on by default? → decided: no, off by default; switch it on with
+`[usage] track = true` (joexbayer, 2026-10-27)
 
 ## Done when
 DOD-16.1 `sdd check` passes, with a test naming each FR, under /bin/sh and dash.
