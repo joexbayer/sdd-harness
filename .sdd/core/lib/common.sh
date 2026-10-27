@@ -514,6 +514,12 @@ agents() {
 	done | sed -n 's/^\([a-z0-9-]*\)\.sh$/\1/p' | sort -u
 }
 
+# json_num <key> <json line>, json_str <key> <json line>: the (last) "<key>": value in one line
+# of an agent's JSON output (numbers; strings without escaped quotes), or nothing. sed only (C-1):
+# enough for the few flat fields sdd reads from an agent's final line.
+json_num() { printf '%s\n' "$2" | sed -n "s/.*\"$1\":[[:space:]]*\([0-9][0-9.eE+-]*\).*/\\1/p" | head -n 1; }
+json_str() { printf '%s\n' "$2" | sed -n "s/.*\"$1\":[[:space:]]*\"\([^\"]*\)\".*/\\1/p" | head -n 1; }
+
 # exclude <path>: keep a generated file out of git for this clone only.
 exclude() {
 	_ex=$(git rev-parse --path-format=absolute --git-path info/exclude)
