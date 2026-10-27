@@ -2,8 +2,9 @@
 id: 6
 type: chore
 title: README with workflow diagram
-status: open
+status: shipped
 created: 2026-10-27
+shipped: 2026-10-27
 ---
 # 6 README with workflow diagram
 
