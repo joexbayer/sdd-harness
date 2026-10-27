@@ -2,9 +2,10 @@
 id: 15
 type: feature
 title: Tasks: small steps a coder model builds one at a time
-status: open
+status: shipped
 created: 2026-10-27
 approved: f2369c5440c48e7ad12b26fe9a68ff20bb272b35 2026-10-27 joexbayer
+shipped: 2026-10-27
 ---
 # 15 Tasks: small steps a coder model builds one at a time
 
