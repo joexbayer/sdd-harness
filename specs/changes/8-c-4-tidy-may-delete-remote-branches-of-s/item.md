@@ -4,6 +4,7 @@ type: amendment
 title: C-4: tidy may delete remote branches of shipped items
 status: open
 created: 2026-10-27
+---
 # 8 C-4: tidy may delete remote branches of shipped items
 
 ## Articles affected
