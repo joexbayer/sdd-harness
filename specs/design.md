@@ -193,8 +193,8 @@ readers ignore keys they do not know.
 
 | step | verbs |
 |---|---|
-| 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary`, `open`, `tidy`, `task` |
-| 2 standard | `approve`, `trace`, `run <role>`, `drop` |
+| 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary`, `open`, `tidy`, `task`, `run`, `usage` |
+| 2 standard | `approve`, `trace`, `drop` |
 | 3 team | team IDs, `ship` via PR, `sdd-server` (MCP), CI job |
 | 4 knowledge | `kb search/links/add/accept/tidy`, `explain` |
 | 5 strict | `trust`, env allowlist, role profiles, `upgrade` with checksums |
@@ -252,9 +252,14 @@ own agent and model:
 [role "verifier"] tier = large     [tier "large"]  agent = codex   model = <id>
 ```
 
-`sdd run verifier 57` renders the prompt. `agents/<agent>.sh` then builds the headless
-command (`claude -p`, `codex exec`, `cursor-agent -p`, `copilot -p`, `opencode run`,
-`gemini -p`/`agy -p`), normalising the model, sandbox and output flags.
+Roles run as subagents where the agent has them: `sync claude` writes
+`.claude/agents/sdd-<role>.md` (the tier's model; "run `sdd next` and do that step") for every
+role on a Claude tier, and the `sdd-run` skill hands a role to its subagent. Other roles (a
+coder model through narrow) run through `sdd run <role> <id>`: `agents/<agent>.sh` builds the
+headless command (`claude -p`, `narrow --json` today; `codex exec`, `opencode run`, … later)
+with only the tier's `args`. Every run, either way, is one line in this clone's
+`.git/sdd/runs.tsv` (tokens from the agent's final JSON, or summed from a subagent's transcript
+by the SubagentStop hook), and `sdd usage` sums them per item, role and task.
 
 ## 11. Team mode and the MCP server
 
@@ -370,7 +375,7 @@ automated behind gates, and every change leaves the code easy to change again.
 | 10 | GitHub adapter, PR on ship: with `forge = github`, `ship` pushes the item branch and opens a PR (the item is its body), shipping again merges it with a merge commit when CI passes and the head is the checked commit; PR and CI state in `status`/`ls`/`review` (C-4, item 11) | teams review and merge in PRs; on the free plan sdd's gates are the only ones |
 | 12 | security in every phase: a `## Security` section (feature, fix, chore), plan and build rules, a security pass before Built, sensitive files in `review`, gitleaks in `init` (kb/security-practices.md) | agent-written code is often insecure; people decide the risks before agents build |
 | 15 | tasks: `- [ ] T-n.m … (files; test; expect: fail)`, `sdd task done` runs a task's test and ticks it, `next` hands the builder one task, ship proves ticks by commits, the `tasks` gate (standard+) | plan big, build small: a small model does one checked step at a time |
-| next | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrow, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
+| 16 | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrow, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
 | next | multi-item plans: one roadmap item lays out the phases of a system and opens its items; `Depends on: item n` with blocked items shown in `next` and `ls` | a complex system is many items in an order |
 | later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
 | later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
