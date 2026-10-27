@@ -257,7 +257,7 @@ Roles run as subagents where the agent has them: `sync claude` writes
 role on a Claude tier, and the `sdd-run` skill hands a role to its subagent. Other roles (a
 coder model through narrow) run through `sdd run <role> <id>`: `agents/<agent>.sh` builds the
 headless command (`claude -p`, `narrow --json` today; `codex exec`, `opencode run`, … later)
-with only the tier's `args`. Every run, either way, is one line in this clone's
+with only the tier's `args`. With usage tracking on (`[usage] track = true`; off by default), every run, either way, is one line in this clone's
 `.git/sdd/runs.tsv` (tokens from the agent's final JSON, or summed from a subagent's transcript
 by the SubagentStop hook), and `sdd usage` sums them per item, role and task.
 

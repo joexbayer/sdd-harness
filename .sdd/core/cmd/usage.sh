@@ -13,6 +13,11 @@ for a in "$@"; do
 done
 need_repo
 log="$ST/runs.tsv"
+if ! usage_on; then
+	echo "usage tracking is off"
+	echo "next    switch it on: add [usage] track = true to $DIRNAME/config (or your $(user_config))"
+	exit 0
+fi
 if ! grep -qv '^#' "$log" 2>/dev/null; then
 	echo "no runs logged yet"
 	echo "next    $CMD run <role> <id>, or ask your agent to run a role on an item"

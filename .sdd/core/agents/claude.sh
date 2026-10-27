@@ -58,12 +58,15 @@ install_subagents() {
 }
 
 # subagent_hooks <settings>: SubagentStart and SubagentStop hooks for the role subagents, so
-# every role run is logged with its tokens (FR-16.6); keeps everything else.
+# every role run is logged with its tokens (FR-16.6), only while usage tracking is on; switched
+# off, sdd's own entries are removed. Keeps everything else.
 subagent_hooks() {
-	if ! jq --arg st "$(hook_cmd subagent-start claude)" --arg sp "$(hook_cmd subagent-stop claude)" --arg tag "$NAME-managed" --arg m "$NAME-.*" '
+	_on=false
+	usage_on && _on=true
+	if ! jq --argjson on "$_on" --arg st "$(hook_cmd subagent-start claude)" --arg sp "$(hook_cmd subagent-stop claude)" --arg tag "$NAME-managed" --arg m "$NAME-.*" '
 		def clean: map(.hooks |= map(select((.command // "") | contains($tag) | not))) | map(select((.hooks | length) > 0));
-		.hooks.SubagentStart = (((.hooks.SubagentStart // []) | clean) + [{matcher: $m, hooks: [{type: "command", command: $st}]}])
-		| .hooks.SubagentStop = (((.hooks.SubagentStop // []) | clean) + [{matcher: $m, hooks: [{type: "command", command: $sp}]}])
+		.hooks.SubagentStart = (((.hooks.SubagentStart // []) | clean) + (if $on then [{matcher: $m, hooks: [{type: "command", command: $st}]}] else [] end))
+		| .hooks.SubagentStop = (((.hooks.SubagentStop // []) | clean) + (if $on then [{matcher: $m, hooks: [{type: "command", command: $sp}]}] else [] end))
 	' "$1" >"$1.tmp.$$"; then
 		rm -f "$1.tmp.$$"
 		die "could not update $1 (is it valid JSON?)"
@@ -120,7 +123,7 @@ agent_run() {
 # agent_subagent_hook <subagent-start|subagent-stop> <hook JSON>: log a role subagent's run
 # (sdd-<role>): note its start, and at its stop sum its transcript (no hook reports tokens).
 agent_subagent_hook() {
-	command -v jq >/dev/null 2>&1 && [ -n "$2" ] || return 0
+	usage_on && command -v jq >/dev/null 2>&1 && [ -n "$2" ] || return 0
 	_type=$(printf '%s' "$2" | jq -r '.agent_type // empty')
 	_aid=$(printf '%s' "$2" | jq -r '.agent_id // empty')
 	_role=${_type#"$NAME"-}

@@ -466,8 +466,18 @@ task_commit() {
 			} }'
 }
 
+# usage_on: usage tracking is switched on ([usage] track = true, yours or the project's); off by
+# default, so nothing about runs is kept unless someone asks for it.
+usage_on() { [ "$(cfg_mine usage.track false)" = true ]; }
+
 # run_slot: a new run number and its folder .git/sdd/runs/<n>/ (mkdir is the lock); sets RUN, RUNDIR.
+# With tracking off, a temporary folder that the caller removes (RUN is "-").
 run_slot() {
+	if ! usage_on; then
+		RUN=-
+		RUNDIR=$(mktemp -d "${TMPDIR:-/tmp}/$NAME-run.XXXXXX") || die "could not make a temporary folder"
+		return 0
+	fi
 	mkdir -p "$ST/runs"
 	RUN=1
 	while ! mkdir "$ST/runs/$RUN" 2>/dev/null; do RUN=$((RUN + 1)); done
@@ -475,13 +485,16 @@ run_slot() {
 }
 
 # run_log <run> <started> <item> <role> <agent> <model> <phase> <task> <in> <out> <cost> <seconds>
-# <exit> <verdict>: one line in this clone's .git/sdd/runs.tsv (usage.sh reads these columns),
-# printed for people too.
+# <exit> <verdict>: one line in this clone's .git/sdd/runs.tsv (usage.sh reads these columns) when
+# tracking is on; printed for people either way.
 run_log() {
-	[ -s "$ST/runs.tsv" ] ||
-		printf '# run\tstarted\titem\trole\tagent\tmodel\tphase\ttask\tin\tout\tcost\tseconds\texit\tverdict\n' >"$ST/runs.tsv"
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@" >>"$ST/runs.tsv"
-	tail -n 1 "$ST/runs.tsv" | awk -F '\t' '
+	_line=$(printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' "$@")
+	if usage_on; then
+		[ -s "$ST/runs.tsv" ] ||
+			printf '# run\tstarted\titem\trole\tagent\tmodel\tphase\ttask\tin\tout\tcost\tseconds\texit\tverdict\n' >"$ST/runs.tsv"
+		printf '%s\n' "$_line" >>"$ST/runs.tsv"
+	fi
+	printf '%s\n' "$_line" | awk -F '\t' '
 		function k(x) { return x == "" ? "?" : x >= 1000 ? sprintf("%.0fk", x / 1000) : x }
 		{ printf "run %s · %s · %s %s · item %s%s · %s in / %s out%s · %ss · exit %s · %s\n", $1, $4, $5, $6, $3,
 			($8 == "" ? "" : " " $8), k($9), k($10), ($11 == "" ? "" : sprintf(" · $%.4f", $11)), $12, $13, ($14 == "" ? "-" : $14) }'

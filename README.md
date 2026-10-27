@@ -155,7 +155,8 @@ An agent reads the `AGENTS.md` block, runs `.sdd/bin/sdd next` and follows it. W
 each developer says which agent and model a tier means for them (`[tier "small"] agent = narrow,
 model = qwen3-coder-30b` in `~/.config/sdd/config`). Ask your agent to "run the builder on
 item 16": a role on a Claude model runs as a subagent (`sync claude` writes them), any other
-through `sdd run builder 16`. Every run is logged with its tokens; `sdd usage` sums them.
+through `sdd run builder 16`. With `[usage] track = true` every run is logged with its tokens, and
+`sdd usage` sums them (off by default).
 
 Gates are scripts, not prose. In testing with a small local model (qwen3-coder 30B), the
 model ignored written rules but obeyed the gates (see `specs/kb/narrow-lessons.md`).

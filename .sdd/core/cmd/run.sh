@@ -62,4 +62,6 @@ use=$(agent_usage "$dir/out")
 run_log "$n" "$started" "$ID" "$role" "$agent" "$model" "$phase" "$task" "$(tsv 1 "$use")" "$(tsv 2 "$use")" \
 	"$(tsv 3 "$use")" "$secs" "$rc" "$(tsv 4 "$use")"
 [ "$rc" -eq 0 ] || { echo "✗ the agent exited $rc (its output: $dir)"; exit 1; }
+# Tracking off: the agent's output was only needed for this summary (kept above when it failed).
+usage_on || rm -rf "$dir"
 echo "next    $CMD next   (or $CMD usage $ID)"

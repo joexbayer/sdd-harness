@@ -3,6 +3,7 @@
 # FR-16.8 failures are logged too.
 . "$SRC/tests/lib.sh"
 new_repo
+setcfg usage.track true   # off by default (FR-16.5); t_usage_off.sh covers that
 
 # Stub agents: record their arguments and prompt, print a final JSON line like the real ones.
 mkdir -p "$T/bin"

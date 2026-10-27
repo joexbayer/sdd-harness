@@ -1,6 +1,7 @@
 # FR-16.7 sdd usage sums the logged runs per item and role, per task for one item, --md for sharing.
 . "$SRC/tests/lib.sh"
 new_repo
+setcfg usage.track true   # off by default (FR-16.5); t_usage_off.sh covers that
 assert_contains "$(sdd usage)" 'no runs logged yet'
 log=$(git rev-parse --git-common-dir)/sdd/runs.tsv
 mkdir -p "$(dirname "$log")"
