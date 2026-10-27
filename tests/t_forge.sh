@@ -6,7 +6,7 @@
 new_repo
 git init -q --bare "$T/origin.git" && git remote add origin "$T/origin.git"
 git push -q origin main
-setcfg sdd.forge github
+setcfg sdd.forge github && git push -q origin main
 
 # The stub keeps PRs in $T/gh/prs as "<branch> <number> <state> <review> <url> <head>" (tabs),
 # newest first, answers pr list with sdd's PR line (the head read live from origin while open),
@@ -68,8 +68,12 @@ echo 1 >"$T/gh/auth"
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(gh logged out)"
 assert_contains "$out" 'ship goes through GitHub (forge = github): gh is not logged in (run: gh auth login)'
-assert_contains "$(sdd status)" 'pr      PR state unknown: gh is not logged in'
+assert_contains "$(sdd ls)" 'pr      state unknown: gh is not logged in'
+assert_contains "$(sdd review)" 'pr      PR state unknown: gh is not logged in'
 echo 0 >"$T/gh/auth"
+# FR-10.6: gh not installed at all.
+nogh=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gh" ] || printf '%s:' "$d"; done)
+assert_contains "$(PATH=$nogh sdd ship 2>&1)" 'gh is not installed'
 
 # FR-10.1: gates, archive on the branch, push, PR with the item as body; main is untouched.
 main_before=$(git rev-parse main)
@@ -96,6 +100,10 @@ assert_eq $? 1 "(CI pending)"
 assert_contains "$out" 'PR #1: CI pending: test; ship again when it passes'
 echo "failing: lint" >"$T/gh/ci"
 assert_contains "$(sdd ship 2>&1)" 'CI failing: lint'
+assert_eq "$(grep -c 'pr merge' "$T/gh/log")" 0 "(no merge was tried)"
+awk -F '\t' -v OFS='\t' '$2 == 1 { $4 = "CHANGES_REQUESTED" } { print }' "$T/gh/prs" >"$T/gh/p" && mv "$T/gh/p" "$T/gh/prs"
+assert_contains "$(sdd ship 2>&1)" 'PR #1: changes requested'
+awk -F '\t' -v OFS='\t' '$2 == 1 { $4 = "APPROVED" } { print }' "$T/gh/prs" >"$T/gh/p" && mv "$T/gh/p" "$T/gh/prs"
 echo passing >"$T/gh/ci"
 
 # FR-10.2: new local commits are checked, pushed, and the body updated; no second PR.
@@ -117,10 +125,22 @@ assert_contains "$(grep 'pr merge' "$T/gh/log")" '--merge --match-head-commit'
 
 # FR-10.3, FR-10.4: a PR whose head moved (a teammate pushed) or that was closed is not merged.
 planned_item fix "Typo"
-echo typo >typo.txt && git add typo.txt && git commit -qm "fix(2): typo"
+mkdir -p .github/workflows && echo "on: push" >.github/workflows/ci.yml
+echo typo >typo.txt && git add -A && git commit -qm "fix(2): typo"
 fill "$ITEM" built && git commit -qam "docs(2): built"
-sdd ship >/dev/null 2>&1 || fail "ship 2 failed"
+out=$(sdd ship 2>&1) || fail "ship 2 failed: $out"
+# FR-10.4: CI says nothing yet although the branch has workflows: not a pass.
+echo none >"$T/gh/ci"
+assert_contains "$(sdd ship 2>&1)" 'PR #2: CI has not reported yet'
+echo passing >"$T/gh/ci"
 git clone -q "$T/origin.git" "$T/mate"
+# FR-10.3: main moved on the remote: the branch must contain it before anything merges.
+(cd "$T/mate" && echo other >other.txt && git add other.txt && git commit -qm other && git push -q origin main) ||
+	fail "teammate main push failed"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(behind origin/main)"
+assert_contains "$out" 'fix/2-typo is behind origin/main: git merge origin/main'
+git merge -q --no-edit origin/main
 (cd "$T/mate" && git switch -q fix/2-typo && echo mate >mate.txt && git add mate.txt && git commit -qm mate &&
 	git push -q origin HEAD) || fail "teammate push failed"
 out=$(sdd ship 2>&1)
@@ -130,6 +150,20 @@ awk -F '\t' -v OFS='\t' '$2 == 2 { $3 = "CLOSED" } { print }' "$T/gh/prs" >"$T/g
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(closed)"
 assert_contains "$out" 'PR #2 is closed'
+
+# FR-10.4, FR-10.5: the real query (FORGE_JQ, which the stub skips) sorts GitHub's check results:
+# a running check is pending, a failed status context is failing, no checks is none.
+cat >"$T/prs.json" <<'JSON'
+[{"headRefName":"a/1-x","number":5,"state":"OPEN","reviewDecision":null,"url":"u5","headRefOid":"s5",
+  "statusCheckRollup":[{"name":"test","status":"IN_PROGRESS","conclusion":null},{"name":"lint","status":"COMPLETED","conclusion":"SKIPPED"}]},
+ {"headRefName":"a/2-y","number":6,"state":"OPEN","reviewDecision":"APPROVED","url":"u6","headRefOid":"s6",
+  "statusCheckRollup":[{"name":"test","status":"COMPLETED","conclusion":"SUCCESS"},{"context":"ext","state":"ERROR"}]},
+ {"headRefName":"a/3-z","number":7,"state":"MERGED","reviewDecision":"","url":"u7","headRefOid":"s7","statusCheckRollup":[]},
+ {"headRefName":"a/4-w","number":8,"state":"OPEN","reviewDecision":"","url":"u8","headRefOid":"s8",
+  "statusCheckRollup":[{"name":"test","status":"COMPLETED","conclusion":"SUCCESS"},{"context":"ci/x","state":"SUCCESS"}]}]
+JSON
+out=$(. "$SRC/.sdd/core/forges/github.sh" && jq -r ".[] | $FORGE_JQ" "$T/prs.json" | cut -f1,5)
+assert_eq "$out" "$(printf 'a/1-x\tpending: test\na/2-y\tfailing: ext\na/3-z\tnone\na/4-w\tpassing')"
 
 # FR-10.7: init on a repo whose origin is on GitHub suggests the forge.
 new_repo other

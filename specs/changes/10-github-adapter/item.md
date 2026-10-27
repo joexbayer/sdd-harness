@@ -113,6 +113,25 @@ Deviations:
 - The second ship re-runs only the check gate, not the plan gates: the plan was gated at the
   first ship and is archived now.
 
+Fresh-context review (2 blockers, 8 warnings, 7 nits) and what changed:
+- Blocker fixed: the merge checked the branch head, but GitHub merges it into the current
+  remote base. `pr_ready` now fetches and requires the branch to contain `<remote>/<base>`
+  (and the local base nothing the remote lacks) before checking, pushing or merging; with a
+  forge the first ship no longer rebases. Test: t_forge.sh (teammate pushes to origin/main).
+- Blocker fixed: the second ship skipped the constitution guard and check articles; `pr_gates`
+  runs both plus the check.
+- Fixed: CHANGES_REQUESTED blocks the merge; CI "none" on a branch with .github/workflows
+  counts as not reported yet; a PR merged on GitHub without newer local commits stops with
+  what was left out; the remote branch is deleted after a button merge too; a forge error is
+  no longer read as "no PR"; `status` asks GitHub only in phase pr (it runs at every agent
+  session start). Tests: t_forge.sh (changes requested, CI not reported, no merge call on a
+  refusal, gh not installed, ls and review with gh logged out).
+- Fixed: `FORGE_JQ` is now tested on saved GitHub JSON (running, failing, none, passing);
+  PR lines go through one awk (`AWK_PR`) instead of ~16 processes each, in one field order
+  from pr_table to row_json; the C-4 check requires marked ship pushes to name "$BRANCH".
+- Not done (speculative): a lease on the remote branch delete right after the merge.
+- Not done: `show --json` carries no `pr` (show is not in this item's FRs).
+
 Follow-ups:
 - DOD-10.2 (a real PR on this repo) needs `forge = github` in this repo's config after this ships.
 
