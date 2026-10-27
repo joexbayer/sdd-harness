@@ -13,3 +13,10 @@ agent_usage() {
 	[ -n "$_l" ] || { printf '\t\t\tno finish event\n'; return 0; }
 	printf '%s\t%s\t%s\t%s\n' "$(json_num in "$_l")" "$(json_num out "$_l")" "$(json_num cost "$_l")" "$(json_str verdict "$_l")"
 }
+
+# agent_run <bin> <model> <prompt file> <output file> <args>: one headless run in this repo,
+# events as JSON. Only the tier's args are added (e.g. --profile local, or --yolo if you choose).
+agent_run() {
+	# shellcheck disable=SC2086 # the tier's args are the developer's words, split on purpose
+	"$1" -C "$ROOT" -m "$2" --json $5 -p "$(cat "$3")" >"$4"
+}

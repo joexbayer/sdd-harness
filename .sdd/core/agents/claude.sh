@@ -60,3 +60,10 @@ agent_transcript_usage() {
 		    (map(.u.output_tokens // 0) | add // 0),
 		    (map(.model) | map(select(. != null)) | first // "") ] | @tsv' "$1"
 }
+
+# agent_run <bin> <model> <prompt file> <output file> <args>: one headless run, the prompt on
+# stdin. Only the tier's args are added (no permission flags of sdd's own; design §13).
+agent_run() {
+	# shellcheck disable=SC2086 # the tier's args are the developer's words, split on purpose
+	"$1" -p --output-format json --model "$2" $5 <"$3" >"$4"
+}
