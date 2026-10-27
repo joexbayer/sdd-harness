@@ -94,7 +94,7 @@ each against its commit.
 - [x] T-15.2 `sdd task` and `sdd task done`, FR-15.2, FR-15.3, FR-15.6 (files: .sdd/core/cmd/task.sh, tests/t_task.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_task.sh)
 - [x] T-15.3 Current task in the phase and `next`, FR-15.5 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_task.sh)
 - [x] T-15.4 Ship drift check and the tasks gate, FR-15.7 (files: .sdd/core/cmd/ship.sh, .sdd/core/config; test: SH=/bin/sh SRC=$PWD sh tests/t_task.sh)
-- [ ] T-15.5 Template, plan prompt, help and design, FR-15.8 (files: .sdd/core/templates/feature.md, .sdd/core/prompts/plan.md, specs/design.md)
+- [x] T-15.5 Template, plan prompt, help and design, FR-15.8 (files: .sdd/core/templates/feature.md, .sdd/core/prompts/plan.md, specs/design.md)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
