@@ -74,7 +74,8 @@ out=$(sdd ship 2>&1)
 assert_eq $? 1 "(ticked, unnamed)"
 assert_contains "$out" 'ticked, but no commit names them: T-1.2'
 git commit -q --amend -m "feat(1): T-1.2 page the orders query, and Built"
-assert_contains "$(sdd task)" 'T-1.2'
+assert_contains "$(sdd task)" "commit $(git rev-parse --short HEAD)"
+assert_not_contains "$(sdd task)" "$(git rev-parse --short HEAD)$(git rev-parse --short HEAD)"
 
 # FR-15.2 (no test: the check runs), FR-15.7 (the tasks gate): standard blocks open tasks.
 setcfg sdd.profile standard

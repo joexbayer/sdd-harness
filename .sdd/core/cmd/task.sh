@@ -20,7 +20,7 @@ if [ $# -eq 0 ]; then
 		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail)"
 		[ -z "$(tsv 5 "$r")" ] || echo "      test: $(tsv 5 "$r")$ex"
 		[ -z "$(tsv 7 "$r")" ] || echo "      serves: $(tsv 7 "$r")"
-		echo "      ${c:+commit $c}${c:-no commit names it yet}"
+		if [ -n "$c" ]; then echo "      commit $c"; else echo "      no commit names it yet"; fi
 	done
 	exit 0
 fi
