@@ -4,6 +4,7 @@ type: feature
 title: Task batches and the build loop
 status: open
 created: 2026-10-27
+approved: 8c3bb1b5a3b6cdff3561267e19821230cebddb23 2026-10-27 joexbayer
 ---
 # 17 Task batches and the build loop
 
