@@ -97,7 +97,7 @@ DOD-16.2 On a scratch repo, a planner subagent (Opus) and a builder run through 
 + qwen) both show up in `sdd usage` with tokens and a verdict.
 
 ## Tasks (optional)
-- [ ] T-16.1 Read usage from claude -p, narrow and a subagent transcript, FR-16.5 (files: .sdd/core/agents/claude.sh, .sdd/core/agents/narrow.sh, tests/t_agent_usage.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_agent_usage.sh)
+- [x] T-16.1 Read usage from claude -p, narrow and a subagent transcript, FR-16.5 (files: .sdd/core/agents/claude.sh, .sdd/core/agents/narrow.sh, tests/t_agent_usage.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_agent_usage.sh)
 - [ ] T-16.2 `sdd run`: resolve the role, run once, log, FR-16.1, FR-16.4, FR-16.5, FR-16.8 (files: .sdd/core/cmd/run.sh, tests/t_run.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_run.sh)
 - [ ] T-16.3 Subagents, the sdd-run skill and the subagent hooks, FR-16.2, FR-16.3, FR-16.6 (files: .sdd/core/agents/claude.sh, .sdd/core/agents/skills/run.md, .sdd/core/cmd/hook.sh, tests/t_roles.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_roles.sh)
 - [ ] T-16.6 `sdd usage`, FR-16.7 (files: .sdd/core/cmd/usage.sh, tests/t_usage.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_usage.sh)
