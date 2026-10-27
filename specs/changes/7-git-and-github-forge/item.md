@@ -111,7 +111,8 @@ DOD-7.2 On this repo, `sdd tidy` removes the leftover local branches of items 2-
   the base instead of `git branch -d`. Test: tests/t_ship.sh (pushed, then rebased by ship).
 - FR-7.5 (ship in a worktree keeps it): `ship.sh:118-122`. Tests: t_ship.sh, tests/t_tidy.sh.
 - FR-7.6, FR-7.7 (tidy removes the safe, keeps the rest with reason and command):
-  `.sdd/core/cmd/tidy.sh:59-79`, reasons in `keep_reason` (`tidy.sh:38`). Kept: the main checkout's branch, the worktree you are in, a
+  `.sdd/core/cmd/tidy.sh:59-79`, reasons in `keep_reason` (`tidy.sh:38`). Kept: the main
+  checkout's branch, the worktree you are in, a
   spike's code, commits not on the base, uncommitted changes. Test: t_tidy.sh (two worktrees,
   a spike, an open item that is never touched, `--dry-run`).
 - FR-7.8, FR-7.9 (remote branches listed; `--remote` deletes, unless `git cherry` finds changes
