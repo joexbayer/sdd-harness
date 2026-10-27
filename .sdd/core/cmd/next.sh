@@ -24,6 +24,28 @@ echo "Item $ID ($ITYPE): $title"
 echo "File: $IFILE"
 echo "Phase: $PHASE ($WHY)"
 echo
+# One task at a time: the current task first, with the requirements it serves.
+if [ "$WHYCODE" = task ]; then
+	t=$(task_rows | awk -F '\t' '$2 == "open" { print; exit }')
+	tid=$(tsv 1 "$t")
+	echo "Current task: $tid $(tsv 3 "$t")"
+	[ -z "$(tsv 4 "$t")" ] || echo "  files   $(tsv 4 "$t")"
+	if [ -n "$(tsv 5 "$t")" ]; then
+		echo "  test    $(tsv 5 "$t")"
+	else
+		echo "  test    the full check ($CMD check)"
+	fi
+	[ "$(tsv 6 "$t")" != fail ] || echo "  expect  fail: write the test first: it must fail (the next task makes it pass)"
+	for fr in $(tsv 7 "$t"); do
+		parse_item "$IFILE" "$ID" | F=$fr awk -F '\t' '$1 == "fr" && $2 == ENVIRON["F"] {
+			print "  serves  " $2 " " $4; if ($5 != "") print "          e.g. " $5 }'
+	done
+	case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
+	echo
+	echo "Do only this task. When its test passes, run: $CMD task done $tid, then commit the code and"
+	echo "$IFILE together with the task in the subject, e.g. $kind($ID): $tid $(tsv 3 "$t")"
+	echo
+fi
 prompt "$PHASE" "$ID" "$title" "$ITYPE"
 prompt "$PHASE.$ITYPE" "$ID" "$title" "$ITYPE"
 case $PHASE in

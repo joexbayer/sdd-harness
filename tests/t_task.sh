@@ -1,0 +1,127 @@
+# FR-15.1 task attributes, FR-15.2 task done runs the task's test and ticks it, FR-15.3 refusals,
+# FR-15.4 ticks do not void approval, FR-15.5 the current task in the phase and next, FR-15.6
+# sdd task lists tasks and their commits, FR-15.7 ship's drift check and tasks gate, FR-15.8 the
+# template and plan prompt ask for tasks.
+. "$SRC/tests/lib.sh"
+new_repo
+
+sdd new feature "Orders paging" >/dev/null 2>&1
+f=specs/changes/1-orders-paging/item.md
+fill "$f" plan
+# FR-15.8: the template has a Tasks section and the plan prompt asks for small tasks.
+grep -q '^## Tasks (optional)$' "$f" || fail "feature template has no Tasks section"
+assert_contains "$(sdd next)" 'End the plan with small, ordered tasks'
+awk '/^## What changes$/ { print; print "FR-1.1 WHEN a page is asked for THE SYSTEM SHALL return 20 orders."; print "  e.g. page 2 → orders 21-40"; next }
+/^## Tasks \(optional\)$/ { print
+	print "- [ ] T-1.1 Page test first, FR-1.1 (files: t1.sh; test: sh t1.sh; expect: fail)"
+	print "- [ ] T-1.2 Page the orders query, FR-1.1 (files: q.sh; test: sh t1.sh && echo ran >ran.txt)"
+	print "- [ ] T-1.3 Docs (files: README.md)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan with tasks"
+
+# FR-15.1, FR-15.6: sdd task lists each task with its test and whether a commit names it.
+out=$(sdd task)
+assert_contains "$out" '[ ] T-1.1 Page test first'
+assert_contains "$out" 'test: sh t1.sh (expect: fail)'
+assert_contains "$out" 'serves: FR-1.1'
+assert_contains "$out" 'no commit names it yet'
+
+# FR-15.3: before approval nothing runs.
+out=$(sdd task 'done' T-1.2 2>&1)
+assert_eq $? 1 "(not approved)"
+assert_contains "$out" 'not approved'
+assert_no_file ran.txt
+sdd approve >/dev/null 2>&1 || fail "approve failed"
+sdd task 'done' T-9.9 >/dev/null 2>&1
+assert_eq $? 1 "(unknown task)"
+
+# FR-15.5: the phase names the current task; next shows it first, with the FR and its example.
+assert_contains "$(sdd status)" 'task T-1.1 of 3: Page test first'
+out=$(sdd next)
+assert_contains "$out" 'Current task: T-1.1 Page test first'
+assert_contains "$out" 'FR-1.1 WHEN a page is asked for THE SYSTEM SHALL return 20 orders.'
+assert_contains "$out" 'e.g. page 2 → orders 21-40'
+assert_contains "$out" 'write the test first: it must fail'
+assert_contains "$out" '.sdd/bin/sdd task 'done' T-1.1'
+
+# FR-15.2: expect: fail ticks only when the test fails; then a normal task must pass.
+echo 'exit 0' >t1.sh
+out=$(sdd task 'done' T-1.1 2>&1)
+assert_eq $? 1 "(a red task whose test passes)"
+assert_contains "$out" 'expected its test to fail'
+echo 'grep -q page q.sh' >t1.sh
+out=$(sdd task 'done' T-1.1 2>&1) || fail "red task failed: $out"
+assert_contains "$out" '✓ T-1.1 done (its test fails, as expected)'
+assert_contains "$out" 'commit with: feat(1): T-1.1 Page test first'
+grep -q '^- \[x\] T-1.1 ' "$f" || fail "T-1.1 not ticked"
+# FR-15.4: the tick did not void the approval.
+assert_not_contains "$(sdd status)" 'changed after approval'
+git add -A && git commit -qm "test(1): T-1.1 page test first"
+out=$(sdd task 'done' T-1.2 2>&1)
+assert_eq $? 1 "(failing test)"
+grep -q '^- \[ \] T-1.2 ' "$f" || fail "a failing task must stay unticked"
+echo page >q.sh
+out=$(sdd task 'done' T-1.2 2>&1) || fail "T-1.2 failed: $out"
+assert_contains "$out" '✓ T-1.2 done (its test passed)'
+assert_file ran.txt
+rm ran.txt
+sdd task 'done' T-1.2 >/dev/null 2>&1
+assert_eq $? 1 "(already ticked)"
+assert_contains "$(sdd status)" 'task T-1.3 of 3: Docs'
+
+# FR-15.7: a tick no commit names is refused at ship, in lite too.
+fill "$f" built && git add -A && git commit -qm "docs(1): built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(ticked, unnamed)"
+assert_contains "$out" 'ticked, but no commit names them: T-1.2'
+git commit -q --amend -m "feat(1): T-1.2 page the orders query, and Built"
+assert_contains "$(sdd task)" "commit $(git rev-parse --short HEAD)"
+assert_not_contains "$(sdd task)" "$(git rev-parse --short HEAD)$(git rev-parse --short HEAD)"
+
+# FR-15.2 (no test: the check runs), FR-15.7 (the tasks gate): standard blocks open tasks.
+setcfg sdd.profile standard
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(open task in standard)"
+assert_contains "$out" 'tasks not done: T-1.3'
+out=$(sdd task 'done' T-1.3 2>&1) || fail "T-1.3 failed: $out"
+assert_contains "$out" '✓ T-1.3 done (the check passed)'
+git commit -qam "docs(1): T-1.3 docs"
+out=$(sdd ship 2>&1) || fail "ship failed: $out"
+assert_contains "$out" 'shipped 1 into main'
+
+# Review cases, on a second item (standard profile from above).
+sdd new feature "Hard cases" >/dev/null 2>&1
+f=specs/changes/2-hard-cases/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print
+	print "```"; print "- [ ] T-2.1 an example in a fence"; print "```"
+	print "- [ ] T-2.1 Red first (files: t2.sh; test: sh other.sh; expect: fail)"
+	print "- [ ] T-2.2 Hides failures (test: false || true)"
+	print "- [ ] T-2.3 Wrapped (test: true)"; print "  and more words"
+	print "- [ ] T-2.4 Plain (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(2): plan" && sdd approve >/dev/null 2>&1 || fail "approve 2 failed"
+# FR-15.2: a red task's files must exist, and a red test that ran no tests is not red.
+assert_contains "$(sdd task 'done' T-2.1 2>&1)" 't2.sh (in files:) does not exist yet'
+printf 'echo "No tests found"\nexit 1\n' >other.sh
+echo x >t2.sh
+assert_contains "$(sdd task 'done' T-2.1 2>&1)" 'its test ran no tests'
+# FR-15.2: a test that hides failures, and attributes that do not end the line, are refused.
+assert_contains "$(sdd task 'done' T-2.2 2>&1)" 'its test hides failures'
+assert_contains "$(sdd task 'done' T-2.3 2>&1)" 'its attributes must end its line'
+# The fenced example is never ticked; the real line is.
+sdd task 'done' T-2.4 >/dev/null 2>&1 || fail "T-2.4 failed"
+grep -q '^- \[x\] T-2.4 ' "$f" || fail "T-2.4 not ticked"
+git add -A && git commit -qm "feat(2): T-2.4 plain"
+# FR-15.7: a tick by hand is refused at ship, even with a commit naming it.
+sed 's/^- \[ \] T-2.1 Red/- [x] T-2.1 Red/' "$f" >"$T/f" && cp "$T/f" "$f"
+grep -c '^- \[ \] T-2.1 an example' "$f" >/dev/null || fail "the fenced example changed"
+fill "$f" built && git commit -qam "feat(2): T-2.1 red first, by hand"
+assert_contains "$(sdd ship 2>&1)" 'ticked without .sdd/bin/sdd task done: T-2.1'
+# A teammate's tick was proven on their machine: only the commit is asked for.
+git commit -q --amend --author="kari <kari@example.com>" --no-edit
+out=$(sdd ship 2>&1)
+assert_not_contains "$out" 'ticked without'
+assert_contains "$out" 'tasks not done: T-2.2, T-2.3'
+# FR-15.4: any other plan edit still voids the approval.
+sed 's/^- \[ \] T-2.2 Hides failures/- [ ] T-2.2 Hides nothing/' "$f" >"$T/f" && cp "$T/f" "$f"
+assert_contains "$(sdd status)" 'changed after approval'
+exit 0

@@ -27,8 +27,11 @@ facts() {
 # 1: shipped, so it comes from the archive on main.
 sdd new feature "One" >/dev/null 2>&1
 fill specs/changes/1-one/item.md plan && facts specs/changes/1-one/item.md 1
+# Ship takes a tick only from task done (FR-15.7): untick T-1.1 and let task done tick it.
+sed 's/^- \[x\] T-1.1 /- [ ] T-1.1 /' specs/changes/1-one/item.md >"$T/u" && cp "$T/u" specs/changes/1-one/item.md
 sdd approve >/dev/null 2>&1 && fill specs/changes/1-one/item.md built
-git commit -qam "built" && sdd check >/dev/null 2>&1 && sdd ship >/dev/null 2>&1 || fail "ship 1 failed"
+sdd task 'done' T-1.1 >/dev/null 2>&1 || fail "task done T-1.1 failed"
+git commit -qam "feat(1): T-1.1 the form, built" && sdd check >/dev/null 2>&1 && sdd ship >/dev/null 2>&1 || fail "ship 1 failed"
 
 # 2: open on a local branch, also pushed (local wins over origin).
 git init -q --bare "$T/origin.git" && git remote add origin "$T/origin.git" && git push -q origin main

@@ -54,6 +54,7 @@ cells=$(printf '%s\n' "$rows" | TODAY=$(date +%F) SINCE=$since LAST=$last MINE=$
 			return s
 		}
 		extra = ($7 > 0) ? "; " $6 "/" $7 " tasks done" : ""
+		if ($4 == "build" && $17 == "task") return "building: " $16 extra
 		if ($4 == "build") return ($17 == "built" ? "building: check passed, Built not written yet" : "building: no passing check yet") extra
 		if ($4 == "review?") return "in review? (its check ran on a teammate'"'"'s machine)" extra
 		if ($4 == "review") return "in review: check passed, Built written; ready to review and ship" extra

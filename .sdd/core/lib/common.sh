@@ -177,7 +177,9 @@ plan_part() {
 	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit } { print }' "$1"
 }
 
-plan_hash() { plan_part "$1" | git hash-object --stdin; }
+# plan_hash <file>: what approval pins. Task boxes count as unticked: sdd ticks them as tasks pass
+# (task done), which must not void the approval; every other plan edit does.
+plan_hash() { plan_part "$1" | sed 's/^- \[[xX]\] T-/- [ ] T-/' | git hash-object --stdin; }
 
 # approval_ok: approved, and the plan has not changed since.
 approval_ok() {
@@ -328,7 +330,7 @@ check_passed_here() {
 }
 
 # item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), WHYCODE (the same
-# as a stable word for programs: frontmatter|status|fill|approval|changed|check|built|ready)
+# as a stable word for programs: frontmatter|status|fill|approval|changed|task|check|built|ready)
 # and MISSING.
 #   plan    the human's time: header not closed, plan empty, or not (or no longer) approved
 #   build   the agent's time: no passing check for this code, or "## Built" empty
@@ -363,8 +365,14 @@ item_phase() {
 			WHYCODE=approval
 		fi
 	else
+		# Open tasks come first: the builder works them in order (task done ticks them).
+		_t=$(task_rows | awk -F '\t' '$2 == "open" && !f { f = $1 "\t" $3 } END { if (f != "") print f "\t" NR }')
 		MISSING=$(missing_sections "$IFILE" built)
-		if [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
+		if [ -n "$_t" ]; then
+			PHASE=build
+			WHY="task $(tsv 1 "$_t") of $(tsv 3 "$_t"): $(tsv 2 "$_t")"
+			WHYCODE=task
+		elif [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
 			PHASE=build
 			WHY="no passing check for the current code"
 			WHYCODE=check
@@ -378,6 +386,52 @@ item_phase() {
 			WHYCODE=ready
 		fi
 	fi
+}
+
+# task_rows: the current item's tasks (IFILE, ID), one per line, in plan order:
+# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>". <bad> is 1 when the
+# line has attributes that do not end it (a wrapped line, words after them): sdd must not guess.
+# Attributes sit in a final "(files: …; test: …; expect: fail)"; a value runs to the next
+# "; <key>:", so a test command may contain ";" and parentheses.
+task_rows() {
+	parse_item "$IFILE" "$ID" | awk -F '\t' -v OFS='\t' '
+		$1 != "task" || $2 !~ /^T-[0-9]+\.[0-9]+$/ { next }
+		{
+			txt = $4; what = txt; files = ""; test = ""; expect = ""; frs = ""; bad = 0
+			p = 0
+			for (k = 1; k <= 3; k++) {
+				key = (k == 1 ? "files:" : k == 2 ? "test:" : "expect:")
+				i = index(txt, " (" key); if (i && (p == 0 || i < p)) p = i
+			}
+			if (p && substr(txt, length(txt)) != ")") bad = 1
+			if (p && substr(txt, length(txt)) == ")") {
+				what = substr(txt, 1, p - 1); a = "; " substr(txt, p + 2, length(txt) - p - 2)
+				n = 0
+				while (match(a, /; (files|test|expect): /)) {
+					if (n) val[n] = substr(a, 1, RSTART - 1)
+					kk = substr(a, RSTART + 2, RLENGTH - 4); a = substr(a, RSTART + RLENGTH); n++; name[n] = kk
+				}
+				if (n) val[n] = a
+				for (j = 1; j <= n; j++) {
+					if (name[j] == "files") files = val[j]; else if (name[j] == "test") test = val[j]; else expect = val[j]
+				}
+			}
+			s = what
+			while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
+			sub(/(,? FR-[0-9]+\.[0-9]+)+[ ,]*$/, "", what); sub(/[ ,]+$/, "", what)
+			print $2, $3, what, files, test, expect, frs, bad
+		}'
+}
+
+# task_commit <task id>: the newest commit on this branch (since the base) whose subject names
+# the task, as a whole ID: T-4.1 is not T-4.10.
+task_commit() {
+	git log --format='%h %s' "$(cfg sdd.base main)..HEAD" 2>/dev/null |
+		T=$1 awk '{ s = " " substr($0, index($0, " ") + 1) " "; t = ENVIRON["T"]
+			while ((i = index(s, t)) > 0) {
+				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; exit }
+				s = substr(s, i + length(t))
+			} }'
 }
 
 # masked: the input lines that hide a failure ("cmd || true", "|| :", "|| exit 0").

@@ -6,7 +6,7 @@
 	mode = solo
 	base = main
 	branch = {type}/{id}-{slug}
-	gates = planned approved check built
+	gates = planned approved tasks check built
 
 # Gate levels per profile: off, warn or block.
 #   planned    every required plan section (above "## Built") has content
@@ -14,6 +14,8 @@
 #              committed before the approval
 #   check      the configured checks pass for exactly the code being shipped
 #   built      "## Built" (what was built, how it was verified) is written
+#   tasks      the plan has tasks and every one is ticked (off for fix, refactor and amendment);
+#              a ticked task needs a commit naming it in every profile, whatever this level
 #   finish     agent stop hook: no stopping with unplanned, unapproved, unverified or
 #              unwritten-up code changes (blocks once, then lets it stop with a warning)
 [profile "lite"]
@@ -21,18 +23,21 @@
 	approved = block
 	check = block
 	built = warn
+	tasks = warn
 	finish = block
 [profile "standard"]
 	planned = block
 	approved = block
 	check = block
 	built = block
+	tasks = block
 	finish = block
 [profile "strict"]
 	planned = block
 	approved = block
 	check = block
 	built = block
+	tasks = block
 	finish = block
 
 # A type exists when templates/<type>.md exists. Settings here are optional:
@@ -51,6 +56,11 @@
 	approved = block
 	check = block
 	built = block
+	tasks = off
+[type "fix"]
+	tasks = off
+[type "refactor"]
+	tasks = off
 [type "spike"]
 	gates = planned approved built
 	lands = item
