@@ -4,6 +4,7 @@ type: amendment
 title: C-4: ship may push its branch and merge its PR
 status: open
 created: 2026-10-27
+approved: 3ff7bd2dbe1eb71998aa7b922fabd51bd0f9417a 2026-10-27 joexbayer
 ---
 # 11 C-4: ship may push its branch and merge its PR
 
