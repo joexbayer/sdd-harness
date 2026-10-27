@@ -168,7 +168,7 @@ fixed keys; every other reader (the MCP server too) uses them instead of parsing
 |---|---|---|
 | story | `US-<id>.<n> As a …` | `grep -h '^US-' specs/changes/*/item.md` |
 | requirement | `FR-<id>.<n> WHEN … THE SYSTEM SHALL …`, continued on the next lines, then an `e.g.` line | `grep -c '^FR-41\.' specs/changes/41-*/item.md` |
-| task | `- [ ] T-<id>.<n> …` or `- [x] T-<id>.<n> …` (`[X]` counts too) | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
+| task | `- [ ] T-<id>.<n> <what>, FR-… (files: …; test: <command>; expect: fail)`; `[x]` once `task done` saw its test pass (`[X]` counts too); attributes optional | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
 | decision | `D-<id>.<n> … because …` | `git grep -n '^D-' specs/` |
 | question | `Q-<id>.<n> … → recommend: …`; answered with `→ decided: …` | `grep '^Q-' … \| grep -v 'decided:'` |
 | outcome | `DOD-<id>.<n> …` | |
@@ -193,8 +193,8 @@ readers ignore keys they do not know.
 
 | step | verbs |
 |---|---|
-| 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary`, `open`, `tidy` |
-| 2 standard | `approve`, `task red/done`, `trace`, `run <role>`, `drop` |
+| 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary`, `open`, `tidy`, `task` |
+| 2 standard | `approve`, `trace`, `run <role>`, `drop` |
 | 3 team | team IDs, `ship` via PR, `sdd-server` (MCP), CI job |
 | 4 knowledge | `kb search/links/add/accept/tidy`, `explain` |
 | 5 strict | `trust`, env allowlist, role profiles, `upgrade` with checksums |
@@ -368,11 +368,14 @@ automated behind gates, and every change leaves the code easy to change again.
 | 5 | `sdd summary`: recent work as a table (item, state, who, when), `--md` for PRs and chat | a lead sees what moved and what waits for whom at a glance |
 | 7 | git forge: `sdd open <id> [--worktree]` (any item, a teammate's too), ship deletes a branch whose commits are all on the base, `sdd tidy` removes what shipped items left, `tidy --remote` deletes their remote branches (C-4, item 8) | every git procedure an agent would otherwise improvise is a script, so it is correct every time |
 | 10 | GitHub adapter, PR on ship: with `forge = github`, `ship` pushes the item branch and opens a PR (the item is its body), shipping again merges it with a merge commit when CI passes and the head is the checked commit; PR and CI state in `status`/`ls`/`review` (C-4, item 11) | teams review and merge in PRs; on the free plan sdd's gates are the only ones |
-| next | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
-| next | model roles: `sdd run <role> <id>` renders a role's prompt and runs it on each developer's own agent and model (§10); narrow as an adapter (`agents/narrow.sh`, `sdd sync narrow`) | plan big, build small: a large model plans, a small local one builds behind the gates (kb/narrow-lessons.md) |
-| next | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
+| 12 | security in every phase: a `## Security` section (feature, fix, chore), plan and build rules, a security pass before Built, sensitive files in `review`, gitleaks in `init` (kb/security-practices.md) | agent-written code is often insecure; people decide the risks before agents build |
+| 15 | tasks: `- [ ] T-n.m … (files; test; expect: fail)`, `sdd task done` runs a task's test and ticks it, `next` hands the builder one task, ship proves ticks by commits, the `tasks` gate (standard+) | plan big, build small: a small model does one checked step at a time |
+| next | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrow, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
+| next | multi-item plans: one roadmap item lays out the phases of a system and opens its items; `Depends on: item n` with blocked items shown in `next` and `ls` | a complex system is many items in an order |
+| later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
+| later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | next | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model); a contract item lands only the contract; items name `Contract:` and approval pins its hash, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
-| next | tasks (`task red/done`) | Spec Kit parity |
+| then | the experiment: a complex multi-phase app, Opus plans and a coder model builds tasks, a scripted human answers and approves, measured against an Opus-only baseline | proves plan big, build small with numbers |
 | then | `sdd-server` (stdio, then HTTP with mirrors) | team coordination across branches and repos |
 | then | fresh-context review for clean, easy-to-change code | ladder step 5 |
 

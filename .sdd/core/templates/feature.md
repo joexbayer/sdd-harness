@@ -37,6 +37,13 @@ what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>
 ## Done when
 <!-- DOD-{{id}}.1 <observable outcome>, e.g. "works against staging". -->
 
+## Tasks (optional)
+<!-- Small, ordered steps the builder does one at a time, each in one sitting, each with a test
+of its own (so it can pass before the next task exists):
+    - [ ] T-{{id}}.1 Page the orders query, FR-{{id}}.1 (files: src/orders.js; test: npm test -- orders)
+Add `; expect: fail` for a test written first (it must fail); without `test:` the full check
+runs. `{{cmd}} task done T-{{id}}.1` ticks a task when its test passes. -->
+
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
