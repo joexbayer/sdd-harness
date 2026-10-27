@@ -1,5 +1,5 @@
 # FR-7.1 open switches to an item's branch, tracking a teammate's remote one; FR-7.2 --worktree;
-# FR-7.3 refusals.
+# FR-7.3 refusals (unknown, shipped, dropped, dirty).
 . "$SRC/tests/lib.sh"
 new_repo
 git init -q --bare "$T/origin.git" && git remote add origin "$T/origin.git"
@@ -47,11 +47,22 @@ out=$(sdd open 3 2>&1)
 assert_eq $? 1 "(shipped)"
 assert_contains "$out" 'item 3 is shipped (specs/archive/3-done-thing)'
 
-# FR-7.2: a worktree next to the main checkout; asked again, it says where the branch is.
+mkdir -p specs/archive/9-dropped-idea
+printf -- '---\nid: 9\ntype: feature\ntitle: Dropped idea\nstatus: dropped\n---\n' >specs/archive/9-dropped-idea/item.md
+git add specs/archive && git commit -qm "docs(9): dropped"
+out=$(sdd open 9 2>&1)
+assert_eq $? 1 "(dropped)"
+assert_contains "$out" 'item 9 is dropped'
+
+# FR-7.2: a worktree next to the main checkout, with the agents synced here (its absolute-path
+# ask rules name the new folder); asked again, it says where the branch is.
+sdd sync claude >/dev/null 2>&1 || fail "sync claude failed"
 out=$(sdd open 1 --worktree) || fail "open --worktree failed: $out"
 assert_contains "$out" 'app.1'
 assert_file "$T/app.1/specs/changes/1-local-thing/item.md"
 assert_eq "$(git -C "$T/app.1" branch --show-current)" feature/1-local-thing
+wt1=$(cd "$T/app.1" && pwd -P)
+assert_contains "$(jq -r '.permissions.ask | join(" ")' "$T/app.1/.claude/settings.local.json")" "Bash($wt1/.sdd/bin/sdd approve:*)"
 assert_contains "$(sdd open 1 --worktree)" 'feature/1-local-thing is checked out in'
 assert_contains "$(sdd open 1)" 'feature/1-local-thing is checked out in'
 # From inside a worktree, the next one still goes next to the main checkout (not app.1.2).

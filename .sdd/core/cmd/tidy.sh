@@ -17,75 +17,90 @@ base=$(cfg sdd.base main)
 main=$(main_root)
 tab=$(printf '\t')
 
-# Items that are done: "<id>\t<status>\t<type>", from the archive on the base branch.
-done_items=$(git ls-tree -r --name-only "$base" -- "$SPECS/archive" 2>/dev/null | grep '/item\.md$' |
-	while IFS= read -r p; do
-		i=$(id_of "${p%/item.md}") || continue
-		printf '%s\t%s\t%s\n' "$i" "$(git show "$base:$p" | fm_get status)" "$(git show "$base:$p" | fm_get type)"
-	done)
-
-# done_item <branch>: "<status>\t<type>" when the branch belongs to a done item, else fails.
-done_item() {
-	_i=$(id_of "$1") || return 1
-	printf '%s\n' "$done_items" | awk -F '\t' -v i="$_i" '$1 == i { print $2 "\t" $3; f = 1 } END { exit !f }'
+# done_in <ref>: "<id>-<slug>\t<status>\t<type>" for every item archived on <ref>.
+done_in() {
+	git ls-tree -r --name-only "$1" -- "$SPECS/archive" 2>/dev/null | grep '/item\.md$' |
+		while IFS= read -r _p; do
+			_d=${_p%/item.md}
+			printf '%s\t%s\t%s\n' "${_d##*/}" "$(git show "$1:$_p" | fm_get status)" "$(git show "$1:$_p" | fm_get type)"
+		done
 }
+
+# done_item <done list> <branch>: "<status>\t<type>" when the branch's last part (always
+# <id>-<slug>) is a done item's folder, else fails.
+done_item() {
+	L=$1 B=${2##*/} awk 'BEGIN { n = split(ENVIRON["L"], r, "\n")
+		for (i = 1; i <= n; i++) { split(r[i], f, "\t"); if (f[1] == ENVIRON["B"]) { print f[2] "\t" f[3]; exit 0 } }
+		exit 1 }'
+}
+
+# keep_reason <branch> <type> <worktree>: why a done item's branch (and its worktree) must stay,
+# with the command that removes it anyway; nothing when removing it loses nothing.
+keep_reason() {
+	_rm="${3:+git worktree remove --force $3 && }git branch -D $1"
+	if [ "$3" = "$main" ]; then
+		echo "checked out in the main checkout · git switch $base && $CMD tidy"
+	elif [ -n "$3" ] && [ "$3" = "$ROOT" ]; then
+		echo "you are in it · cd $main && $CMD tidy"
+	elif ! git merge-base --is-ancestor "$1" "$base"; then
+		if [ "$2" = spike ]; then echo "a spike's code never lands on $base · $_rm"; else echo "has commits not on $base · $_rm"; fi
+	elif [ -d "$3" ] && [ -n "$(git -C "$3" status --porcelain)" ]; then
+		echo "uncommitted changes · $_rm"
+	fi
+}
+
+# remove_worktree <path>: remove it, or forget it when its folder was already deleted by hand.
+remove_worktree() { if [ -d "$1" ]; then git worktree remove "$1"; else git worktree prune; fi; }
 
 shown=
 say() { printf '%-8s %s\n' "$1" "$2"; shown=1; }
-gone=$([ -n "$dry" ] && echo "would remove" || echo removed)
 
-# Local branches, and the worktree each one is checked out in.
+# Local branches (and their worktrees), judged against the local base.
+done_here=$(done_in "$base")
 for b in $(git for-each-ref --format='%(refname:short)' refs/heads); do
-	[ "$b" != "$base" ] || continue
-	st=$(done_item "$b") || continue
-	why="(item $(id_of "$b"), ${st%%"$tab"*})"
+	st=$(done_item "$done_here" "$b") || continue
 	w=$(worktree_of "$b")
-	rmwt=${w:+"git worktree remove --force $w && "}
-	if [ "$w" = "$main" ]; then
-		say kept "branch $b $why: checked out in the main checkout · git switch $base && $CMD tidy"
-	elif [ -n "$w" ] && [ "$w" = "$ROOT" ]; then
-		say kept "worktree $w $why: you are in it · cd $main && $CMD tidy"
-	elif ! git merge-base --is-ancestor "$b" "$base"; then
-		if [ "${st#*"$tab"}" = spike ]; then
-			say kept "branch $b $why: a spike's code never lands on $base · ${rmwt}git branch -D $b"
-		else
-			say kept "branch $b $why: has commits not on $base · ${rmwt}git branch -D $b"
-		fi
-	elif [ -n "$w" ] && [ -n "$(git -C "$w" status --porcelain)" ]; then
-		say kept "worktree $w $why: uncommitted changes · git worktree remove --force $w && git branch -D $b"
+	wl=$w
+	[ "$w" != "$main" ] || wl= # the main checkout is never removed, so it is not named
+	what="${wl:+worktree $wl and }branch $b (item $(id_of "$b"), ${st%%"$tab"*})"
+	keep=$(keep_reason "$b" "${st#*"$tab"}" "$w")
+	if [ -n "$keep" ]; then
+		say kept "$what: $keep"
+	elif [ -n "$dry" ]; then
+		say "would remove" "$what"
+	elif { [ -z "$w" ] || remove_worktree "$w"; } && git branch -q -D "$b"; then
+		say removed "$what"
 	else
-		if [ -n "$w" ]; then
-			[ -n "$dry" ] || git worktree remove "$w" || die "could not remove worktree $w"
-			say "$gone" "worktree $w $why"
-		fi
-		[ -n "$dry" ] || git branch -q -D "$b" || die "could not delete branch $b"
-		say "$gone" "branch $b $why"
+		say kept "$what: git could not remove it (see above)"
 	fi
 done
 
-# Remote branches of done items. Deleting one is a push, so only with --remote, and only when
-# every commit's change is already on the base (git cherry), because a deleted remote branch
-# cannot be brought back and a teammate may have pushed to it after the ship.
+# Remote branches. Deleting one is a push, so only with --remote. Each is judged against what
+# its remote holds (<remote>/<base> as of the last fetch: an item shipped here but not pushed yet
+# does not count), and the delete is leased: if the branch moved on the remote since the last
+# fetch, the remote refuses, because a deleted remote branch cannot be brought back.
 left=
+seen=
 for r in $(git for-each-ref --format='%(refname:short)' refs/remotes); do
 	case $r in */HEAD) continue ;; esac
-	st=$(done_item "$r") || continue
-	why="(item $(id_of "$r"), ${st%%"$tab"*})"
 	rem=${r%%/*} b=${r#*/}
+	[ "$rem" = "$seen" ] || { seen=$rem && done_there=$(done_in "$rem/$base"); }
+	st=$(done_item "$done_there" "$r") || continue
+	what="$r (item $(id_of "$r"), ${st%%"$tab"*})"
 	if [ -z "$remote" ]; then
-		say remote "$r $why"
+		say remote "$what"
 		left=1
 		continue
 	fi
-	extra=$(git cherry "$base" "$r" | sed -n 's/^+ //p' | cut -c1-7 | paste -sd ' ' -)
+	extra=$(git cherry "$rem/$base" "$r" | sed -n 's/^+ //p' | cut -c1-7 | paste -sd ' ' -)
 	if [ -n "$extra" ]; then
-		say kept "$r $why: changes not on $base ($extra) · git push $rem --delete $b"
+		say kept "$what: changes not on $rem/$base ($extra) · git push $rem --delete $b"
 	elif [ -n "$dry" ]; then
-		say "$gone" "$r $why"
-	elif git push -q "$rem" --delete "$b"; then
-		say "$gone" "$r $why"
+		say "would remove" "$what"
+	elif git push -q --force-with-lease="$b:$(git rev-parse "$r")" "$rem" --delete "$b"; then # C-4: tidy --remote
+		say removed "$what"
 	else
-		say kept "$r $why: the push failed (already gone? git fetch --prune $rem)"
+		say kept "$what: $rem refused (it moved since the last fetch, or is gone) · git fetch --prune $rem && $CMD tidy --remote"
 	fi
 done
 

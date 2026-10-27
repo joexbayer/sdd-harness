@@ -191,10 +191,14 @@ worktree_of() {
 # worktree_path <id>: where an item's worktree goes: ../<repo>.<id>, next to the main checkout.
 worktree_path() { _m=$(main_root) && printf '%s/%s.%s\n' "$(dirname "$_m")" "$(basename "$_m")" "$1"; }
 
-# sync_here: give this (new) worktree the agents synced in the clone, as `sync` would.
+# sync_here: give this (new) worktree the agents synced in the clone, as `sync` would. ROOT
+# is this worktree for the sync, so its absolute-path ask rules name this folder.
 sync_here() {
 	[ -f "$ST/agents" ] || return 0
-	while IFS= read -r _a; do sync_agent "$_a" >/dev/null || warn "sync $_a failed in $(pwd)"; done <"$ST/agents"
+	(
+		ROOT=$(pwd -P)
+		while IFS= read -r _a; do sync_agent "$_a" >/dev/null || warn "sync $_a failed in $ROOT"; done <"$ST/agents"
+	)
 }
 
 # id_of <branch-or-dir>: the item id from "<anything>/<id>-<slug>", else fails.

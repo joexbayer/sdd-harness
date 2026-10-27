@@ -111,11 +111,11 @@ DOD-7.2 On this repo, `sdd tidy` removes the leftover local branches of items 2-
   the base instead of `git branch -d`. Test: tests/t_ship.sh (pushed, then rebased by ship).
 - FR-7.5 (ship in a worktree keeps it): `ship.sh:118-122`. Tests: t_ship.sh, tests/t_tidy.sh.
 - FR-7.6, FR-7.7 (tidy removes the safe, keeps the rest with reason and command):
-  `.sdd/core/cmd/tidy.sh:38`. Kept: the main checkout's branch, the worktree you are in, a
+  `.sdd/core/cmd/tidy.sh:59-79`, reasons in `keep_reason` (`tidy.sh:38`). Kept: the main checkout's branch, the worktree you are in, a
   spike's code, commits not on the base, uncommitted changes. Test: t_tidy.sh (two worktrees,
   a spike, an open item that is never touched, `--dry-run`).
 - FR-7.8, FR-7.9 (remote branches listed; `--remote` deletes, unless `git cherry` finds changes
-  the base lacks): `tidy.sh:70-90`. Test: t_tidy.sh (a teammate pushes to a shipped item's
+  the base lacks): `tidy.sh:81-105`. Test: t_tidy.sh (a teammate pushes to a shipped item's
   branch after the ship: kept; the other one is gone from the bare origin).
 - FR-7.10 (ask rule): `.sdd/core/agents/claude.sh:33` adds `tidy --remote` for every spelling
   (18 rules now). Test: tests/t_agents.sh. FR-7.11 (`--remote` first only): `tidy.sh:8,12`.
@@ -135,6 +135,28 @@ Deviations:
   so the names do not clash.
 - When `ship` runs in the main checkout while the base is checked out in a worktree, the branch
   is kept and it prints `git switch --detach && sdd tidy` (the plan did not cover this case).
+
+Fresh-context review (2 blockers, 2 warnings, 7 nits) and what changed:
+- Blocker fixed: `tidy --remote` judged a remote branch by the last fetch, then deleted
+  whatever the remote had now. The delete is now leased (`--force-with-lease=<branch>:<sha>`,
+  `tidy.sh:100`), so a branch a teammate moved since the fetch is refused. Test: t_tidy.sh
+  (teammate pushes, no fetch: "origin refused").
+- Blocker fixed: "done" for remote branches meant the local base, so running
+  `tidy --remote` before `git push origin main` deleted branches whose work only this laptop
+  had. Remote branches are now judged against `<remote>/<base>` (`tidy.sh:87`). Test: t_tidy.sh
+  (before main is pushed, no remote branch is listed).
+- Fixed: worktrees synced by `new`/`open --worktree` got ask rules naming the original
+  checkout's absolute path; `sync_here` now syncs with `ROOT` set to the new worktree. Test:
+  t_open.sh. Added tests for the dropped case, "has commits not on main" and "checked out in
+  the main checkout".
+- Fixed nits: a branch matches a done item by `<id>-<slug>`, not the id alone (a `fix/1-typo`
+  is not item 1's); a worktree folder deleted by hand is pruned without an error; a failed
+  removal is reported and tidy carries on; one `keep_reason` decides, one path removes.
+- Fixed nit: the C-4 check strips quoted text and comments, then allows `git push` only on
+  tidy.sh's line marked `# C-4: tidy --remote`; `echo ok && git push …` is caught now.
+- Accepted: `git worktree remove` deletes ignored files (an `.env`) in a clean worktree, as
+  git does. Suggested commands can fail in unusual layouts (base checked out in another
+  worktree; bare repo plus worktrees, which sdd does not support yet).
 
 Follow-ups:
 - Commands printed by tidy do not quote paths; a checkout path with spaces needs hand quoting.
