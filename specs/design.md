@@ -120,7 +120,7 @@ built on git state instead of edit counters.
 | check passes before ship | block | block | block |
 | item described before ship | warn | block | block |
 | stop with unverified edits (agent hook) | warn | block once | block once |
-| feature brief approved before build | – | you, content-hash pinned | non-author |
+| plan approved before build (not chore, hotfix) | you, content-hash pinned | you, content-hash pinned | non-author |
 | failing test first (fix, feature tasks) | – | block | block |
 | trace: every FR has a test naming it | – | warn | block |
 | independent review | on request | on request | required for features |
@@ -364,7 +364,9 @@ automated behind gates, and every change leaves the code easy to change again.
 | 2 | `sdd ls` / `sdd show`, both with `--json`; spec grammar | Spec Kit's best trait is greppable progress; the app and MCP server read this |
 | 3 | constitution + `amendment` type | ground truths that are hard to change, enforced, not prose |
 | 4 | AI driver: one skill per step (`sdd-new`, `-plan`, `-build`, `-review`, `-ship`) installed by `sync`, and `ask` permission rules so the human confirms `approve` and `ship` | an AI drives sdd most of the time; the human's two decisions need the human's click |
-| 5 | git and GitHub forge: scripted worktrees for any item (`sdd open <id> [--worktree]`), landing and cleanup (ship removes its worktree and branches, `sdd tidy` for leftovers), and a GitHub adapter (`core/forges/github.sh`, via `gh`, on automatically when `origin` is github.com and `gh` is logged in): `ship` pushes and opens a PR with the brief as body, PR and CI state in `status`/`ls`/`review`, the PR review as approval in team mode | every git procedure an agent would otherwise improvise is a script, so it is correct every time |
+| 5 | `sdd summary`: recent work as a table (item, state, who, when), `--md` for PRs and chat | a lead sees what moved and what waits for whom at a glance |
+| next | git and GitHub forge: scripted worktrees for any item (`sdd open <id> [--worktree]`), landing and cleanup (ship removes its worktree and branches, `sdd tidy` for leftovers), and a GitHub adapter (`core/forges/github.sh`, via `gh`, on automatically when `origin` is github.com and `gh` is logged in): `ship` pushes and opens a PR with the brief as body, PR and CI state in `status`/`ls`/`review`, the PR review as approval in team mode | every git procedure an agent would otherwise improvise is a script, so it is correct every time |
+| next | model roles: `sdd run <role> <id>` renders a role's prompt and runs it on each developer's own agent and model (§10); narrow as an adapter (`agents/narrow.sh`, `sdd sync narrow`) | plan big, build small: a large model plans, a small local one builds behind the gates (kb/narrow-lessons.md) |
 | next | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | next | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model); a contract item lands only the contract; items name `Contract:` and approval pins its hash, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
 | next | tasks (`task red/done`) | Spec Kit parity |
