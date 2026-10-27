@@ -138,9 +138,11 @@ Deviations:
 
 Follow-ups:
 - Commands printed by tidy do not quote paths; a checkout path with spaces needs hand quoting.
-- Remote branches of items 3-5 here had rebase conflicts resolved at ship, so their patches
-  differ and `tidy --remote` will keep them (with the command to delete by hand).
+- On this repo `tidy --remote --dry-run` would delete the remote branches of items 1, 2, 4, 5
+  and 6, and keeps item 3's: a rebase conflict was resolved at its ship, so one commit's
+  change differs (b44dc7d). Delete it by hand with the printed command once you agree.
 - The missing-frontmatter trap (approve says "could not commit"): a fix item.
+
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->
