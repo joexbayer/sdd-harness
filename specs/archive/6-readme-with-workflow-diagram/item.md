@@ -26,7 +26,6 @@ moves to next; add narrow model roles) and the gate table (lite does require app
   roles are next rows.
 - Not verified: the Mermaid diagram renders on GitHub (no local renderer; the syntax is
   plain flowchart). Check it on the branch page.
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
