@@ -66,6 +66,15 @@ cfg_every() {
 	return 0
 }
 
+# cfg_mine <key> [default]: a tier or agent setting, the developer's own config first, then the
+# project's: the team names roles, each developer chooses the agent and model behind them.
+cfg_mine() {
+	for _f in "$(user_config)" "$SDD_HOME/config" "$SDD_HOME/core/config"; do
+		[ -f "$_f" ] && git config -f "$_f" --get "$1" && return 0
+	done
+	[ $# -gt 1 ] && printf '%s\n' "$2"
+}
+
 # types: every type with a template (core or local).
 types() {
 	for _d in "$SDD_HOME/core/templates" "$SDD_HOME/local/templates"; do
@@ -432,6 +441,27 @@ task_commit() {
 				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; exit }
 				s = substr(s, i + length(t))
 			} }'
+}
+
+# run_slot: a new run number and its folder .git/sdd/runs/<n>/ (mkdir is the lock); sets RUN, RUNDIR.
+run_slot() {
+	mkdir -p "$ST/runs"
+	RUN=1
+	while ! mkdir "$ST/runs/$RUN" 2>/dev/null; do RUN=$((RUN + 1)); done
+	RUNDIR="$ST/runs/$RUN"
+}
+
+# run_log <run> <started> <item> <role> <agent> <model> <phase> <task> <in> <out> <cost> <seconds>
+# <exit> <verdict>: one line in this clone's .git/sdd/runs.tsv (usage.sh reads these columns),
+# printed for people too.
+run_log() {
+	[ -s "$ST/runs.tsv" ] ||
+		printf '# run\tstarted\titem\trole\tagent\tmodel\tphase\ttask\tin\tout\tcost\tseconds\texit\tverdict\n' >"$ST/runs.tsv"
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@" >>"$ST/runs.tsv"
+	tail -n 1 "$ST/runs.tsv" | awk -F '\t' '
+		function k(x) { return x == "" ? "?" : x >= 1000 ? sprintf("%.0fk", x / 1000) : x }
+		{ printf "run %s · %s · %s %s · item %s%s · %s in / %s out%s · %ss · exit %s · %s\n", $1, $4, $5, $6, $3,
+			($8 == "" ? "" : " " $8), k($9), k($10), ($11 == "" ? "" : " · $" $11), $12, $13, ($14 == "" ? "-" : $14) }'
 }
 
 # masked: the input lines that hide a failure ("cmd || true", "|| :", "|| exit 0").

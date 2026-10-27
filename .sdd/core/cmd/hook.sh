@@ -23,6 +23,46 @@ if [ -n "$cwd" ]; then cd "$cwd" 2>/dev/null || exit 0; fi
 git rev-parse --show-toplevel >/dev/null 2>&1 || exit 0
 need_repo
 
+# Role subagents (sync claude): note the start, and at the stop log the run with the tokens
+# summed from its transcript (no hook reports them; kb/claude-subagents.md). Never blocks.
+case $event in
+subagent-start | subagent-stop)
+	command -v jq >/dev/null 2>&1 && [ -n "$input" ] || exit 0
+	type=$(printf '%s' "$input" | jq -r '.agent_type // empty')
+	aid=$(printf '%s' "$input" | jq -r '.agent_id // empty')
+	case $type in "$NAME"-*) ;; *) exit 0 ;; esac
+	case $aid in '' | *[!A-Za-z0-9_-]*) exit 0 ;; esac
+	mkdir -p "$ST/runs"
+	mark="$ST/runs/sub.$aid"
+	if [ "$event" = subagent-start ]; then
+		item=- phase=- task=
+		if current_item; then
+			item=$ID
+			item_phase
+			phase=$PHASE
+			[ "$WHYCODE" != task ] || task=$(task_rows | awk -F '\t' '$2 == "open" { print $1; exit }')
+		fi
+		printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$item" "$phase" "$task" >"$mark"
+		exit 0
+	fi
+	st=$(cat "$mark" 2>/dev/null)
+	rm -f "$mark"
+	[ -n "$st" ] || st=$(printf '%s\t%s\t-\t-\t' "$(date +%s)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+	tr=$(printf '%s' "$input" | jq -r '.agent_transcript_path // empty')
+	# shellcheck source=/dev/null
+	. "$(sdd_path agents/claude.sh)"
+	use=
+	[ -f "$tr" ] && use=$(agent_transcript_usage "$tr" 2>/dev/null)
+	verdict='done'
+	[ -n "$use" ] || verdict="no transcript"
+	run_slot
+	[ -z "$tr" ] || printf '%s\n' "$tr" >"$RUNDIR/transcript"
+	run_log "$RUN" "$(tsv 2 "$st")" "$(tsv 3 "$st")" "${type#"$NAME"-}" claude "$(tsv 3 "$use")" "$(tsv 4 "$st")" "$(tsv 5 "$st")" \
+		"$(tsv 1 "$use")" "$(tsv 2 "$use")" "" "$(($(date +%s) - $(tsv 1 "$st")))" 0 "$verdict" >/dev/null
+	exit 0
+	;;
+esac
+
 level=ok
 msg=
 case $event in
