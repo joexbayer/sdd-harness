@@ -50,6 +50,7 @@ C-4 allows only `tidy --remote` to push.
 - specs/design.md §8: names both exceptions (`tidy --remote`, `ship` with `forge = github`).
 - `tests/constitution/c4-commits.sh` is unchanged and stricter than the new text (only
   tidy's marked delete may push); item 10 (GitHub adapter) extends it.
+
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->
