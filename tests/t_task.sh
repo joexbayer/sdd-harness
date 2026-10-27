@@ -26,12 +26,12 @@ assert_contains "$out" 'serves: FR-1.1'
 assert_contains "$out" 'no commit names it yet'
 
 # FR-15.3: before approval nothing runs.
-out=$(sdd task done T-1.2 2>&1)
+out=$(sdd task 'done' T-1.2 2>&1)
 assert_eq $? 1 "(not approved)"
 assert_contains "$out" 'not approved'
 assert_no_file ran.txt
 sdd approve >/dev/null 2>&1 || fail "approve failed"
-sdd task done T-9.9 >/dev/null 2>&1
+sdd task 'done' T-9.9 >/dev/null 2>&1
 assert_eq $? 1 "(unknown task)"
 
 # FR-15.5: the phase names the current task; next shows it first, with the FR and its example.
@@ -41,30 +41,30 @@ assert_contains "$out" 'Current task: T-1.1 Page test first'
 assert_contains "$out" 'FR-1.1 WHEN a page is asked for THE SYSTEM SHALL return 20 orders.'
 assert_contains "$out" 'e.g. page 2 → orders 21-40'
 assert_contains "$out" 'write the test first: it must fail'
-assert_contains "$out" '.sdd/bin/sdd task done T-1.1'
+assert_contains "$out" '.sdd/bin/sdd task 'done' T-1.1'
 
 # FR-15.2: expect: fail ticks only when the test fails; then a normal task must pass.
 echo 'exit 0' >t1.sh
-out=$(sdd task done T-1.1 2>&1)
+out=$(sdd task 'done' T-1.1 2>&1)
 assert_eq $? 1 "(a red task whose test passes)"
 assert_contains "$out" 'expected its test to fail'
 echo 'grep -q page q.sh' >t1.sh
-out=$(sdd task done T-1.1 2>&1) || fail "red task failed: $out"
+out=$(sdd task 'done' T-1.1 2>&1) || fail "red task failed: $out"
 assert_contains "$out" '✓ T-1.1 done (its test fails, as expected)'
 assert_contains "$out" 'commit with: feat(1): T-1.1 Page test first'
 grep -q '^- \[x\] T-1.1 ' "$f" || fail "T-1.1 not ticked"
 # FR-15.4: the tick did not void the approval.
 assert_not_contains "$(sdd status)" 'changed after approval'
 git add -A && git commit -qm "test(1): T-1.1 page test first"
-out=$(sdd task done T-1.2 2>&1)
+out=$(sdd task 'done' T-1.2 2>&1)
 assert_eq $? 1 "(failing test)"
 grep -q '^- \[ \] T-1.2 ' "$f" || fail "a failing task must stay unticked"
 echo page >q.sh
-out=$(sdd task done T-1.2 2>&1) || fail "T-1.2 failed: $out"
+out=$(sdd task 'done' T-1.2 2>&1) || fail "T-1.2 failed: $out"
 assert_contains "$out" '✓ T-1.2 done (its test passed)'
 assert_file ran.txt
 rm ran.txt
-sdd task done T-1.2 >/dev/null 2>&1
+sdd task 'done' T-1.2 >/dev/null 2>&1
 assert_eq $? 1 "(already ticked)"
 assert_contains "$(sdd status)" 'task T-1.3 of 3: Docs'
 
@@ -81,7 +81,7 @@ setcfg sdd.profile standard
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(open task in standard)"
 assert_contains "$out" 'tasks not done: T-1.3'
-out=$(sdd task done T-1.3 2>&1) || fail "T-1.3 failed: $out"
+out=$(sdd task 'done' T-1.3 2>&1) || fail "T-1.3 failed: $out"
 assert_contains "$out" '✓ T-1.3 done (the check passed)'
 git commit -qam "docs(1): T-1.3 docs"
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
