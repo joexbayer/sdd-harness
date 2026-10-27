@@ -2,9 +2,10 @@
 id: 5
 type: feature
 title: Summary table of recent work
-status: open
+status: shipped
 created: 2026-10-26
 approved: 069e273149e8a0f28c392f2b5dc3c8c4ec5434e4 2026-10-26 joexbayer
+shipped: 2026-10-27
 ---
 # 5 Summary table of recent work
 
