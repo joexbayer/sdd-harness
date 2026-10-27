@@ -2,8 +2,9 @@
 id: 13
 type: hotfix
 title: PR number overwritten before merge
-status: open
+status: shipped
 created: 2026-10-27
+shipped: 2026-10-27
 ---
 # 13 PR number overwritten before merge
 
