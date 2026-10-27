@@ -41,6 +41,24 @@ echo "Code changed (outside $SPECS/)"
 git diff --stat=100 "$mb" -- . ":(exclude)$SPECS" | sed 's/^/ /'
 git ls-files --others --exclude-standard | grep -v "^$SPECS/" | sed 's/^/  untracked: /'
 
+# Sensitive files: dependencies, CI and agent config change what runs, with what, and who
+# decides, so the human reads these diffs in full. Globs: [review] sensitive; this tool's own
+# folder always counts.
+globs=$(cfg_all review.sensitive)
+sens=$({ git diff --name-only "$mb"; git ls-files --others --exclude-standard; } | sort -u |
+	while IFS= read -r p; do
+		set -f
+		for g in $globs "$DIRNAME/*"; do
+			# shellcheck disable=SC2254 # $g is a pattern on purpose
+			case $p in ($g) echo "$p" && break ;; esac
+		done
+	done)
+if [ -n "$sens" ]; then
+	echo
+	echo "Sensitive files changed (read these diffs in full)"
+	printf '%s\n' "$sens" | sed 's/^/  /'
+fi
+
 # section <heading>: the body of one "## " section of the item, guidance removed. Built runs
 # up to "## Review", so headings an agent adds inside Built stay part of it.
 section() {
@@ -76,6 +94,19 @@ if [ "$ITYPE" = amendment ]; then
 fi
 
 echo
+sec=$(section "Security" | sed '/^[[:space:]]*$/d; s/^/  /')
+if [ -n "$sec" ]; then
+	echo "Security (from the plan)"
+	printf '%s\n' "$sec"
+	echo "  Check yourself (you, not the agent):"
+	echo "  [ ] new input is validated, and every new path checks who may use it"
+	echo "  [ ] no secrets in code, tests, specs or logs"
+	echo "  [ ] new dependencies are real, needed and pinned"
+	echo "  [ ] CI, agent config and $NAME itself changed only as planned"
+	echo "  [ ] errors and logs leak no personal data or internals"
+	echo "  [ ] the security pass under Built looked at this diff"
+	echo
+fi
 echo "Built (written by the agent)"
 section "Built" | sed '/^[[:space:]]*$/d; s/^/  /'
 notes=$(section "Review (optional)" | sed '/^[[:space:]]*$/d; s/^/  /')

@@ -8,7 +8,7 @@ f=specs/changes/1-device-login/item.md
 
 out=$(sdd status)
 assert_contains "$out" 'phase   plan'
-assert_contains "$out" 'to fill: Why, What changes, How, Done when'
+assert_contains "$out" 'to fill: Why, What changes, How, Security, Done when'
 out=$(sdd next)
 assert_contains "$out" 'PLAN: this is the human'"'"'s time'
 assert_contains "$out" 'FR-1.1'

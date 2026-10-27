@@ -16,6 +16,11 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   WHEN <trigger> THE SYSTEM SHALL <response>, each with an "e.g." example. IDs embed the
   item number (FR-{{id}}.1, FR-{{id}}.2, ...). Never renumber; gaps are fine. Every
   behaviour, edge cases and errors included, is its own FR line, not a separate section.
+- Security: go through the questions in "## Security" with the human. Write each mitigation
+  as an FR whose example is the attack and the refusal. Name every new dependency under How
+  with why it is needed, and check that it exists in the official registry under exactly
+  that name and is maintained (agents suggest packages that do not exist). Prefer the
+  framework's own auth, escaping and crypto over new code.
 - Make the plan precise enough that you could build it later without asking anything:
   the approach, the files involved, and how each requirement will be proven by a test.
 - Keep it to about a screen. If it does not fit, the change is too big: suggest a split.

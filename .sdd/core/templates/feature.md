@@ -25,6 +25,12 @@ Start each entry at the beginning of its line, ID first. IDs never change; leave
 and the decisions they would question, each at the start of its line:
     D-{{id}}.1 <decision>, because <reason>. -->
 
+## Security
+<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
+dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
+what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
+    e.g. uploads are untrusted → FR-{{id}}.4 rejects non-images and files over 5 MB -->
+
 ## Questions (optional)
 <!-- Q-{{id}}.1 <question> → recommend: <answer>. Resolve before building. -->
 

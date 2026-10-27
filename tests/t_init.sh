@@ -12,7 +12,8 @@ assert_file .sdd/bin/sdd
 assert_file .sdd/core/lib/common.sh
 assert_file .sdd/VERSION
 assert_eq "$(git config -f .sdd/config sdd.base)" main
-assert_eq "$(git config -f .sdd/config --get-all check.run | paste -sd '|' -)" 'go vet ./...|go test ./...'
+# Detected test commands; gitleaks joins them when installed on this machine (FR-12.6, t_security.sh).
+assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ' | paste -sd '|' -)" 'go vet ./...|go test ./...'
 assert_contains "$(cat AGENTS.md)" 'Keep this line.'
 assert_contains "$(cat AGENTS.md)" '.sdd/bin/sdd next'
 assert_contains "$(cat AGENTS.md)" 'give every ID its name'
@@ -27,14 +28,14 @@ assert_eq "$(grep -c '<!-- sdd:start -->' AGENTS.md)" 1
 mkdir -p "$T/py" && cd "$T/py" || exit 1
 git init -q && printf '[pytest]\n' >pytest.ini && git add -A && git commit -qm init
 sdd init >/dev/null 2>&1
-assert_eq "$(git config -f .sdd/config --get-all check.run)" 'python3 -m pytest'
+assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ')" 'python3 -m pytest'
 
 # A repo with no detectable tests gets a warning, not a guess.
 mkdir -p "$T/bare" && cd "$T/bare" || exit 1
 git init -q && echo x >x && git add x && git commit -qm init
 out=$(sdd init 2>&1)
 assert_contains "$out" 'no test command detected'
-git config -f .sdd/config --get-all check.run >/dev/null && fail "expected no check.run"
+[ -z "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ')" ] || fail "expected no detected check.run"
 
 # Base detection prefers an existing main over the branch you happen to be on.
 mkdir -p "$T/wip" && cd "$T/wip" || exit 1
