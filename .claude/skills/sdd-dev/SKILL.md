@@ -69,6 +69,10 @@ refuses a dirty tree), and `fill`.
 - Forges: only `core/forges/<forge>.sh` calls `gh` (the C-4 check enforces it). Tests use a
   stub `gh` on PATH over a bare origin (tests/t_forge.sh); the PR jq lives in `FORGE_JQ` and
   can be tried offline with `jq -r ".[] | $FORGE_JQ" sample.json`.
+- sh has no local variables: lib helpers use short `_x` names (`_n`, `_f`, `_b`) and
+  overwrite any caller's variable of that name. In `cmd/` scripts, keep values that must
+  survive a helper call in descriptive names (`pr_num`, not `_n`); item 13 was `_n` clobbered
+  by `check_articles`.
 
 ## Evaluating sdd with a real agent (narrow + qwen)
 Unit tests don't show whether a mid-size model can follow sdd. To find out, run narrow headless:

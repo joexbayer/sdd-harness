@@ -108,61 +108,64 @@ pr_gates() {
 # pr_push <message>: push the item branch and open its PR, or update the open one.
 pr_push() {
 	git push -q -u "$remote" "$BRANCH" || fail "could not push $BRANCH to $remote" # C-4: ship (forge)
-	_pr=$(forge_pr_state "$BRANCH") || die "pushed, but $FORGE_NAME did not answer; run $CMD ship again"
-	if [ "$(printf '%s\n' "$_pr" | cut -f3)" = OPEN ]; then
-		_n=$(printf '%s\n' "$_pr" | cut -f2)
-		forge_pr_edit "$_n" "$IFILE" || die "pushed, but could not update the body of PR #$_n"
-		echo "✓ $1 PR #$_n: $(printf '%s\n' "$_pr" | cut -f6)"
+	pr_line=$(forge_pr_state "$BRANCH") || die "pushed, but $FORGE_NAME did not answer; run $CMD ship again"
+	if [ "$(printf '%s\n' "$pr_line" | cut -f3)" = OPEN ]; then
+		pr_num=$(printf '%s\n' "$pr_line" | cut -f2)
+		forge_pr_edit "$pr_num" "$IFILE" || die "pushed, but could not update the body of PR #$pr_num"
+		echo "✓ $1 PR #$pr_num: $(printf '%s\n' "$pr_line" | cut -f6)"
 	else
-		_url=$(forge_pr_create "$BRANCH" "$base" "$ITYPE($ID): $title" "$IFILE") ||
+		pr_url=$(forge_pr_create "$BRANCH" "$base" "$ITYPE($ID): $title" "$IFILE") ||
 			die "pushed $BRANCH, but could not open the PR; run $CMD ship again"
-		echo "✓ PR opened for item $ID: $_url"
+		echo "✓ PR opened for item $ID: $pr_url"
 	fi
 	echo "next    when CI passes (and a teammate approved, if your team asks for it): $CMD ship   (merges it)"
 }
 
+# PR facts live in pr_* variables: sh has no locals, and lib helpers called in between (the
+# constitution check counts in _n) reuse the short _x names.
 # pr_ship: ship again, for an item already shipped into a PR. New local commits are checked and
 # pushed; otherwise the PR is merged when CI allows and GitHub still has exactly this commit.
 pr_ship() {
 	[ -n "$forge" ] || die "item $ID was shipped into a pull request; set forge under [sdd] in $DIRNAME/config to merge it"
-	_pr=$(forge_pr_state "$BRANCH") || die "$FORGE_NAME did not answer; run $CMD ship again"
-	_n=$(tsv 2 "$_pr") _st=$(tsv 3 "$_pr") _rv=$(tsv 4 "$_pr") _ci=$(tsv 5 "$_pr") _url=$(tsv 6 "$_pr") _head=$(tsv 7 "$_pr")
-	_here=$(git rev-parse HEAD)
-	case $_st in
+	pr_line=$(forge_pr_state "$BRANCH") || die "$FORGE_NAME did not answer; run $CMD ship again"
+	pr_num=$(tsv 2 "$pr_line") pr_state=$(tsv 3 "$pr_line") pr_review=$(tsv 4 "$pr_line")
+	pr_ci=$(tsv 5 "$pr_line") pr_url=$(tsv 6 "$pr_line") pr_head=$(tsv 7 "$pr_line")
+	pr_here=$(git rev-parse HEAD)
+	case $pr_state in
 	'') pr_ready && pr_gates && pr_push "pushed item $ID to" && return ;;
-	CLOSED) die "PR #$_n is closed: reopen it (gh pr reopen $_n) to ship it, or drop the item" ;;
+	CLOSED) die "PR #$pr_num is closed: reopen it (gh pr reopen $pr_num) to ship it, or drop the item" ;;
 	MERGED)
 		# Merged on GitHub (the button): fine, unless it left out newer commits from here.
-		git merge-base --is-ancestor HEAD "$_head" 2>/dev/null ||
-			die "PR #$_n was merged without the newest commits here ($(git log --format=%h "$_head..HEAD" 2>/dev/null | paste -sd ' ' -)): keep $BRANCH and ship them as a new item"
+		git merge-base --is-ancestor HEAD "$pr_head" 2>/dev/null ||
+			die "PR #$pr_num was merged without the newest commits here ($(git log --format=%h "$pr_head..HEAD" 2>/dev/null | paste -sd ' ' -)): keep $BRANCH and ship them as a new item"
 		git push -q "$remote" --delete "$BRANCH" 2>/dev/null # C-4: ship (forge)
 		;;
 	*)
-		if [ "$_head" != "$_here" ]; then
-			git merge-base --is-ancestor "$_head" HEAD 2>/dev/null ||
-				die "PR #$_n has commits this branch lacks (a teammate pushed?): git pull $remote $BRANCH, then $CMD ship"
+		if [ "$pr_head" != "$pr_here" ]; then
+			git merge-base --is-ancestor "$pr_head" HEAD 2>/dev/null ||
+				die "PR #$pr_num has commits this branch lacks (a teammate pushed?): git pull $remote $BRANCH, then $CMD ship"
 			pr_ready && pr_gates && pr_push "pushed new commits to" && return
 		fi
-		[ "$_rv" != CHANGES_REQUESTED ] || die "PR #$_n: changes requested; address the review, then $CMD ship ($_url)"
-		case $_ci in
-		failing* | pending*) die "PR #$_n: CI $_ci; ship again when it passes ($_url)" ;;
+		[ "$pr_review" != CHANGES_REQUESTED ] || die "PR #$pr_num: changes requested; address the review, then $CMD ship ($pr_url)"
+		case $pr_ci in
+		failing* | pending*) die "PR #$pr_num: CI $pr_ci; ship again when it passes ($pr_url)" ;;
 		none)
 			# Right after a push GitHub has not registered the checks yet: no result is not a pass.
 			[ -z "$(git ls-tree -d HEAD .github/workflows)" ] ||
-				die "PR #$_n: CI has not reported yet (this branch has .github/workflows); ship again in a minute"
+				die "PR #$pr_num: CI has not reported yet (this branch has .github/workflows); ship again in a minute"
 			;;
 		esac
 		pr_ready
 		pr_gates
-		forge_pr_merge "$_n" "$_here" || die "could not merge PR #$_n ($_url)"
+		forge_pr_merge "$pr_num" "$pr_here" || die "could not merge PR #$pr_num ($pr_url)"
 		git push -q "$remote" --delete "$BRANCH" || warn "merged, but could not delete $remote/$BRANCH" # C-4: ship (forge)
 		;;
 	esac
-	git fetch -q "$remote" "$base" || die "PR #$_n is merged, but $remote/$base could not be fetched; run $CMD ship again"
+	git fetch -q "$remote" "$base" || die "PR #$pr_num is merged, but $remote/$base could not be fetched; run $CMD ship again"
 	git merge-base --is-ancestor "$base" "$remote/$base" ||
-		die "PR #$_n is merged, but $base has commits $remote/$base lacks; reconcile $base, then $CMD ship"
+		die "PR #$pr_num is merged, but $base has commits $remote/$base lacks; reconcile $base, then $CMD ship"
 	ff_base "$remote/$base"
-	cleanup "merged PR #$_n into $base (now at $(git rev-parse --short "$base"))"
+	cleanup "merged PR #$pr_num into $base (now at $(git rev-parse --short "$base"))"
 }
 
 if [ -n "${IPR:-}" ]; then
