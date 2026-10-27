@@ -45,9 +45,22 @@ FR-16.7 WHEN `sdd usage [<id>] [--md]` runs THE SYSTEM SHALL sum the runs per it
 task too for one item): runs, tokens in and out, cost, seconds.
 FR-16.8 WHEN an agent is missing or a run exits non-zero THE SYSTEM SHALL still log it with its
 exit code and say what failed (exit 1).
+FR-16.9 WHEN a task says `size: S|M|L` THE SYSTEM SHALL read it (no size counts as M), and
+`sdd task next` SHALL print the next batch: the first open task, joined by the open `size: S`
+tasks right after it while it is small too, up to `[build] batch` (default 3); M and L run alone;
+the template and plan prompt ask the planner to size each task.
+  e.g. T-4.1 S, T-4.2 S, T-4.3 L, T-4.4 S → batches: T-4.1 + T-4.2, then T-4.3, then T-4.4
+FR-16.10 WHEN the builder works an item THE SYSTEM SHALL show it the current batch in `next`
+(each task as today), and `sdd run builder` SHALL run on that batch.
+FR-16.11 WHEN the human says to build ("now let's build", the sdd-build skill) THE SYSTEM SHALL
+have the main agent loop: `sdd task next`, one builder subagent (or `sdd run builder`) for that
+batch, `sdd task done` for each of its tasks and a commit naming them, until no task is open;
+on the first failure it stops and reports; then the check and Built, as today.
+  e.g. "now let's build" → batch 1 (T-4.1, T-4.2) → ticked, committed → batch 2 (T-4.3) → …
 
 ## Not in scope (optional)
-Looping over tasks (a script, or a later `--until review`), a price table, a committed usage
+Parallel tasks (independent tasks in separate worktrees), building across items (the multi-item
+plans item), a price table, a committed usage
 log, subagents and run adapters for codex and others, the scripted human (the experiment adds a
 role with its own `prompts/role-human.md`).
 
@@ -59,7 +72,9 @@ role with its own `prompts/role-human.md`).
                                                          agent_run, agent_usage (final JSON)   ▼
  tiers: [role] tier → [tier] agent, model, args                .git/sdd/runs.tsv ─▶ sdd usage
 ```
-- New `cmd/run.sh`, `cmd/usage.sh`, `agents/narrow.sh`, `agents/skills/run.md`; `agents/claude.sh`
+- New `cmd/run.sh`, `cmd/usage.sh`, `agents/narrow.sh`, `agents/skills/run.md`; `agents/skills/
+  build.md` becomes the loop (FR-16.11); `task_rows` reads `size`; `cmd/task.sh` gains `next`;
+  `agents/claude.sh`
   gains `agent_run`, `agent_usage`, the subagent files and the two hooks; `cmd/hook.sh` handles
   `subagent-start` and `subagent-stop`.
 - Tests use stub `claude` and `narrow` on PATH, and a sample subagent transcript.
@@ -70,6 +85,8 @@ D-16.3 A role only picks the model; what to do comes from `sdd next` for the ite
 D-16.4 Subagent tokens come from its transcript, because no hook reports them; the transcript's
 layout is Claude Code's internal format (kb/claude-subagents.md), so its reader lives in
 `agents/claude.sh` (jq, hook JSON per C-1) and a test pins the shape.
+D-16.5 The planner judges size and the human approves it with the plan; sdd only groups by it,
+because scripts decide and agents judge (design §2), and a batch must be the same every run.
 
 ## Security
 Runs agents unattended. Risks: more power than intended → only the tier's explicit `args`
@@ -88,6 +105,9 @@ Q-16.4 Where does the cost come from? → recommend: the agent's figure, else a 
 decided: just the agent's figure; cost is for testing, not a feature (joexbayer, 2026-10-27)
 Q-16.5 How do roles run? → recommend: skills and subagents, `sdd run` for non-Claude models. →
 decided: most should run as subagents (joexbayer, 2026-10-27)
+Q-16.6 How does "now let's build" hand out the work? → recommend: one task per subagent, in
+order. → decided: by complexity, to avoid overhead on very small tasks (joexbayer, 2026-10-27);
+so the planner sizes tasks and consecutive small ones share a subagent (D-16.5).
 
 ## Done when
 DOD-16.1 `sdd check` passes, with a test naming each FR, under /bin/sh and dash.
@@ -98,8 +118,10 @@ DOD-16.2 On a scratch repo, a planner subagent (Opus) and a builder run through 
 - [ ] T-16.1 Read usage from claude -p, narrow and a subagent transcript, FR-16.5 (files: .sdd/core/agents/claude.sh, .sdd/core/agents/narrow.sh, tests/t_agent_usage.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_agent_usage.sh)
 - [ ] T-16.2 `sdd run`: resolve the role, run once, log, FR-16.1, FR-16.4, FR-16.5, FR-16.8 (files: .sdd/core/cmd/run.sh, tests/t_run.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_run.sh)
 - [ ] T-16.3 Subagents, the sdd-run skill and the subagent hooks, FR-16.2, FR-16.3, FR-16.6 (files: .sdd/core/agents/claude.sh, .sdd/core/agents/skills/run.md, .sdd/core/cmd/hook.sh, tests/t_roles.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_roles.sh)
-- [ ] T-16.4 `sdd usage`, FR-16.7 (files: .sdd/core/cmd/usage.sh, tests/t_usage.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_usage.sh)
-- [ ] T-16.5 Help, design §8 and §10, README (files: .sdd/core/cmd/help.sh, specs/design.md, README.md)
+- [ ] T-16.4 Task sizes, `sdd task next` and the batch in `next`, FR-16.9, FR-16.10 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/cmd/next.sh, .sdd/core/prompts/plan.md, .sdd/core/templates/feature.md, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh)
+- [ ] T-16.5 The build loop in the sdd-build skill, FR-16.11 (files: .sdd/core/agents/skills/build.md, .sdd/core/agents/skills/build.claude.md, tests/t_roles.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_roles.sh)
+- [ ] T-16.6 `sdd usage`, FR-16.7 (files: .sdd/core/cmd/usage.sh, tests/t_usage.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_usage.sh)
+- [ ] T-16.7 Help, design §8 and §10, README (files: .sdd/core/cmd/help.sh, specs/design.md, README.md)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
