@@ -15,6 +15,8 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME ls [--all] [--json]         every item and its progress (archive + all branches)
   $NAME show <id> [--json]          an item's stories, requirements, tasks, decisions, questions
   $NAME task [done T-<id>.<n>]      the item's tasks; done runs a task's test and ticks it
+  $NAME run <role> <id>             one step of an item on the role's agent and model, headless, logged
+  $NAME usage [<id>] [--md]         tokens, cost and time of the logged runs, per item, role and task
   $NAME summary [--since <when>] [--last <n>] [--mine] [--md|--ascii]
                                    recent work as a table: item, state, who, when
   $NAME review                      walkthrough of what was built: commits, diff, FRs, check

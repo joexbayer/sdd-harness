@@ -102,6 +102,8 @@ and the hooks. Windows works through WSL or Git Bash.
 | `sdd ls [--all] [--json]` | every item and its progress, across all branches |
 | `sdd show <id> [--json]` | one item's stories, requirements, tasks, decisions, questions |
 | `sdd summary [--since <when>] [--last <n>] [--mine] [--md]` | recent work as a table |
+| `sdd run <role> <id>` | one step of an item on the role's agent and model, logged |
+| `sdd usage [<id>] [--md]` | tokens, cost and time of the logged runs |
 | `sdd sync <agent>` | per-developer hooks and skills for an agent, never committed |
 
 Every verb exits `0` ok, `1` failed or refused, `2` usage error, `3` ran but proved nothing.
@@ -148,6 +150,13 @@ An agent reads the `AGENTS.md` block, runs `.sdd/bin/sdd next` and follows it. W
   unverified code changes is refused once, then told to report it;
 - **ask rules (Claude Code):** `approve`, `ship` and `tidy --remote` always need the human's
   click, however the agent spells the command.
+
+**Roles and models.** The team names roles in `.sdd/config` (`[role "builder"] tier = small`);
+each developer says which agent and model a tier means for them (`[tier "small"] agent = narrow,
+model = qwen3-coder-30b` in `~/.config/sdd/config`). Ask your agent to "run the builder on
+item 16": a role on a Claude model runs as a subagent (`sync claude` writes them), any other
+through `sdd run builder 16`. With `[usage] track = true` every run is logged with its tokens, and
+`sdd usage` sums them (off by default).
 
 Gates are scripts, not prose. In testing with a small local model (qwen3-coder 30B), the
 model ignored written rules but obeyed the gates (see `specs/kb/narrow-lessons.md`).

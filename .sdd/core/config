@@ -105,3 +105,7 @@
 	sensitive = .mcp.json
 	sensitive = .codex/*
 	sensitive = .cursor/*
+# Usage tracking: one line per role run (sdd run, role subagents) in .git/sdd/runs.tsv, read by
+# `sdd usage`. Off unless someone asks for it, here or in their own ~/.config/sdd/config.
+[usage]
+	track = false

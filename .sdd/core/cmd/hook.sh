@@ -23,6 +23,19 @@ if [ -n "$cwd" ]; then cd "$cwd" 2>/dev/null || exit 0; fi
 git rev-parse --show-toplevel >/dev/null 2>&1 || exit 0
 need_repo
 
+# Role subagents (sync claude): the agent's adapter logs them (agent_subagent_hook). Never blocks.
+case $agent in *[!a-z0-9-]*) agent= ;; esac
+case $event in
+subagent-start | subagent-stop)
+	if [ -n "$agent" ] && _a=$(sdd_path "agents/$agent.sh"); then
+		# shellcheck source=/dev/null
+		. "$_a"
+		! command -v agent_subagent_hook >/dev/null 2>&1 || agent_subagent_hook "$event" "$input"
+	fi
+	exit 0
+	;;
+esac
+
 level=ok
 msg=
 case $event in
@@ -47,9 +60,8 @@ stop)
 esac
 [ "$level" = off ] && level=ok
 
-if [ -n "$agent" ] && _a=$(sdd_path "agents/$agent.sh"); then
-	# shellcheck source=/dev/null
-	. "$_a"
+# shellcheck source=/dev/null
+if [ -n "$agent" ] && _a=$(sdd_path "agents/$agent.sh") && . "$_a" && command -v agent_hook_reply >/dev/null 2>&1; then
 	agent_hook_reply "$event" "$level" "$msg" "$active"
 	exit 0
 fi

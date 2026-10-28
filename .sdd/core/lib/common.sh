@@ -66,6 +66,35 @@ cfg_every() {
 	return 0
 }
 
+# tier_file <tier>: the one config file that defines the tier (sets its agent), the developer's
+# own first, then the project's. A tier is read whole from that file: a project's args for one
+# agent never reach a developer who maps the tier to another (D-16.1).
+tier_file() {
+	for _f in "$(user_config)" "$SDD_HOME/config" "$SDD_HOME/core/config"; do
+		[ -f "$_f" ] && git config -f "$_f" --get "tier.$1.agent" >/dev/null && { printf '%s\n' "$_f"; return 0; }
+	done
+	return 1
+}
+
+# tier_get <tier> <key>: one setting of the tier, from its file (tier_file).
+tier_get() { _tf=$(tier_file "$1") && git config -f "$_tf" --get "tier.$1.$2"; }
+
+# tier_ok <agent> <model>: names safe to use as a file name and inside YAML: an agent is a word,
+# a model has no spaces, quotes or newlines.
+tier_ok() {
+	case $1 in '' | *[!a-z0-9-]*) return 1 ;; esac
+	case $2 in '' | *[!A-Za-z0-9._:/@[\]-]*) return 1 ;; esac
+}
+
+# cfg_mine <key> [default]: a tier or agent setting, the developer's own config first, then the
+# project's: the team names roles, each developer chooses the agent and model behind them.
+cfg_mine() {
+	for _f in "$(user_config)" "$SDD_HOME/config" "$SDD_HOME/core/config"; do
+		[ -f "$_f" ] && git config -f "$_f" --get "$1" && return 0
+	done
+	[ $# -gt 1 ] && printf '%s\n' "$2"
+}
+
 # types: every type with a template (core or local).
 types() {
 	for _d in "$SDD_HOME/core/templates" "$SDD_HOME/local/templates"; do
@@ -329,7 +358,8 @@ check_passed_here() {
 	grep -qx "fp=$_fp" "$_rec" && grep -qx 'result=pass' "$_rec"
 }
 
-# item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), WHYCODE (the same
+# item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), TASK (the current task,
+# in build), WHYCODE (the same
 # as a stable word for programs: frontmatter|status|fill|approval|changed|task|check|built|ready)
 # and MISSING.
 #   plan    the human's time: header not closed, plan empty, or not (or no longer) approved
@@ -337,6 +367,7 @@ check_passed_here() {
 #   review  the human's time: verified and written up
 item_phase() {
 	WHY=
+	TASK=
 	WHYCODE=
 	MISSING=$(missing_sections "$IFILE" plan)
 	if ! fm_closed "$IFILE"; then
@@ -372,6 +403,7 @@ item_phase() {
 			PHASE=build
 			WHY="task $(tsv 1 "$_t") of $(tsv 3 "$_t"): $(tsv 2 "$_t")"
 			WHYCODE=task
+			TASK=$(tsv 1 "$_t")
 		elif [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
 			PHASE=build
 			WHY="no passing check for the current code"
@@ -432,6 +464,40 @@ task_commit() {
 				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; exit }
 				s = substr(s, i + length(t))
 			} }'
+}
+
+# usage_on: usage tracking is switched on ([usage] track = true, yours or the project's); off by
+# default, so nothing about runs is kept unless someone asks for it.
+usage_on() { [ "$(cfg_mine usage.track false)" = true ]; }
+
+# run_slot: a new run number and its folder .git/sdd/runs/<n>/ (mkdir is the lock); sets RUN, RUNDIR.
+# With tracking off, a temporary folder that the caller removes (RUN is "-").
+run_slot() {
+	if ! usage_on; then
+		RUN=-
+		RUNDIR=$(mktemp -d "${TMPDIR:-/tmp}/$NAME-run.XXXXXX") || die "could not make a temporary folder"
+		return 0
+	fi
+	mkdir -p "$ST/runs"
+	RUN=1
+	while ! mkdir "$ST/runs/$RUN" 2>/dev/null; do RUN=$((RUN + 1)); done
+	RUNDIR="$ST/runs/$RUN"
+}
+
+# run_log <run> <started> <item> <role> <agent> <model> <phase> <task> <in> <out> <cost> <seconds>
+# <exit> <verdict>: one line in this clone's .git/sdd/runs.tsv (usage.sh reads these columns) when
+# tracking is on; printed for people either way.
+run_log() {
+	_line=$(printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' "$@")
+	if usage_on; then
+		[ -s "$ST/runs.tsv" ] ||
+			printf '# run\tstarted\titem\trole\tagent\tmodel\tphase\ttask\tin\tout\tcost\tseconds\texit\tverdict\n' >"$ST/runs.tsv"
+		printf '%s\n' "$_line" >>"$ST/runs.tsv"
+	fi
+	printf '%s\n' "$_line" | awk -F '\t' '
+		function k(x) { return x == "" ? "?" : x >= 1000 ? sprintf("%.0fk", x / 1000) : x }
+		{ printf "run %s · %s · %s %s · item %s%s · %s in / %s out%s · %ss · exit %s · %s\n", $1, $4, $5, $6, $3,
+			($8 == "" ? "" : " " $8), k($9), k($10), ($11 == "" ? "" : sprintf(" · $%.4f", $11)), $12, $13, ($14 == "" ? "-" : $14) }'
 }
 
 # masked: the input lines that hide a failure ("cmd || true", "|| :", "|| exit 0").
@@ -512,6 +578,25 @@ agents() {
 	for _d in "$SDD_HOME/core/agents" "$SDD_HOME/local/agents"; do
 		[ -d "$_d" ] && ls "$_d"
 	done | sed -n 's/^\([a-z0-9-]*\)\.sh$/\1/p' | sort -u
+}
+
+# json_num <key> <json line>, json_str <key> <json line>: the first "<key>": value in one line
+# of an agent's JSON output (numbers; strings without escaped quotes), or nothing. The first,
+# because totals come before their parts (claude's usage, then usage.iterations[]). awk only (C-1):
+# enough for the few flat fields sdd reads from an agent's final line.
+json_num() {
+	K=$1 awk '{ i = index($0, "\"" ENVIRON["K"] "\":"); if (!i) exit
+		s = substr($0, i + length(ENVIRON["K"]) + 3); sub(/^[ \t]*/, "", s)
+		if (match(s, /^[0-9][0-9.eE+-]*/)) print substr(s, 1, RLENGTH); exit }' <<EOF
+$2
+EOF
+}
+json_str() {
+	K=$1 awk '{ i = index($0, "\"" ENVIRON["K"] "\":"); if (!i) exit
+		s = substr($0, i + length(ENVIRON["K"]) + 3); sub(/^[ \t]*/, "", s)
+		if (substr(s, 1, 1) == "\"") { s = substr(s, 2); print substr(s, 1, index(s, "\"") - 1) }; exit }' <<EOF
+$2
+EOF
 }
 
 # exclude <path>: keep a generated file out of git for this clone only.
