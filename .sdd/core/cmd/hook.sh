@@ -16,12 +16,15 @@ input=
 cwd=
 active=false
 if [ -n "$input" ] && command -v jq >/dev/null 2>&1; then
-	cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
-	active=$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)
+	# Both fields in one jq run: "<cwd>\n<stop_hook_active>".
+	fields=$(printf '%s' "$input" | jq -r '"\(.cwd // "")\n\(.stop_hook_active // false)"' 2>/dev/null)
+	cwd=${fields%%"
+"*}
+	active=${fields#*"
+"}
 fi
 if [ -n "$cwd" ]; then cd "$cwd" 2>/dev/null || exit 0; fi
-git rev-parse --show-toplevel >/dev/null 2>&1 || exit 0
-need_repo
+find_repo || exit 0
 
 # Role subagents (sync claude): the agent's adapter logs them (agent_subagent_hook). Never blocks.
 case $agent in *[!a-z0-9-]*) agent= ;; esac
@@ -40,7 +43,9 @@ level=ok
 msg=
 case $event in
 session-start)
-	msg="$("${SDD_SH:-/bin/sh}" "$SDD_HOME/bin/$NAME" status 2>/dev/null)
+	# status, run in this process: a subshell instead of a new sdd.
+	# shellcheck source=/dev/null
+	msg="$(set --; . "$(sdd_path cmd/status.sh)" 2>/dev/null)
 This repo uses $NAME. For instructions on the current phase run: $CMD next"
 	;;
 stop)

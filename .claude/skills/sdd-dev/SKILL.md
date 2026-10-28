@@ -8,9 +8,15 @@ description: How to develop and test the sdd CLI in swe-harness (POSIX sh script
 ## Run
 ```sh
 sh tests/run.sh               # macOS /bin/sh (bash 3.2 in POSIX mode)
-dash tests/run.sh dash        # Linux-style /bin/sh; run both, failures differ
-.sdd/bin/sdd check            # shellcheck -S warning + both suites (~50 s); this repo dogfoods sdd
+sh tests/run.sh dash          # Linux-style /bin/sh; run both, failures differ
+sh tests/run.sh /bin/sh dash  # both at once (what the check runs)
+SH=/bin/sh SRC=$PWD sh tests/t_x.sh   # one file
+.sdd/bin/sdd check            # shellcheck -S warning + both suites (~2 min); this repo dogfoods sdd
 ```
+run.sh starts every test file under every shell at once and prints results afterwards, per
+shell in file order. `t_perf*.sh` (timing budgets on a generated 100-item repo) runs alone
+after the rest; `SDD_PERF_SLACK=2` doubles its budgets on a slow machine, and
+`SDD_PERF_SLACK=0.01` makes it fail on purpose so it prints every measured time.
 Each `tests/t_*.sh` sources `tests/lib.sh`. That gives you a temporary dir `$T`, an isolated
 `HOME` and git identity, `sdd` (the source copy; inside a repo it delegates to that repo's
 vendored copy via `SDD_SH`), `new_repo`, `setcfg` (changes the config *and commits it*: ship
@@ -73,6 +79,26 @@ refuses a dirty tree), and `fill`.
   overwrite any caller's variable of that name. In `cmd/` scripts, keep values that must
   survive a helper call in descriptive names (`pr_num`, not `_n`); item 13 was `_n` clobbered
   by `check_articles`.
+
+## Performance (item 18)
+A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git calls. So:
+- Config is read once per process (`cfg_load` in need_repo: `git config --list` per file into
+  `CFG_TAB`); `cfg`, `cfg_all`, `cfg_every`, `cfg_mine`, `gate_level` look up in awk
+  (`AWK_CFG`). A command that writes the config and then reads it must call `cfg_load` again.
+- `item_phase` reads the item once (`item_read`, one awk) and leaves `IR_*` (title, approved,
+  first open task, facts, …) for the command: use those instead of `fm_get`/`parse_item` again.
+  `parse_item`, `task_rows`, `missing_sections` and `fm_get` still exist for other callers and
+  share their grammar with `item_read` (`AWK_PARSE`, `AWK_TASK`), so change it there once.
+- `ls`, `summary`, `status` go through `item_rows`: the facts an item file decides are cached in
+  `.git/sdd/cache/facts.<hash of VERSION + common.sh + CMD + config>`, one line per
+  `<blob>\t<origin>\t<path>`. Rows that consulted a check result (reason code check, built,
+  ready) or the worktree are never cached. Branch, opened_by and active are read from git per
+  ref. `rm -rf .git/sdd/cache` changes nothing but speed; tests/t_cache.sh poisons the cache to
+  prove each input change misses. A new row field goes in `item_facts` (and the cache line
+  width, 16, in `AWK_CACHE`).
+- To check a refactor prints the same: run each command with the old and the new `.sdd/` in a
+  copy of a repo and diff; mark `.sdd` files `git update-index --assume-unchanged` first, or the
+  swapped copy itself shows up as a code change (hook stop, review).
 
 ## Evaluating sdd with a real agent (narrow + qwen)
 Unit tests don't show whether a mid-size model can follow sdd. To find out, run narrow headless:

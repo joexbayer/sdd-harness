@@ -10,6 +10,7 @@ SPECS=specs
 DIRNAME=${SDD_HOME##*/}
 CMD="$DIRNAME/bin/$NAME"
 PHASE_FP=
+PHASE_REF=
 
 die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 1; }
 usage_die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 2; }
@@ -18,11 +19,21 @@ joinlist() { printf '%s\n' "$1" | paste -sd ',' - | sed 's/,/, /g'; }
 
 # need_repo: cd to the repository root and set ROOT and ST (machine-local state dir,
 # shared by all worktrees of the clone, never committed).
-need_repo() {
-	ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || die "not inside a git repository"
+need_repo() { find_repo || die "not inside a git repository"; }
+
+# find_repo: need_repo, but fails quietly outside a repository (hooks). A no-op when it already
+# ran in this process (a command run inside another, like status in hook session-start).
+ROOT=
+find_repo() {
+	[ -z "$ROOT" ] || [ "$PWD" != "$ROOT" ] || return 0
+	_rp=$(git rev-parse --show-toplevel --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+	ROOT=${_rp%%"
+"*}
 	cd "$ROOT" || exit 1
-	ST="$(git rev-parse --path-format=absolute --git-common-dir)/$NAME"
-	mkdir -p "$ST/checks"
+	ST="${_rp#*"
+"}/$NAME"
+	[ -d "$ST/checks" ] || mkdir -p "$ST/checks"
+	cfg_load
 }
 
 # --- paths and config -------------------------------------------------------------
@@ -40,31 +51,79 @@ sdd_path() {
 
 user_config() { printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/$NAME/config"; }
 
+# cfg_load: read the three config files once, into CFG_TAB: lines "<n> <key>=<value>" as
+# `git config --list` prints them (git parses the files), n = 1 project, 2 user, 3 core. cfg,
+# cfg_all, cfg_every, cfg_mine and gate_level look keys up there instead of running git each
+# time. need_repo loads it; a lookup before that loads it itself.
+CFG_TAB=
+CFG_ON=
+cfg_load() {
+	CFG_TAB=$(
+		_n=0
+		for _f in "$SDD_HOME/config" "$(user_config)" "$SDD_HOME/core/config"; do
+			_n=$((_n + 1))
+			[ -f "$_f" ] || continue
+			echo "#$_n"
+			git config -f "$_f" --list
+		done | awk '/^#[123]$/ { n = substr($0, 2); next } { print n " " $0 }')
+	CFG_ON=1
+}
+
+# AWK_CFG: cfg_get(key, files) in awk, over ENVIRON["CFG_TAB"]: the last value of <key> in the
+# first of <files> (e.g. "123", in lookup order) that has it, as `git config --get` finds it;
+# cfg_found says whether one did. cfg_vals[f] holds all of a file's values, one per line.
+# Sections and names compare case-insensitively, as in git.
+AWK_CFG='function cfg_get(key, files,   a, b, i, j, r, e, f, n, l, last) {
+	a = index(key, "."); b = key; sub(/.*[.]/, "", b)
+	if (a) key = tolower(substr(key, 1, a - 1)) substr(key, a, length(key) - a - length(b) + 1) tolower(b)
+	n = split(ENVIRON["CFG_TAB"], l, "\n")
+	for (f in cfg_vals) delete cfg_vals[f]
+	for (i = 1; i <= n; i++) {
+		r = substr(l[i], 3); e = index(r, "=")
+		if ((e ? substr(r, 1, e - 1) : r) != key) continue
+		f = substr(l[i], 1, 1); last[f] = e ? substr(r, e + 1) : ""
+		cfg_vals[f] = cfg_vals[f] last[f] "\n"
+	}
+	cfg_found = 0
+	for (j = 1; j <= length(files); j++) {
+		f = substr(files, j, 1)
+		if (f in cfg_vals) { cfg_found = 1; return last[f] }
+	}
+	return ""
+}
+'
+
+# cfg_tab <get|all|every> <key> <files>: look <key> up in CFG_TAB (see AWK_CFG). get: its value;
+# all: every value in the first file that has any (--get-all); every: every value in each of
+# <files> in turn. Fails when none has it.
+cfg_tab() {
+	[ -n "$CFG_ON" ] || cfg_load
+	CFG_TAB=$CFG_TAB M=$1 K=$2 F=$3 awk "$AWK_CFG"'BEGIN {
+		v = cfg_get(ENVIRON["K"], ENVIRON["F"]); m = ENVIRON["M"]; fs = ENVIRON["F"]
+		if (!cfg_found) exit 1
+		if (m == "get") { print v; exit }
+		for (j = 1; j <= length(fs); j++) {
+			f = substr(fs, j, 1)
+			if (!(f in cfg_vals)) continue
+			printf "%s", cfg_vals[f]
+			if (m == "all") exit
+		}
+	}'
+}
+
 # cfg <key> [default]: first hit in project, user, core config (git-config format).
 cfg() {
-	for _f in "$SDD_HOME/config" "$(user_config)" "$SDD_HOME/core/config"; do
-		[ -f "$_f" ] && git config -f "$_f" --get "$1" && return 0
-	done
+	cfg_tab get "$1" 123 && return 0
 	[ $# -gt 1 ] && printf '%s\n' "$2" && return 0
 	return 1
 }
 
 # cfg_all <key>: all values of a multi-valued key, from the first file that has any.
-cfg_all() {
-	for _f in "$SDD_HOME/config" "$(user_config)" "$SDD_HOME/core/config"; do
-		[ -f "$_f" ] && git config -f "$_f" --get-all "$1" && return 0
-	done
-	return 1
-}
+cfg_all() { cfg_tab all "$1" 123; }
 
 # cfg_every <key>: every value of a multi-valued key from core, user and project config
 # together: a list that adds up, unlike cfg_all, where the first file with any wins.
-cfg_every() {
-	for _f in "$SDD_HOME/core/config" "$(user_config)" "$SDD_HOME/config"; do
-		[ -f "$_f" ] && git config -f "$_f" --get-all "$1"
-	done
-	return 0
-}
+cfg_every() { cfg_tab every "$1" 321 || return 0; }
 
 # tier_file <tier>: the one config file that defines the tier (sets its agent), the developer's
 # own first, then the project's. A tier is read whole from that file: a project's args for one
@@ -89,9 +148,7 @@ tier_ok() {
 # cfg_mine <key> [default]: a tier or agent setting, the developer's own config first, then the
 # project's: the team names roles, each developer chooses the agent and model behind them.
 cfg_mine() {
-	for _f in "$(user_config)" "$SDD_HOME/config" "$SDD_HOME/core/config"; do
-		[ -f "$_f" ] && git config -f "$_f" --get "$1" && return 0
-	done
+	cfg_tab get "$1" 213 && return 0
 	[ $# -gt 1 ] && printf '%s\n' "$2"
 }
 
@@ -105,19 +162,28 @@ types() {
 # gate_level <gate> <type>: off, warn or block. Off unless the type lists the gate;
 # a per-type level beats the profile's level.
 gate_level() {
-	case " $(cfg "type.$2.gates" || cfg sdd.gates 'planned approved check built') " in
-	*" $1 "*) ;;
-	*) echo off && return 0 ;;
-	esac
-	cfg "type.$2.$1" || cfg "profile.$(cfg sdd.profile lite).$1" off
+	[ -n "$CFG_ON" ] || cfg_load
+	CFG_TAB=$CFG_TAB G=$1 T=$2 awk "$AWK_CFG"'BEGIN {
+		g = ENVIRON["G"]; t = ENVIRON["T"]
+		gates = cfg_get("type." t ".gates", "123")
+		if (!cfg_found) { gates = cfg_get("sdd.gates", "123"); if (!cfg_found) gates = "planned approved check built" }
+		if (!index(" " gates " ", " " g " ")) { print "off"; exit }
+		v = cfg_get("type." t "." g, "123"); if (cfg_found) { print v; exit }
+		p = cfg_get("sdd.profile", "123"); if (!cfg_found) p = "lite"
+		v = cfg_get("profile." p "." g, "123"); print (cfg_found ? v : "off")
+	}'
 }
 
 # --- text helpers -----------------------------------------------------------------
 
 # render <file> <id> <title> <type>: substitute {{id}} {{title}} {{type}} {{date}}
 # {{cmd}} {{base}} {{name}} literally (no regex, so titles may contain any character).
+RENDER_DATE=
+RENDER_BASE=
 render() {
-	R_ID=$2 R_TITLE=$3 R_TYPE=$4 R_DATE=$(date +%F) R_CMD=$CMD R_BASE=$(cfg sdd.base main) R_NAME=$NAME \
+	[ -n "$RENDER_DATE" ] || RENDER_DATE=$(date +%F)
+	[ -n "$RENDER_BASE" ] || RENDER_BASE=$(cfg sdd.base main)
+	R_ID=$2 R_TITLE=$3 R_TYPE=$4 R_DATE=$RENDER_DATE R_CMD=$CMD R_BASE=$RENDER_BASE R_NAME=$NAME \
 		awk '
 	function repl(s, from, to,   out, i) {
 		out = ""
@@ -208,7 +274,10 @@ plan_part() {
 
 # plan_hash <file>: what approval pins. Task boxes count as unticked: sdd ticks them as tasks pass
 # (task done), which must not void the approval; every other plan edit does.
-plan_hash() { plan_part "$1" | sed 's/^- \[[xX]\] T-/- [ ] T-/' | git hash-object --stdin; }
+plan_hash() {
+	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit }
+		/^- \[[xX]\] T-/ { $0 = "- [ ] T-" substr($0, 9) } { print }' "$1" | git hash-object --stdin
+}
 
 # approval_ok: approved, and the plan has not changed since.
 approval_ok() {
@@ -358,10 +427,20 @@ check_passed_here() {
 	grep -qx "fp=$_fp" "$_rec" && grep -qx 'result=pass' "$_rec"
 }
 
+# phase_check_passed: check_passed_here for the code item_phase judges: the working tree, or the
+# committed code of the ref the item was read from (PHASE_REF, see item_load), fingerprinted only
+# when a check was recorded for the item at all.
+phase_check_passed() {
+	[ -f "$ST/checks/$ID" ] || return 1
+	[ -z "${PHASE_REF:-}" ] || [ -n "$PHASE_FP" ] ||
+		PHASE_FP=$(git ls-tree "$PHASE_REF" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
+	check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}
+}
+
 # item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), TASK (the current task,
 # in build), WHYCODE (the same
-# as a stable word for programs: frontmatter|status|fill|approval|changed|task|check|built|ready)
-# and MISSING.
+# as a stable word for programs: frontmatter|status|fill|approval|changed|task|check|built|ready),
+# MISSING (the empty required sections it judged, joined) and the IR_* facts of item_read.
 #   plan    the human's time: header not closed, plan empty, or not (or no longer) approved
 #   build   the agent's time: no passing check for this code, or "## Built" empty
 #   review  the human's time: verified and written up
@@ -369,8 +448,9 @@ item_phase() {
 	WHY=
 	TASK=
 	WHYCODE=
-	MISSING=$(missing_sections "$IFILE" plan)
-	if ! fm_closed "$IFILE"; then
+	item_read
+	MISSING=$IR_MISS_PLAN
+	if [ -z "$IR_CLOSED" ]; then
 		PHASE=plan
 		WHY="item.md: $FM_OPEN"
 		WHYCODE=frontmatter
@@ -378,17 +458,17 @@ item_phase() {
 		PHASE='pr'
 		WHY="shipped into a pull request, waiting to merge: $CMD ship merges it"
 		WHYCODE='pr'
-	elif [ "$(fm_get status "$IFILE")" != open ]; then
+	elif [ "$IR_STATUS" != open ]; then
 		PHASE='done'
-		WHY="status: $(fm_get status "$IFILE")"
+		WHY="status: $IR_STATUS"
 		WHYCODE=status
 	elif [ -n "$MISSING" ]; then
 		PHASE=plan
-		WHY="to fill: $(joinlist "$MISSING")"
+		WHY="to fill: $MISSING"
 		WHYCODE=fill
-	elif [ "$(gate_level approved "$ITYPE")" = block ] && ! approval_ok; then
+	elif [ "$(gate_level approved "$ITYPE")" = block ] && ! { [ -n "$IR_APPROVED" ] && [ "${IR_APPROVED%% *}" = "$(plan_hash "$IFILE")" ]; }; then
 		PHASE=plan
-		if [ -n "$(fm_get approved "$IFILE")" ]; then
+		if [ -n "$IR_APPROVED" ]; then
 			WHY="the plan changed after approval; the human re-approves with: $CMD approve"
 			WHYCODE=changed
 		else
@@ -397,14 +477,15 @@ item_phase() {
 		fi
 	else
 		# Open tasks come first: the builder works them in order (task done ticks them).
-		_t=$(task_rows | awk -F '\t' '$2 == "open" && !f { f = $1 "\t" $3 } END { if (f != "") print f "\t" NR }')
-		MISSING=$(missing_sections "$IFILE" built)
-		if [ -n "$_t" ]; then
+		MISSING=$IR_MISS_BUILT
+		if [ -n "$IR_TASK" ]; then
 			PHASE=build
-			WHY="task $(tsv 1 "$_t") of $(tsv 3 "$_t"): $(tsv 2 "$_t")"
+			TASK=${IR_TASK%%"$(printf '\t')"*}
+			_t=${IR_TASK#*"$(printf '\t')"}
+			_t=${_t#*"$(printf '\t')"}
+			WHY="task $TASK of $IR_TASKS: ${_t%%"$(printf '\t')"*}"
 			WHYCODE=task
-			TASK=$(tsv 1 "$_t")
-		elif [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
+		elif [ "$(gate_level check "$ITYPE")" != off ] && ! phase_check_passed; then
 			PHASE=build
 			WHY="no passing check for the current code"
 			WHYCODE=check
@@ -426,34 +507,36 @@ item_phase() {
 # Attributes sit in a final "(files: …; test: …; expect: fail)"; a value runs to the next
 # "; <key>:", so a test command may contain ";" and parentheses.
 task_rows() {
-	parse_item "$IFILE" "$ID" | awk -F '\t' -v OFS='\t' '
-		$1 != "task" || $2 !~ /^T-[0-9]+\.[0-9]+$/ { next }
-		{
-			txt = $4; what = txt; files = ""; test = ""; expect = ""; frs = ""; bad = 0
-			p = 0
-			for (k = 1; k <= 3; k++) {
-				key = (k == 1 ? "files:" : k == 2 ? "test:" : "expect:")
-				i = index(txt, " (" key); if (i && (p == 0 || i < p)) p = i
-			}
-			if (p && substr(txt, length(txt)) != ")") bad = 1
-			if (p && substr(txt, length(txt)) == ")") {
-				what = substr(txt, 1, p - 1); a = "; " substr(txt, p + 2, length(txt) - p - 2)
-				n = 0
-				while (match(a, /; (files|test|expect): /)) {
-					if (n) val[n] = substr(a, 1, RSTART - 1)
-					kk = substr(a, RSTART + 2, RLENGTH - 4); a = substr(a, RSTART + RLENGTH); n++; name[n] = kk
-				}
-				if (n) val[n] = a
-				for (j = 1; j <= n; j++) {
-					if (name[j] == "files") files = val[j]; else if (name[j] == "test") test = val[j]; else expect = val[j]
-				}
-			}
-			s = what
-			while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
-			sub(/(,? FR-[0-9]+\.[0-9]+)+[ ,]*$/, "", what); sub(/[ ,]+$/, "", what)
-			print $2, $3, what, files, test, expect, frs, bad
-		}'
+	parse_item "$IFILE" "$ID" | awk -F '\t' "$AWK_TASK"'$1 == "task" && $2 ~ /^T-[0-9]+\.[0-9]+$/ { print task_row($2, $3, $4) }'
 }
+
+# AWK_TASK: task_row(id, state, text) in awk: a task fact (parse_item) as a task_rows line.
+AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, frs, bad, p, k, key, i, a, n, kk, val, name, j, s) {
+	what = txt; files = ""; test = ""; expect = ""; frs = ""; bad = 0
+	p = 0
+	for (k = 1; k <= 3; k++) {
+		key = (k == 1 ? "files:" : k == 2 ? "test:" : "expect:")
+		i = index(txt, " (" key); if (i && (p == 0 || i < p)) p = i
+	}
+	if (p && substr(txt, length(txt)) != ")") bad = 1
+	if (p && substr(txt, length(txt)) == ")") {
+		what = substr(txt, 1, p - 1); a = "; " substr(txt, p + 2, length(txt) - p - 2)
+		n = 0
+		while (match(a, /; (files|test|expect): /)) {
+			if (n) val[n] = substr(a, 1, RSTART - 1)
+			kk = substr(a, RSTART + 2, RLENGTH - 4); a = substr(a, RSTART + RLENGTH); n++; name[n] = kk
+		}
+		if (n) val[n] = a
+		for (j = 1; j <= n; j++) {
+			if (name[j] == "files") files = val[j]; else if (name[j] == "test") test = val[j]; else expect = val[j]
+		}
+	}
+	s = what
+	while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
+	sub(/(,? FR-[0-9]+\.[0-9]+)+[ ,]*$/, "", what); sub(/[ ,]+$/, "", what)
+	return id "\t" st "\t" what "\t" files "\t" test "\t" expect "\t" frs "\t" bad
+}
+'
 
 # task_commit <task id>: the newest commit on this branch (since the base) whose subject names
 # the task, as a whole ID: T-4.1 is not T-4.10.
@@ -674,57 +757,95 @@ function row_json() {
 }
 '
 
-# item_sources: "<origin>\t<ref>\t<path>" for every item, the first source of an id winning:
-# archive (on the base branch), worktree (the current item), local and remote branches, then
-# base (specs/changes on the base branch).
+# item_sources: "<origin>\t<ref>\t<path>\t<blob>" for every item, the first source of an id
+# winning: archive (on the base branch), worktree (the current item), local and remote branches,
+# then base (specs/changes on the base branch). <blob> is the item file's hash in <ref>, empty
+# for the worktree (its file may have edits).
 item_sources() {
 	_base=$(cfg sdd.base main)
 	{
-		git ls-tree -r --name-only "$_base" -- "$SPECS/archive" 2>/dev/null | grep '/item\.md$' |
-			sed "s|^|archive	$_base	|"
-		current_item && printf 'worktree\t%s\t%s\n' "$BRANCH" "$IFILE"
+		git ls-tree -r "$_base" -- "$SPECS/archive" 2>/dev/null | O=archive R=$_base P1='' P2='' awk -F '\t' "$AWK_TREE"
+		current_item && printf 'worktree\t%s\t%s\t\n' "$BRANCH" "$IFILE"
 		for _kind in heads remotes; do
 			git for-each-ref --format='%(refname:short)' "refs/$_kind" | while IFS= read -r _b; do
 				case $_b in */HEAD | HEAD) continue ;; esac
 				_bid=$(id_of "$_b") || continue
 				# An item's own branch carries it under changes/, or under archive/ once shipped into a PR.
-				git ls-tree --name-only "$_b" -- "$SPECS/changes/" "$SPECS/archive/" 2>/dev/null |
-					grep -e "^$SPECS/changes/$_bid-" -e "^$SPECS/archive/$_bid-" |
-					while IFS= read -r _d; do
-						git cat-file -e "$_b:$_d/item.md" 2>/dev/null || continue
-						printf '%s\t%s\t%s\n' "$([ $_kind = heads ] && echo local || echo remote)" "$_b" "$_d/item.md"
-					done
+				git ls-tree -r "$_b" -- "$SPECS/changes/" "$SPECS/archive/" 2>/dev/null |
+					O=$([ $_kind = heads ] && echo local || echo remote) R=$_b \
+						P1="$SPECS/changes/$_bid-" P2="$SPECS/archive/$_bid-" awk -F '\t' "$AWK_TREE"
 			done
 		done
-		git ls-tree -r --name-only "$_base" -- "$SPECS/changes" 2>/dev/null | grep '/item\.md$' |
-			sed "s|^|base	$_base	|"
-	} | while IFS="$(printf '\t')" read -r _o _r _p; do
-		_d=${_p%/item.md}
-		_i=$(id_of "$_d") || continue
-		printf '%s\t%s\t%s\t%s\n' "$_i" "$_o" "$_r" "$_p"
-	done | awk -F '\t' '!seen[$1]++ { print $2 "\t" $3 "\t" $4 }'
+		git ls-tree -r "$_base" -- "$SPECS/changes" 2>/dev/null | O=base R=$_base P1='' P2='' awk -F '\t' "$AWK_TREE"
+	} | awk -F '\t' '{
+		# The id from the folder name, as id_of has it: the digits before its first "-".
+		d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
+		if (i == "" || i ~ /[^0-9]/ || i == d || seen[i]++) next
+		print
+	}'
 }
 
+# AWK_TREE: `git ls-tree -r` lines to item_sources lines: every */item.md, as origin O and ref R.
+# With P1 and P2 set, only an item folder directly under one of those prefixes (an item branch's
+# own item).
+AWK_TREE='{
+	p = $2
+	if (p !~ /\/item\.md$/) next
+	if (ENVIRON["P1"] != "") {
+		if (index(p, ENVIRON["P1"]) == 1) r = substr(p, length(ENVIRON["P1"]) + 1)
+		else if (index(p, ENVIRON["P2"]) == 1) r = substr(p, length(ENVIRON["P2"]) + 1)
+		else next
+		if (r !~ /^[^\/]*\/item\.md$/) next
+	}
+	b = $1; sub(/.* /, "", b)
+	print ENVIRON["O"] "\t" ENVIRON["R"] "\t" p "\t" b
+}'
+
 # item_load <origin> <ref> <path>: point IFILE/ID/ITYPE at that item (a temp copy unless it
-# is the working file; ITMP names it for cleanup) and set PHASE_FP to the fingerprint of the
-# ref's committed code, so item_phase judges that code instead of the working tree.
+# is the working file; ITMP names it for cleanup) and set PHASE_REF to the ref, so item_phase
+# judges that ref's committed code instead of the working tree.
 item_load() {
 	ITMP=
 	IPR=
 	PHASE_FP=
+	PHASE_REF=
 	if [ "$1" = worktree ]; then
 		IFILE=$3
 	else
 		ITMP=$(mktemp "${TMPDIR:-/tmp}/$NAME-item.XXXXXX") || return 1
 		git show "$2:$3" >"$ITMP" 2>/dev/null || { rm -f "$ITMP"; return 1; }
 		IFILE=$ITMP
-		PHASE_FP=$(git ls-tree "$2" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
+		PHASE_REF=$2
 	fi
 	# An item archived on a branch but not on the base was shipped into a PR (see current_item).
 	case $1:$3 in archive:*) ;; *:"$SPECS/archive/"*) IPR=1 ;; esac
 	# The id comes from the folder name, like everywhere else; the frontmatter repeats it.
 	ID=$(id_of "${3%/item.md}")
 	ITYPE=$(fm_get type "$IFILE")
+}
+
+# item_facts <origin>: for a loaded item (item_load), what its file, origin and path and the
+# config decide, as TSV: 1 cache (1 when only those decide it, see item_rows) 2 id 3 type
+# 4 status 5 phase 6 frs 7 tasks_done 8 tasks_total 9 title 10 questions_open 11 approved_by
+# 12 shipped 13 reason 14 reason_code.
+item_facts() {
+	item_phase
+	# A teammate's check results live on their machine: say what the file alone cannot.
+	if [ "$1" = remote ] && [ "$PHASE" = build ] && [ -z "$IR_MISS_BUILT" ]; then
+		PHASE='review?'
+	fi
+	_ap=$IR_APPROVED
+	# "approved: <plan hash> <date> <name, may contain spaces>"
+	if [ -n "$_ap" ]; then
+		_ap=${_ap#* }
+		_ap=${_ap#* }
+	fi
+	# The check's result (check, built, ready) and the working tree depend on more than the file.
+	_fixed=1
+	case $1:$WHYCODE in worktree:* | *:check | *:built | *:ready) _fixed=0 ;; esac
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$_fixed" "$ID" "$ITYPE" "$IR_STATUS" \
+		"$PHASE" "${IR_COUNTS%"$(printf '\t')"*}" "$IR_TITLE" "${IR_COUNTS##*"$(printf '\t')"}" \
+		"$_ap" "$IR_SHIPPED" "$WHY" "$WHYCODE"
 }
 
 # item_row <origin> <ref> <path>: one TSV summary line (see row_json):
@@ -735,36 +856,109 @@ item_load() {
 # tree has edits); "opened_by" is the author of the item's open commit.
 item_row() {
 	item_load "$@" || return 1
-	item_phase
-	# A teammate's check results live on their machine: say what the file alone cannot.
-	if [ "$1" = remote ] && [ "$PHASE" = build ] && [ -z "$(missing_sections "$IFILE" built)" ]; then
-		PHASE='review?'
-	fi
-	_counts=$(parse_item "$IFILE" "$ID" | awk -F '\t' '
-		$1 == "fr" { f++ } $1 == "task" { t++; if ($3 == "done") d++ } $1 == "q" && $3 == "open" { q++ }
-		END { printf "%d\t%d\t%d\t%d", f, d, t, q }')
-	_br=$2
-	[ "$1" = archive ] && _br=
-	_ap=$(fm_get approved "$IFILE")
-	# "approved: <plan hash> <date> <name, may contain spaces>"
-	if [ -n "$_ap" ]; then
-		_ap=${_ap#* }
-		_ap=${_ap#* }
-	fi
-	_shipped=$(fm_get shipped "$IFILE")
-	_by=$(git log -1 --format=%an --grep="^docs($ID): open " "$2" 2>/dev/null)
-	if [ -n "$_shipped" ]; then
-		_act=$_shipped
-	elif [ "$1" = worktree ] && [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-		_act=$(date +%F)
-	else
-		_act=$(git log -1 --format=%cs "$2" 2>/dev/null)
-	fi
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
-		"$PHASE" "${_counts%"$(printf '\t')"*}" "$(fm_get title "$IFILE")" "$_br" "$1" "${_counts##*"$(printf '\t')"}" \
-		"$_ap" "$_by" "$_shipped" "$_act" "$WHY" "$WHYCODE"
+	_facts=$(item_facts "$1")
 	[ -z "$ITMP" ] || rm -f "$ITMP"
 	PHASE_FP=
+	PHASE_REF=
+	printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "${_facts#*"$(printf '\t')"}" | item_rows_finish
+}
+
+# item_rows [origin]: item_row for every item (item_sources), or only those from <origin>. The
+# facts an item's file decides (item_facts) are cached in .git/sdd/cache/ (cache_file) under the
+# file's hash, its origin and path; the rest (branch, opened_by, active) is read from git for
+# all rows at once. A row whose facts depend on more (a check result, the working tree) is
+# never cached. Deleting the cache changes nothing but speed (C-2).
+item_rows() {
+	_cf=$(cache_file) || _cf=/dev/null
+	_src=$(item_sources | O=${1:-} awk -F '\t' 'ENVIRON["O"] == "" || $1 == ENVIRON["O"]')
+	[ -n "$_src" ] || return 0
+	# Facts for the files the cache does not know yet; the ones only their file decides go into it.
+	_new=$(printf '%s\n' "$_src" | C=$_cf awk -F '\t' "$AWK_CACHE"'!(($4 SUBSEP $1 SUBSEP $3) in c) || $1 == "worktree"' |
+		while IFS="$(printf '\t')" read -r _o _r _p _bl; do
+			item_load "$_o" "$_r" "$_p" || continue
+			_facts=$(item_facts "$_o")
+			[ -z "$ITMP" ] || rm -f "$ITMP"
+			_fixed=${_facts%%"$(printf '\t')"*}
+			_facts=${_facts#*"$(printf '\t')"}
+			[ -z "$_bl" ] || [ "$_fixed" != 1 ] ||
+				printf '%s\t%s\t%s\t%s\n' "$_bl" "$_o" "$_p" "$_facts" >>"$_cf"
+			printf '%s\t%s\t%s\t%s\n' "$_o" "$_r" "$_p" "$_facts"
+		done)
+	printf '%s\n' "$_src" | N=$_new C=$_cf awk -F '\t' "$AWK_CACHE"'
+		BEGIN { n = split(ENVIRON["N"], l, "\n"); for (i = 1; i <= n; i++) { split(l[i], f, "\t"); nf[f[1] SUBSEP f[3]] = substr(l[i], length(f[1] f[2] f[3]) + 4) } }
+		{
+			if (($1 SUBSEP $3) in nf) x = nf[$1 SUBSEP $3]
+			else if (($4 SUBSEP $1 SUBSEP $3) in c) x = c[$4 SUBSEP $1 SUBSEP $3]
+			else next
+			print $1 "\t" $2 "\t" $3 "\t" x
+		}' | item_rows_finish
+}
+
+# AWK_CACHE: load the cache file C into c[<blob>, <origin>, <path>] = the cached facts (item_facts
+# without its first field). Lines of the wrong shape (a write cut short) are skipped.
+AWK_CACHE='BEGIN {
+	while ((getline cl < ENVIRON["C"]) > 0) {
+		if (split(cl, cf, "\t") != 16) continue
+		ck = cf[1] SUBSEP cf[2] SUBSEP cf[3]
+		if (!(ck in c)) c[ck] = substr(cl, length(cf[1] cf[2] cf[3]) + 4)
+	}
+}
+'
+
+# item_rows_finish: "<origin>\t<ref>\t<path>\t<facts without the cache field>" lines (13 facts)
+# to item_row lines, adding what git says: opened_by (open_authors) and active.
+item_rows_finish() {
+	_in=$(cat)
+	[ -n "$_in" ] || return 0
+	_tab=$(printf '\t')
+	# Per ref: who opened which item, and the day of its last commit (for rows not shipped).
+	_git=$(printf '%s\n' "$_in" | cut -f2 | sort -u | while IFS= read -r _r; do
+		open_authors "$_r" | R=$_r awk '{ print "a\t" ENVIRON["R"] "\t" $0 }'
+		printf '%s\n' "$_in" | R=$_r awk -F '\t' '$2 == ENVIRON["R"] && $14 == "" { f = 1 } END { exit !f }' &&
+			printf 'd\t%s\t%s\n' "$_r" "$(git log -1 --format=%cs "$_r" 2>/dev/null)"
+	done)
+	_today=
+	case $_in in worktree"$_tab"* | *"
+worktree$_tab"*) [ -z "$(git status --porcelain 2>/dev/null)" ] || _today=$(date +%F) ;; esac
+	printf '%s\n' "$_in" | G=$_git TODAY=$_today awk -F '\t' -v OFS='\t' '
+		BEGIN {
+			n = split(ENVIRON["G"], l, "\n")
+			for (i = 1; i <= n; i++) {
+				split(l[i], f, "\t")
+				if (f[1] == "a") by[f[2] SUBSEP f[3]] = f[4]; else day[f[2]] = f[3]
+			}
+		}
+		{
+			# $4 id 5 type 6 status 7 phase 8 frs 9 done 10 total 11 title 12 q 13 approved_by
+			# 14 shipped 15 reason 16 reason_code
+			act = $14 != "" ? $14 : ($1 == "worktree" && ENVIRON["TODAY"] != "") ? ENVIRON["TODAY"] : day[$2]
+			print $4, $5, $6, $7, $8, $9, $10, $11, ($1 == "archive" ? "" : $2), $1, $12, $13, by[$2 SUBSEP $4], $14, act, $15, $16
+		}'
+}
+
+# open_authors <ref>: "<id>\t<author>" for every item opened in <ref>'s history: the author of
+# the newest commit with a "docs(<id>): open " line, as `git log -1 --grep` finds it for one id.
+open_authors() {
+	git log --format='%x01%an%n%B' --grep='^docs([0-9][0-9]*): open ' "$1" 2>/dev/null | awk '
+		substr($0, 1, 1) == "\001" { a = substr($0, 2); next }
+		/^docs\([0-9]+\): open / { i = substr($0, 6, index($0, ")") - 6); if (!(i in s)) { s[i] = 1; print i "\t" a } }'
+}
+
+# cache_file: this clone's cache of item facts for this sdd code and config:
+# .git/sdd/cache/facts.<hash of both>. Other cache files (older code or config) are removed when
+# a new one starts.
+cache_file() {
+	_ck=$({
+		cat "$SDD_HOME/VERSION" "$SDD_HOME/core/lib/common.sh" 2>/dev/null
+		printf '%s\n%s\n' "$CMD" "$CFG_TAB"
+	} | git hash-object --stdin) || return 1
+	_cf="$ST/cache/facts.$_ck"
+	if [ ! -f "$_cf" ]; then
+		mkdir -p "$ST/cache" || return 1
+		rm -f "$ST/cache"/facts.*
+		: >"$_cf" || return 1
+	fi
+	printf '%s\n' "$_cf"
 }
 
 # parse_item <file> <id>: the facts in the plan part of an item, guidance comments removed,
@@ -773,30 +967,117 @@ item_row() {
 # "- [ ] T-<id>.<n>" or "- [x] …"); following lines continue it until a blank line, and
 # "e.g." lines are its example.
 parse_item() {
-	plan_part "$1" | uncomment | I=$2 awk '
-	function emit() {
-		if (k == "q") st = (index(txt, "decided:") ? "decided" : "open")
-		if (k != "") printf "%s\t%s\t%s\t%s\t%s\n", k, id, st, txt, eg
-		k = ""; txt = ""; eg = ""; st = ""
+	plan_part "$1" | uncomment | I=$2 awk 'function out(s) { print s }'"$AWK_PARSE"
+}
+
+# AWK_PARSE: parse_item's rules, for uncommented plan lines; each fact goes to out(line).
+AWK_PARSE='
+function emit() {
+	if (k == "q") st = (index(txt, "decided:") ? "decided" : "open")
+	if (k != "") out(k "\t" id "\t" st "\t" txt "\t" eg)
+	k = ""; txt = ""; eg = ""; st = ""
+}
+function start(kind, s,   n) {
+	n = index(s, " "); id = (n ? substr(s, 1, n - 1) : s); txt = (n ? substr(s, n + 1) : "")
+	sub(/^[ \t]+/, "", txt)
+	k = (substr(id, index(id, "-") + 1, length(ENVIRON["I"]) + 1) == ENVIRON["I"] ".") ? kind : ""
+}
+{ gsub(/\t/, " ") }
+/^```/ { emit(); fence = !fence; next }
+fence { next }
+/^- \[[ xX]\] T-[0-9]+\.[0-9]+/ { emit(); start("task", substr($0, 7)); st = (substr($0, 4, 1) == " ") ? "open" : "done"; next }
+/^(US|FR|D|Q|DOD)-[0-9]+\.[0-9]+([ ]|$)/ {
+	emit(); p = substr($0, 1, index($0, "-") - 1)
+	start(p == "US" ? "us" : p == "FR" ? "fr" : p == "D" ? "d" : p == "Q" ? "q" : "dod", $0); next
+}
+k != "" && /^[ ]*e\.g\./ { l = $0; sub(/^[ ]*e\.g\.[ ]*/, "", l); eg = (eg == "" ? l : eg " " l); next }
+k != "" && /^#/ { emit(); next }
+k != "" && /[^ ]/ { l = $0; sub(/^[ ]+/, "", l); if (eg != "") eg = eg " " l; else txt = txt " " l; next }
+{ emit() }
+END { emit() }'
+
+# item_read: read the item file (IFILE, for ID) once, for item_phase and the commands after it,
+# with the same rules as the helpers named here. Sets IR_CLOSED (1 when fm_closed), IR_TYPE,
+# IR_STATUS, IR_TITLE, IR_APPROVED and IR_SHIPPED (fm_get), IR_MISS_PLAN and IR_MISS_BUILT
+# (missing_sections of each part, joined as joinlist does), IR_TASK (the first open task_rows
+# line), IR_TASKS (how many task_rows lines), IR_COUNTS ("<frs>\t<tasks done>\t<tasks>\t<open
+# questions>") and IR_FACTS (parse_item's lines).
+item_read() {
+	_s=$(I=$ID awk "$AWK_TASK"'
+	function out(s,   f) {
+		facts = facts s "\n"; split(s, f, "\t")
+		if (f[1] == "fr") nfr++
+		if (f[1] == "task") { nt++; if (f[3] == "done") nd++ }
+		if (f[1] == "q" && f[3] == "open") nq++
+		if (f[1] == "task" && f[2] ~ /^T-[0-9]+\.[0-9]+$/) { ntask++; if (f[3] == "open" && task == "") task = task_row(f[2], f[3], f[4]) }
 	}
-	function start(kind, s,   n) {
-		n = index(s, " "); id = (n ? substr(s, 1, n - 1) : s); txt = (n ? substr(s, n + 1) : "")
-		sub(/^[ \t]+/, "", txt)
-		k = (substr(id, index(id, "-") + 1, length(ENVIRON["I"]) + 1) == ENVIRON["I"] ".") ? kind : ""
+	# uncomment, one line at a time, with a state per stream w.
+	function unc(line, w,   o, e, b) {
+		o = ""
+		while (length(line) > 0) {
+			if (inc[w]) {
+				e = index(line, "-->"); if (!e) { line = ""; break }
+				line = substr(line, e + 3); inc[w] = 0
+			} else {
+				b = index(line, "<!--"); if (!b) { o = o line; break }
+				o = o substr(line, 1, b - 1); line = substr(line, b + 4); inc[w] = 1
+			}
+		}
+		return o
 	}
-	{ gsub(/\t/, " ") }
-	/^```/ { emit(); fence = !fence; next }
-	fence { next }
-	/^- \[[ xX]\] T-[0-9]+\.[0-9]+/ { emit(); start("task", substr($0, 7)); st = (substr($0, 4, 1) == " ") ? "open" : "done"; next }
-	/^(US|FR|D|Q|DOD)-[0-9]+\.[0-9]+([ ]|$)/ {
-		emit(); p = substr($0, 1, index($0, "-") - 1)
-		start(p == "US" ? "us" : p == "FR" ? "fr" : p == "D" ? "d" : p == "Q" ? "q" : "dod", $0); next
+	# missing_sections, for both parts at once, over the whole file uncommented.
+	function mflush() {
+		if (mname != "" && !mopt && !mfilled) { if (mpart) mb = mb (mb == "" ? "" : ",") mname; else mp = mp (mp == "" ? "" : ",") mname }
 	}
-	k != "" && /^[ ]*e\.g\./ { l = $0; sub(/^[ ]*e\.g\.[ ]*/, "", l); eg = (eg == "" ? l : eg " " l); next }
-	k != "" && /^#/ { emit(); next }
-	k != "" && /[^ ]/ { l = $0; sub(/^[ ]+/, "", l); if (eg != "") eg = eg " " l; else txt = txt " " l; next }
-	{ emit() }
-	END { emit() }'
+	function whole(l) {
+		l = unc(l, "w")
+		if (mbuilt && l ~ /^## / && l !~ /^## Review/) return
+		if (l ~ /^## /) {
+			mflush(); mname = substr(l, 4)
+			if (mname == "Built") mbuilt = 1
+			mpart = mbuilt; mopt = (mname ~ /\(optional\)/); mfilled = 0; return
+		}
+		if (mname != "" && l ~ /[^ \t]/) mfilled = 1
+	}
+	{ whole($0) }
+	# The frontmatter (fm_get: the first of each key; fm_closed), then the plan part (plan_part).
+	NR == 1 && $0 == "---" { infm = 1; next }
+	infm {
+		if ($0 == "---") { infm = 0; closed = 1; next }
+		i = index($0, ":")
+		if (i && !((kk = substr($0, 1, i - 1)) in fm)) { v = substr($0, i + 1); sub(/^[ \t]+/, "", v); fm[kk] = v }
+		next
+	}
+	$0 == "## Built" { past = 1 }
+	past { next }
+	{ $0 = unc($0, "p") }
+	'"$AWK_PARSE"'
+	END {
+		mflush(); gsub(/,/, ", ", mp); gsub(/,/, ", ", mb)
+		printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\t%d\t%d\t%d\n%s", closed ? 1 : "", fm["type"], fm["status"],
+			fm["title"], fm["approved"], fm["shipped"], mp, mb, task, ntask, nfr, nd, nt, nq, facts
+	}' "$IFILE")
+	{
+		IFS= read -r IR_CLOSED
+		IFS= read -r IR_TYPE
+		IFS= read -r IR_STATUS
+		IFS= read -r IR_TITLE
+		IFS= read -r IR_APPROVED
+		IFS= read -r IR_SHIPPED
+		IFS= read -r IR_MISS_PLAN
+		IFS= read -r IR_MISS_BUILT
+		IFS= read -r IR_TASK
+		IFS= read -r IR_TASKS
+		IFS= read -r IR_COUNTS
+	} <<EOF
+$_s
+EOF
+	_s="$_s
+"
+	for _ln in 1 2 3 4 5 6 7 8 9 10 11; do _s=${_s#*"
+"}; done
+	IR_FACTS=${_s%"
+"}
 }
 
 # --- constitution -----------------------------------------------------------------

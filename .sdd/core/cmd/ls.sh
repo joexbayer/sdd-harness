@@ -14,8 +14,7 @@ need_repo
 
 # Branches contribute open items (and items shipped into a PR) only; shipped and dropped ones are
 # read from the archive.
-rows=$(item_sources | while IFS="$(printf '\t')" read -r o r p; do item_row "$o" "$r" "$p"; done |
-	A=$all awk -F '\t' '($10 == "archive" || $3 == "open" || $17 == "pr") && (ENVIRON["A"] != "" || $3 != "dropped")' |
+rows=$(item_rows | A=$all awk -F '\t' '($10 == "archive" || $3 == "open" || $17 == "pr") && (ENVIRON["A"] != "" || $3 != "dropped")' |
 	sort -t "$(printf '\t')" -k1,1n)
 
 # With a forge, each item branch's newest PR joins its row as fields 18-23 (number, state,
