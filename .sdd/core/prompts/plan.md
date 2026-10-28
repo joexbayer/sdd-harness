@@ -23,8 +23,10 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   framework's own auth, escaping and crypto over new code.
 - End the plan with small, ordered tasks under "## Tasks" (a feature needs them in the
   standard profile): each one sitting, naming its files, the FRs it serves and a test of its
-  own that can pass before later tasks exist; `expect: fail` for a test written first. The
-  builder may be a small model that sees one task at a time, so say what it needs to know.
+  own that can pass before later tasks exist; `expect: fail` for a test written first. Size
+  each one `size: S|M|L` (S: a few lines, M: a sitting, L: a big one): consecutive S tasks
+  share a builder, M and L run alone. The builder may be a small model that sees only its
+  batch, so say what it needs to know.
 - Make the plan precise enough that you could build it later without asking anything:
   the approach, the files involved, and how each requirement will be proven by a test.
 - Keep it to about a screen. If it does not fit, the change is too big: suggest a split.

@@ -502,41 +502,56 @@ item_phase() {
 }
 
 # task_rows: the current item's tasks (IFILE, ID), one per line, in plan order:
-# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>". <bad> is 1 when the
-# line has attributes that do not end it (a wrapped line, words after them): sdd must not guess.
-# Attributes sit in a final "(files: …; test: …; expect: fail)"; a value runs to the next
-# "; <key>:", so a test command may contain ";" and parentheses.
+# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>\t<size>". <bad> is
+# empty, or why sdd cannot read the line (attributes that do not end it, an attribute it does not
+# know, a size not S, M or L): sdd must not guess. <size> is S, M or L (M when none is given).
+# Attributes sit in a final "(files: …; test: …; expect: fail; size: S)"; a value runs to the
+# next "; <key>:", so a test command may contain ";" and parentheses.
 task_rows() {
 	parse_item "$IFILE" "$ID" | awk -F '\t' "$AWK_TASK"'$1 == "task" && $2 ~ /^T-[0-9]+\.[0-9]+$/ { print task_row($2, $3, $4) }'
 }
 
 # AWK_TASK: task_row(id, state, text) in awk: a task fact (parse_item) as a task_rows line.
-AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, frs, bad, p, k, key, i, a, n, kk, val, name, j, s) {
-	what = txt; files = ""; test = ""; expect = ""; frs = ""; bad = 0
+AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, size, frs, bad, p, k, key, i, a, n, kk, val, name, j, s) {
+	what = txt; files = ""; test = ""; expect = ""; size = "M"; frs = ""; bad = ""
 	p = 0
-	for (k = 1; k <= 3; k++) {
-		key = (k == 1 ? "files:" : k == 2 ? "test:" : "expect:")
+	for (k = 1; k <= 4; k++) {
+		key = (k == 1 ? "files:" : k == 2 ? "test:" : k == 3 ? "expect:" : "size:")
 		i = index(txt, " (" key); if (i && (p == 0 || i < p)) p = i
 	}
-	if (p && substr(txt, length(txt)) != ")") bad = 1
+	if (p && substr(txt, length(txt)) != ")") bad = "its attributes must end its line, e.g. … (files: a.js; test: npm test)"
 	if (p && substr(txt, length(txt)) == ")") {
 		what = substr(txt, 1, p - 1); a = "; " substr(txt, p + 2, length(txt) - p - 2)
 		n = 0
-		while (match(a, /; (files|test|expect): /)) {
+		while (match(a, /; [A-Za-z][A-Za-z0-9_-]*: /)) {
 			if (n) val[n] = substr(a, 1, RSTART - 1)
 			kk = substr(a, RSTART + 2, RLENGTH - 4); a = substr(a, RSTART + RLENGTH); n++; name[n] = kk
 		}
 		if (n) val[n] = a
 		for (j = 1; j <= n; j++) {
-			if (name[j] == "files") files = val[j]; else if (name[j] == "test") test = val[j]; else expect = val[j]
+			if (name[j] == "files") files = val[j]; else if (name[j] == "test") test = val[j]
+			else if (name[j] == "expect") expect = val[j]; else if (name[j] == "size") size = val[j]
+			else if (bad == "") bad = "unknown attribute " name[j] " (known: files, test, expect, size)"
 		}
+		if (bad == "" && size !~ /^[SML]$/) bad = "size must be S, M or L, not " size
 	}
 	s = what
 	while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
 	sub(/(,? FR-[0-9]+\.[0-9]+)+[ ,]*$/, "", what); sub(/[ ,]+$/, "", what)
-	return id "\t" st "\t" what "\t" files "\t" test "\t" expect "\t" frs "\t" bad
+	return id "\t" st "\t" what "\t" files "\t" test "\t" expect "\t" frs "\t" bad "\t" size
 }
 '
+
+# task_batch: of the task_rows lines on stdin, the next batch the builder works at once: the first
+# open task, joined by the open S tasks right after it while it is S too, up to [build] batch (3).
+# M and L tasks run alone, so a batch is the same every run (D-17.1).
+task_batch() {
+	B=$(cfg build.batch 3) awk -F '\t' '
+		$2 != "open" { next }
+		n == 0 { print; n = 1; small = ($9 == "S"); next }
+		!small || $9 != "S" || n >= ENVIRON["B"] + 0 { exit }
+		{ print; n++ }'
+}
 
 # task_commit <task id>: the newest commit on this branch (since the base) whose subject names
 # the task, as a whole ID: T-4.1 is not T-4.10.
