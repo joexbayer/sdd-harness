@@ -146,6 +146,9 @@ Follow-ups (for the human to decide):
 - DOD-22.2 (a real qwen build with an Opus/Sonnet verifier on a scratch repo) is left for the
   main session.
 
+The Verified by line above is from before the review changes below; each of those has its own
+test, run under /bin/sh and dash.
+
 Review change (DOD-22.2 trial): qwen's first batch was T-1.1 (test first, `expect: fail "FAIL
 slug"`), T-1.2 (the code) and T-1.3. It wrote both, the red run then passed, `task done` refused
 T-1.1, and qwen thrashed (it even ran `git stash`, hiding its tick) until its 80-step limit.
