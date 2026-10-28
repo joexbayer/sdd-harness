@@ -123,7 +123,8 @@ built on git state instead of edit counters.
 | plan approved before build (not chore, hotfix) | you, content-hash pinned | you, content-hash pinned | non-author |
 | failing test first (fix, feature tasks) | – | block | block |
 | trace: every FR has a test naming it | – | warn | block |
-| independent review | on request | on request | required for features |
+| verifier ran: a `Verified by:` line under Built, not `none` (`verified`) | – | warn | block |
+| code unchanged since the human's `sdd review` in this clone (`reviewed`) | warn | warn | block |
 | trust gate, env allowlist, role profiles | – | – | on |
 
 "Block once" follows narrow: the first stop is refused with the reason. The second is allowed,
@@ -168,7 +169,7 @@ fixed keys; every other reader (the MCP server too) uses them instead of parsing
 |---|---|---|
 | story | `US-<id>.<n> As a …` | `grep -h '^US-' specs/changes/*/item.md` |
 | requirement | `FR-<id>.<n> WHEN … THE SYSTEM SHALL …`, continued on the next lines, then an `e.g.` line | `grep -c '^FR-41\.' specs/changes/41-*/item.md` |
-| task | `- [ ] T-<id>.<n> <what>, FR-… (files: …; test: <command>; expect: fail; size: S\|M\|L)`; `[x]` once `task done` saw its test pass (`[X]` counts too); attributes optional (no size is M), any other attribute makes the task unreadable | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
+| task | `- [ ] T-<id>.<n> <what>, FR-… (files: …; test: <command>; expect: fail; size: S\|M\|L)`; `[x]` once `task done` saw its test pass (`[X]` counts too); attributes optional (no size is M), any other attribute makes the task unreadable; `expect: fail "<text>"` counts the red run only when its output contains that text (a fixed string) | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
 | decision | `D-<id>.<n> … because …` | `git grep -n '^D-' specs/` |
 | question | `Q-<id>.<n> … → recommend: …`; answered with `→ decided: …` | `grep '^Q-' … \| grep -v 'decided:'` |
 | outcome | `DOD-<id>.<n> …` | |
@@ -268,6 +269,17 @@ an agent can spawn subagents (D-17.2): `sdd task next` prints the next batch, on
 loop. A batch is the first open task, joined by the open `size: S` tasks right after it while it
 is S too, up to `[build] batch` (3): the planner sizes tasks and the human approves them, sdd
 only groups, so a batch is the same every run (D-17.1).
+
+Verifying: once no task is open and the check passes, the finish steps hand the item to the
+`verifier` role (its `sdd-verifier` subagent, `sdd run verifier <id>`, or a fresh subagent on
+another model), whose prompt (`prompts/role-verifier.md`) is to prove each FR by running
+something and report only findings, with the command and its output, never editing. Its result
+goes under Built as `Verified by: <model>: <n> of <m> FRs proven; <findings>`, which the
+`verified` gate asks for; it stops a forgotten step, not a forged line (the human reads it in
+review, `sdd usage` shows whether a verifier ran). `sdd review` records the patch id of the
+code diff from the merge base (`specs/` left out) in `.git/sdd/checks/<id>.reviewed`; the
+`reviewed` gate compares it at ship and names the files changed since, and a rebase that keeps
+the change keeps the id. The record is per clone: a teammate's review is the PR's (D-22.2).
 
 ## 11. Team mode and the MCP server
 

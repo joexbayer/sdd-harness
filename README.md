@@ -100,7 +100,7 @@ and the hooks. Windows works through WSL or Git Bash.
 | `sdd status` | the current item and its phase, or open items on local branches |
 | `sdd approve` | the human hands the plan to the agent |
 | `sdd check` | run your tests and linters (exit 0 pass, 1 fail, 3 no tests ran) |
-| `sdd review` | walk through what was built |
+| `sdd review` | walk through what was built (and remember the code you saw) |
 | `sdd ship` | gates, archive the item, fast-forward the base branch |
 | `sdd open <id> [--worktree]` | switch to an item's branch (a teammate's too), or open it in `../<repo>.<id>` |
 | `sdd tidy [--remote] [--dry-run]` | remove what shipped items left; `--remote` deletes their remote branches |
@@ -168,6 +168,12 @@ through `sdd run builder 16`. With `[usage] track = true` every run is logged wi
 tasks, giving each batch to one builder and committing it, and stops at the first failure.
 The planner sizes each task (`size: S|M|L`); consecutive small ones share a builder
 (`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each.
+A test written first says `expect: fail "<text>"` to count only when it fails for that reason.
+
+**Verified, then reviewed.** Before writing Built, the agent hands the item to a `verifier`
+role (ideally another model) that proves each FR by running it and reports only findings; the
+result is a `Verified by:` line under Built. `sdd review` remembers the code it showed you, so
+`ship` warns (blocks in strict) when the code changed after your review; a rebase does not count.
 
 Gates are scripts, not prose. In testing with a small local model (qwen3-coder 30B), the
 model ignored written rules but obeyed the gates (see `specs/kb/narrow-lessons.md`).

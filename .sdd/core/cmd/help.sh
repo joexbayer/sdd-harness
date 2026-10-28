@@ -22,7 +22,8 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME usage [<id>] [--md]         tokens, cost and time of the logged runs, per item, role and task
   $NAME summary [--since <when>] [--last <n>] [--mine] [--md|--ascii]
                                    recent work as a table: item, state, who, when
-  $NAME review                      walkthrough of what was built: commits, diff, FRs, check
+  $NAME review                      walkthrough of what was built: commits, diff, FRs, check,
+                                   verifier; remembers the code shown (ship: the reviewed gate)
   $NAME ship                        gates, archive the item, fast-forward the base branch locally
                                    (forge = github: push and open a PR; ship again merges it)
   $NAME open <id> [--worktree]      switch to an item's branch (teammates' too), or a worktree
