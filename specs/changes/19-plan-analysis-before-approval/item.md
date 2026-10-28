@@ -64,7 +64,7 @@ block in standard and strict, warn in lite (this repo is lite, so it warns here)
 DOD-19.1 `sdd analyze` on items 16, 17 and 18 in this repo gives a correct list (checked by hand).
 
 ## Tasks (optional)
-- [ ] T-19.1 `plan_findings` and `sdd analyze`, FR-19.1 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/analyze.sh, .sdd/core/cmd/help.sh, tests/t_analyze.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_analyze.sh; expect: fail)
+- [x] T-19.1 `plan_findings` and `sdd analyze`, FR-19.1 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/analyze.sh, .sdd/core/cmd/help.sh, tests/t_analyze.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_analyze.sh; expect: fail)
 - [ ] T-19.2 Gate `analyzed` at approve, FR-19.2 (files: .sdd/core/config, .sdd/core/cmd/approve.sh, tests/t_analyze.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_analyze.sh)
 - [ ] T-19.3 Findings in the plan step of next, gap checklist in the plan prompt, FR-19.3, FR-19.4 (files: .sdd/core/cmd/next.sh, .sdd/core/prompts/plan.md, tests/t_analyze.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_analyze.sh)
 
