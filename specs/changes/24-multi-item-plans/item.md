@@ -90,6 +90,70 @@ DOD-24.2 In a scratch repo, a three-entry roadmap ships, `next` offers R-n.1, it
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-24.1 roadmap type: .sdd/core/templates/roadmap.md (Goal, Items, Done when), `[type "roadmap"]`
+(gates planned analyzed approved built, `lands = item`) in .sdd/core/config:90; ship.sh:254-275 lands
+only the item like a spike (commit "docs(<id>): roadmap plan …", its own message). Proved by
+tests/t_roadmap.sh (FR-24.1: scaffold, approve, ship, stray code not on main).
+FR-24.2 entries: AWK_PARSE reads `- R-<id>.<n> …` as fact kind `r` (.sdd/core/lib/common.sh:1212),
+`entry_row` (AWK_ENTRY, common.sh:445) splits type, title, after:; plan_findings (common.sh:391)
+flags an unknown type, an after: that is not an entry / not an earlier one, an unreadable entry, a
+duplicate (the existing "written twice") and a roadmap with no entries. tests/t_roadmap.sh checks
+the exact analyze output and that standard blocks approve.
+FR-24.3 new --from: .sdd/core/cmd/new.sh:9-35 (validates R-<digits>.<digits>, reads the entry from
+the shipped roadmap on the base, refuses unknown entry / unshipped roadmap / entry already opened
+by a non-dropped item in item_rows), new.sh:66-69 writes `roadmap:` and `depends:`. Reading roadmaps:
+`shipped_roadmaps` (common.sh:1319). Row fields 18 roadmap, 19 depends added (item_read, item_facts,
+AWK_CACHE width 18, item_rows_finish, row_json; ls --json gains `roadmap` and `depends`). Proved by
+tests/t_roadmap.sh (FR-24.3, incl. a teammate clone seeing the branch only as origin/…, --worktree).
+FR-24.4 depends state: AWK_DEPS (common.sh:1350) over item_rows: a ref is met once the item, or the
+item opened from the entry, has shipped; `waits_for` (common.sh:1376) names unmet ones. Proved by
+tests/t_depends.sh (FR-24.4: "3 (Auth API), R-1.3 (not opened yet)", then only R-1.3 once 3 shipped)
+and tests/t_roadmap.sh (R-6.2 offered only after R-6.1's item shipped).
+FR-24.5 next and show: next.sh:22-37 prints "Ready in roadmap <id> (<title>): <entry> → <cmd> new
+--from <entry>" with no item; show.sh:26-29 and its text/JSON awk mark every entry not opened /
+open (item n) / shipped (item n), JSON `entries`; none.md lists the roadmap type. Proved by
+tests/t_roadmap.sh (FR-24.5, incl. a teammate who fetched the branch is not offered the entry).
+FR-24.6 waits-for and gate: next.sh:45-46 (line after Phase), status.sh:21-22 and its open-items
+list, ls.sh:44-50; gate `depends` in sdd.gates and profiles (lite warn, standard/strict block,
+config:9,38,49,60), added to chore's and spike's gate lists, applied in ship.sh:211-215. Proved by
+tests/t_depends.sh (FR-24.6: next line 4, status, ls, standard refusal with HEAD unchanged, lite
+warning and ship).
+
+Deviations:
+- Added prompts/plan.roadmap.md and prompts/build.roadmap.md (two short texts, like
+  build.spike.md) so `next` tells the agent what a roadmap's plan and Built are; not in a task's
+  file list.
+- Entry findings print with no short name ("✗ R-1.2: after R-1.3, …"), matching FR-24.2's example;
+  a missing after: target says "which is not an entry", a later one "which is not an earlier entry".
+- An entry whose only item was dropped counts as not opened: it may be opened again and is offered
+  again.
+- `depends` gate is off for hotfix (urgent by nature, keeps its own short gate list); on for chore
+  and spike, since roadmap entries may be chores (the plan's own R-30.3 example).
+- Words for an unmet entry ref: "R-1.1 (not opened yet)" or "3 (Auth API, R-1.1)" once opened.
+- T-24.2 and T-24.3 share one commit (both use shipped_roadmaps and AWK_DEPS in common.sh, and
+  one test file); both IDs are in the subject.
+- No existing test changed.
+
+Follow-ups:
+- Cost: when an item has `depends:`, next/status (and hook session-start) read all item rows
+  (~0.3 s in a tiny repo under load 12, over the 0.2 s budget). Items without depends: are
+  unchanged (t_gitcalls limits hold). Worth an item before item 25, where most items will have
+  depends: (e.g. answer from the archive first, read branches only to name an unmet ref).
+- `next` with no item off the base branch runs one `git grep` (zero on the base itself).
+- Two teammates opening the same entry before either has pushed both succeed (out of scope as
+  written; likelihood low with fetch-before-open).
+
+DOD-24.2 (scratch repo verify24-dod, standard): roadmap 1 with three chore entries approved and
+shipped; `next` on main offered only "R-1.1 chore: Auth API → .sdd/bin/sdd new --from R-1.1"; its
+item 2 shipped; `next` then offered R-1.2; item 3 from R-1.3 opened early, and its ship was refused:
+"sdd: item 3: waits for R-1.2 (not opened yet) (gate depends)", exit 1.
+DOD-24.1: `sdd check` passes (shellcheck + both suites under /bin/sh and dash, run by task done
+T-24.5; t_perf included, no slack needed).
+
+Security pass: no findings (a fresh subagent given only the diff: entry type/title reach git and
+paths only through the existing type check, slugify and quoted args; awk data goes via ENVIRON).
+
+Verified by: claude-sonnet-5-5: 6 of 6 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
