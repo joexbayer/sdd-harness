@@ -4,6 +4,7 @@ type: feature
 title: Build and plan discipline
 status: open
 created: 2026-10-28
+approved: 4e017ecff6032e31ebae00a14f106d7a7b238e0b 2026-10-28 joexbayer
 ---
 # 20 Build and plan discipline
 
