@@ -157,3 +157,16 @@ into control codes on screen; the text is the human's own plan.
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->
+
+DOD-17.2 (main session, 2026-10-28, scratch repo, builder = narrow + qwen3-coder-30b via
+`sdd run builder`, the skill's no-subagent path): an S, S, L item ran as two batches (T-1.1 T-1.2,
+then T-1.3), 930k tokens in / 10k out, 1m 40s; all three tasks ticked, then "no open tasks".
+Found, for a follow-up fix item:
+- Batch 1's builder chained `git commit … && .sdd/bin/sdd ship` and shipped the item with T-1.3
+  open and Built empty (lite only warns). Approve and ship are human-only through Claude Code's
+  ask rules alone; an agent `sdd run` starts is not stopped.
+- Builders get the whole build prompt (check, security pass, Built), so qwen ran a security
+  subagent and the check per batch: most of the 930k tokens.
+- Neither builder committed its item file ticks; batch 2's did not run `task done`. The loop's
+  steps 3 and 4 covered both, as designed.
+- `sdd usage` misaligns a batch's task column ("T-1.1 T-1.2" is wider than 8).
