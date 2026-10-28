@@ -37,7 +37,7 @@ lives in `.git/`, so a branch cannot ship one.
 
 ## Tasks (optional)
 - [x] T-18.1 Run test files in parallel, sh and dash at the same time (files: tests/run.sh, .sdd/config; test: sh tests/run.sh)
-- [ ] T-18.2 A perf test with the budgets on a generated 100-item repo (files: tests/t_perf.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_perf.sh; expect: fail)
+- [x] T-18.2 A perf test with the budgets on a generated 100-item repo (files: tests/t_perf.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_perf.sh; expect: fail)
 - [ ] T-18.3 Cache derived item rows by content hash (files: .sdd/core/lib/common.sh, tests/t_cache.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_cache.sh)
 - [ ] T-18.4 One read per item in next, status, hooks and review until the perf test passes (files: .sdd/core/lib/common.sh, .sdd/core/cmd/*.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_perf.sh)
 
