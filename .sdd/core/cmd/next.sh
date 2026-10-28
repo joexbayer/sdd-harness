@@ -90,6 +90,17 @@ BATCH
 fi
 prompt "$PHASE" "$ID" "$title" "$ITYPE"
 prompt "$PHASE.$ITYPE" "$ID" "$title" "$ITYPE"
+# A filled-in plan waiting for approval: what analyze finds, for the agent to fix first (FR-19.3).
+case $WHYCODE in
+approval | changed)
+	found=$(printf '%s\n' "$IR_FACTS" | plan_findings | findings_lines)
+	if [ -n "$found" ]; then
+		echo
+		echo "Before asking for approval, fix:"
+		printf '%s\n' "$found"
+	fi
+	;;
+esac
 case $PHASE in
 plan | build)
 	rules=$(articles | awk -F '\t' '$1 != "!" { print $1 " " $4 }')

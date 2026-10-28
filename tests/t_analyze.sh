@@ -1,4 +1,5 @@
-# FR-19.1 sdd analyze: the plan's problems, one line each; FR-19.2 the analyzed gate at approve.
+# FR-19.1 sdd analyze: the plan's problems, one line each; FR-19.2 the analyzed gate at approve;
+# FR-19.3 the problems in next's plan step; FR-19.4 the gap checklist in the plan prompt.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -76,3 +77,29 @@ setcfg profile.lite.analyzed block
 out=$(sdd approve 2>&1)
 assert_eq $? 1 "(analyzed = block in lite)"
 assert_contains "$out" '✗ Q-2.2 (Sort order?): not decided'
+
+# FR-19.3: next, in the plan phase with the plan filled in, lists the problems to fix first.
+git checkout -q main
+sdd new feature "Orders search" >/dev/null 2>&1
+h=specs/changes/3-orders-search/item.md
+out=$(sdd next)
+assert_not_contains "$out" 'Before asking for approval, fix:'
+plan "$h" 'FR-3.1 WHEN a word is searched for THE SYSTEM SHALL list matching orders.' '' '' ''
+out=$(sdd next)
+assert_contains "$out" 'Phase: plan (waiting for the human to approve'
+assert_contains "$out" 'Before asking for approval, fix:
+✗ FR-3.1 (list matching orders): no e.g. example under it'
+awk '{ print } /^FR-3\.1 / { print "  e.g. \"ink\" → orders 4 and 9" }' "$h" >"$T/plan" && cp "$T/plan" "$h"
+git commit -qam "docs(3): example"
+assert_not_contains "$(sdd next)" 'Before asking for approval, fix:'
+# FR-19.3: not in the build phase.
+git checkout -q feature/1-orders-export || fail "checkout"
+assert_not_contains "$(sdd next)" 'Before asking for approval, fix:'
+
+# FR-19.4: the plan step tells the agent to look for gaps and ask about each one.
+git checkout -q feature/3-orders-search || fail "checkout"
+out=$(sdd next)
+for c in 'check the plan for gaps' 'scope edges' 'errors and edge cases' 'data and state' 'speed' \
+	'several developers at once' 'security' 'Ask the human about each gap you find'; do
+	assert_contains "$out" "$c"
+done
