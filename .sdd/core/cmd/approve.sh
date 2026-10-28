@@ -3,6 +3,7 @@
 # of the plan (everything above "## Built") and commits it; editing the plan afterwards
 # clears the approval.
 [ $# -eq 0 ] || usage_die "usage: $NAME approve"
+human_only approve
 need_repo
 current_item || die "not on an item branch (see: $CMD status)"
 fm_closed "$IFILE" || die "item $ID: $FM_OPEN"

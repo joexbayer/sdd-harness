@@ -16,6 +16,15 @@ die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 1; }
 usage_die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 2; }
 warn() { printf '%s: warning: %s\n' "$NAME" "$*" >&2; }
 joinlist() { printf '%s\n' "$1" | paste -sd ',' - | sed 's/,/, /g'; }
+# human_only <verb>: refuse inside a role run (sdd run sets SDD_RUN for its agent; "-" when usage
+# tracking is off): approve, ship and tidy --remote are the human's (FR-21.1). It stops a careless
+# agent, not a hostile one, which could unset it (D-21.1).
+human_only() {
+	[ -n "${SDD_RUN:-}" ] || return 0
+	_r=" (run $SDD_RUN)"
+	[ "$SDD_RUN" != - ] || _r=
+	usage_die "$1 is the human's: a role run$_r cannot $1"
+}
 
 # need_repo: cd to the repository root and set ROOT and ST (machine-local state dir,
 # shared by all worktrees of the clone, never committed).

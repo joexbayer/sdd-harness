@@ -82,6 +82,11 @@ refuses a dirty tree), and `fill`.
   the new parsing is in the working tree, `sdd next`/`task done` read the new attribute wrongly
   (item 17: `; size: M` became part of the test command). Build the parser task first, then run
   `task done` with the working-tree `.sdd/bin/sdd`.
+- Role runs (item 21): `sdd run` exports `SDD_RUN` to its agent, and `human_only` (lib/common.sh)
+  makes approve, ship and `tidy --remote` exit 2 while it is set. A builder running this repo's
+  suite inherits it, so tests/lib.sh unsets it; a new human-only verb calls `human_only` before
+  `need_repo`. Build prompt text that is only for the finisher (check, security pass, Built) goes
+  in prompts/finish.md, which `next` skips while a task is open.
 - sh has no local variables: lib helpers use short `_x` names (`_n`, `_f`, `_b`) and
   overwrite any caller's variable of that name. In `cmd/` scripts, keep values that must
   survive a helper call in descriptive names (`pr_num`, not `_n`); item 13 was `_n` clobbered

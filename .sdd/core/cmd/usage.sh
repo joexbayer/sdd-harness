@@ -30,7 +30,7 @@ grep -v '^#' "$log" | I=$id MD=$md awk -F '\t' '
 	function money(c, has) { return has ? sprintf("$%.2f", c) : "-" }
 	function row(a, b, c, key) {
 		if (ENVIRON["MD"] != "") printf "| %s | %s | %s | %d | %s | %s | %s | %s |\n", a, b, c, runs[key], k(tin[key]), k(tout[key]), money(cost[key], priced[key]), t(secs[key])
-		else printf "%-6s %-10s %-8s %5d %8s %8s %9s %9s\n", a, b, c, runs[key], k(tin[key]), k(tout[key]), money(cost[key], priced[key]), t(secs[key])
+		else printf fmt, a, b, c, runs[key], k(tin[key]), k(tout[key]), money(cost[key], priced[key]), t(secs[key])
 	}
 	ENVIRON["I"] != "" && $3 != ENVIRON["I"] { next }
 	{
@@ -43,8 +43,12 @@ grep -v '^#' "$log" | I=$id MD=$md awk -F '\t' '
 	}
 	END {
 		if (n == 0) { print "no runs logged for item " ENVIRON["I"]; exit }
+		# The task column is as wide as its widest entry, a batch ("T-1.1 T-1.2") too (FR-21.4).
+		w = 8
+		for (i = 1; i <= n; i++) { split(order[i], p, SUBSEP); if (length(p[3]) > w) w = length(p[3]) }
+		fmt = "%-6s %-10s %-" w "s %5d %8s %8s %9s %9s\n"
 		if (ENVIRON["MD"] != "") { print "| item | role | task | runs | in | out | cost | time |"; print "|---|---|---|---|---|---|---|---|" }
-		else printf "%-6s %-10s %-8s %5s %8s %8s %9s %9s\n", "item", "role", "task", "runs", "in", "out", "cost", "time"
+		else printf "%-6s %-10s %-" w "s %5s %8s %8s %9s %9s\n", "item", "role", "task", "runs", "in", "out", "cost", "time"
 		for (i = 1; i <= n; i++) { split(order[i], p, SUBSEP); row(p[1], p[2], (p[3] == "" ? "-" : p[3]), order[i]) }
 		row("total", "", "", "total")
 	}'
