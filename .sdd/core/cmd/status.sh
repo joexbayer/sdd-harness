@@ -10,7 +10,7 @@ open_items() {
 
 if current_item; then
 	item_phase
-	echo "$ID $ITYPE · $(fm_get title "$IFILE") · $BRANCH"
+	echo "$ID $ITYPE · $IR_TITLE · $BRANCH"
 	echo "phase   $PHASE   ($WHY)"
 	# Only in a PR: status also runs at every agent session start, so no network call otherwise.
 	pr=

@@ -8,11 +8,11 @@ item_phase
 
 base=$(cfg sdd.base main)
 mb=$(git merge-base "$base" HEAD)
-title=$(fm_get title "$IFILE")
+title=$IR_TITLE
 echo "Review: $ID $ITYPE · $title   ($BRANCH → $base)"
 echo "phase   $PHASE   ($WHY)"
 
-ap=$(fm_get approved "$IFILE")
+ap=$IR_APPROVED
 if [ "$(gate_level approved "$ITYPE")" = off ]; then
 	:
 elif [ -z "$ap" ]; then
