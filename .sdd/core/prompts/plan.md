@@ -29,6 +29,10 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   batch, so say what it needs to know.
 - Make the plan precise enough that you could build it later without asking anything:
   the approach, the files involved, and how each requirement will be proven by a test.
+- Before asking for approval, check the plan for gaps: scope edges (what is in, what is
+  out), errors and edge cases, data and state, speed, several developers at once, and
+  security. Ask the human about each gap you find, one at a time, and write the answer in.
+  Then run `{{cmd}} analyze` and fix every problem it lists.
 - Keep it to about a screen. If it does not fit, the change is too big: suggest a split.
 
 When the plan is complete, summarise it for the human and ask them to approve it. Only the

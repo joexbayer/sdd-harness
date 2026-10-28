@@ -87,6 +87,16 @@ refuses a dirty tree), and `fill`.
   suite inherits it, so tests/lib.sh unsets it; a new human-only verb calls `human_only` before
   `need_repo`. Build prompt text that is only for the finisher (check, security pass, Built) goes
   in prompts/finish.md, which `next` skips while a task is open.
+- A new gate: add it to `sdd.gates` in core/config as well as to each profile, because
+  `gate_level` says off for any gate the type's list lacks. Types with their own `gates =`
+  (hotfix, chore, spike) do not get it unless you add it there; amendment pins every gate to block.
+- Plan checks (item 19): `plan_findings` reads parse_item lines on stdin, so `next` feeds it
+  `IR_FACTS` (no second read) and `analyze`/`approve` feed it `parse_item`. A new mechanical
+  check goes there, and its message in tests/t_analyze.sh's exact expected output.
+- Test fixtures: `fill` writes "Filled in by the test" on the line right after each heading. A
+  fact you insert after the heading is followed by that text, which continues the fact (a task
+  line then "cannot be read": its attributes no longer end it). End inserted facts with a blank
+  line.
 - sh has no local variables: lib helpers use short `_x` names (`_n`, `_f`, `_b`) and
   overwrite any caller's variable of that name. In `cmd/` scripts, keep values that must
   survive a helper call in descriptive names (`pr_num`, not `_n`); item 13 was `_n` clobbered

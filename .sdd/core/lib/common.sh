@@ -299,6 +299,54 @@ plan_frs() {
 	plan_part "$IFILE" | uncomment | grep -oE "FR-$ID\.[0-9]+" | sort -u -t . -k 2,2n
 }
 
+# plan_findings: the problems in a plan that need no judgement (FR-19.1), from parse_item's lines
+# on stdin (or IR_FACTS), in plan order: "<id>\t<short name>\t<problem>". An FR no task names
+# (when there are tasks), an FR with no example, an open question, an ID written twice, a task
+# naming an FR the plan lacks, a task line task_rows cannot read. The short name is the start
+# of the text: an FR's after "SHALL", a question's up to its "?".
+plan_findings() {
+	awk -F '\t' "$AWK_TASK"'
+	function short(s,   n, w, i, o) {
+		n = split(s, w, " "); o = ""
+		for (i = 1; i <= n && i <= 6; i++) o = o (i > 1 ? " " : "") w[i]
+		if (o !~ /\?$/) sub(/[,.;:]+$/, "", o)
+		return o (n > 6 ? "…" : "")
+	}
+	function say(i, p) { print id[i] "\t" name[i] "\t" p }
+	$1 == "" { next }
+	($2 in times) { times[$2]++; next }
+	{
+		n++; id[n] = $2; kind[n] = $1; times[$2] = 1; s = $4
+		if ($1 == "fr") { fr[$2] = 1; noeg[n] = ($5 == ""); if ((i = index(s, "SHALL "))) s = substr(s, i + 6) }
+		if ($1 == "q" && (i = index(s, "?"))) s = substr(s, 1, i)
+		if ($1 == "q") open[n] = ($3 != "decided")
+		if ($1 == "task") {
+			tasks++
+			if ($2 !~ /^T-[0-9]+\.[0-9]+$/) bad[n] = "its ID must be T-<item>.<n>"
+			else {
+				split(task_row($2, $3, $4), r, "\t"); s = r[3]; bad[n] = r[8]; names[n] = r[7]
+				if ((i = index(s, " ("))) s = substr(s, 1, i - 1)
+				m = split(r[7], x, " "); for (j = 1; j <= m; j++) named[x[j]] = 1
+			}
+		}
+		name[n] = short(s)
+	}
+	END {
+		for (i = 1; i <= n; i++) {
+			if (times[id[i]] > 1) say(i, times[id[i]] == 2 ? "written twice" : "written " times[id[i]] " times")
+			if (noeg[i]) say(i, "no e.g. example under it")
+			if (kind[i] == "fr" && tasks && !(id[i] in named)) say(i, "no task names it")
+			if (open[i]) say(i, "not decided")
+			if (bad[i] != "") say(i, "cannot read it: " bad[i])
+			m = split(names[i], x, " ")
+			for (j = 1; j <= m; j++) if (!(x[j] in fr)) say(i, "names " x[j] ", which the plan does not have")
+		}
+	}'
+}
+
+# findings_lines: plan_findings lines on stdin as people read them: "✗ <id> (<name>): <problem>".
+findings_lines() { awk -F '\t' '{ printf "✗ %s%s: %s\n", $1, ($2 == "" ? "" : " (" $2 ")"), $3 }'; }
+
 # --- git helpers ------------------------------------------------------------------
 
 current_branch() { git symbolic-ref --quiet --short HEAD 2>/dev/null; }

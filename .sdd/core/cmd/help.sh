@@ -10,6 +10,7 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
                                    start a change: branch + specs/changes/<id>-<slug>/item.md
   $NAME status                      current item and phase, or open items on local branches
   $NAME next                        instructions for the current phase (agents call this)
+  $NAME analyze [<id>]              the plan's gaps: FRs no task names, open questions, …
   $NAME approve                     the human hands the plan over to the agent (pins the plan)
   $NAME check                       run the configured checks (0 pass, 1 fail, 3 no tests ran)
   $NAME ls [--all] [--json]         every item and its progress (archive + all branches)
