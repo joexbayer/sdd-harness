@@ -9,7 +9,8 @@ while [ -L "$_self" ]; do
 	_link=$(readlink "$_self")
 	case $_link in /*) _self=$_link ;; *) _self=$(dirname -- "$_self")/$_link ;; esac
 done
-SDD_HOME=$(CDPATH='' cd -- "$(dirname -- "$_self")/.." && pwd -P) || exit 1
+case $_self in */*) _dir=${_self%/*} ;; *) _dir=. ;; esac
+SDD_HOME=$(CDPATH='' cd -- "$_dir/.." && pwd -P) || exit 1
 export SDD_HOME
 # shellcheck source=/dev/null
 . "$SDD_HOME/core/lib/common.sh"
@@ -17,8 +18,12 @@ export SDD_HOME
 cmd=${1:-help}
 [ $# -gt 0 ] && shift
 
-if [ "$cmd" != init ] && _root=$(git rev-parse --show-toplevel 2>/dev/null); then
-	_own="$_root/$DIRNAME"
+# The one rev-parse of a command: find_repo reuses it while the folder is the same (RP_PWD).
+if [ "$cmd" != init ] && RP=$(git rev-parse --show-toplevel --path-format=absolute --git-common-dir --absolute-git-dir 2>/dev/null); then
+	# shellcheck disable=SC2034 # read by find_repo (common.sh)
+	RP_PWD=$PWD
+	_own="${RP%%"
+"*}/$DIRNAME"
 	if [ -x "$_own/bin/$NAME" ] && [ "$(cd "$_own" && pwd -P)" != "$SDD_HOME" ]; then
 		exec "${SDD_SH:-/bin/sh}" "$_own/bin/$NAME" "$cmd" "$@"
 	fi
