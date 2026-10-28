@@ -4,6 +4,7 @@ type: feature
 title: Multi-item plans
 status: open
 created: 2026-10-28
+approved: 1c965f9ca7270c705ff22890b487c927dab21278 2026-10-28 joexbayer
 ---
 # 24 Multi-item plans
 
