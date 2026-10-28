@@ -28,6 +28,10 @@ FR-20.3 WHEN an agent plans THE SYSTEM SHALL tell it (plan prompt): take complex
 adding any, and plan what would have been built had the requirement existed from the start,
 delivered in tasks, rather than bolting it on.
   e.g. a third special case in one function → the plan reshapes the function, then adds the case
+FR-20.5 WHEN an agent plans THE SYSTEM SHALL tell it (plan prompt): before writing a question for
+the human, check whether running something (a probe, a quick script, reading the code) could
+answer it, and if so run it; questions are for product and preference calls.
+  e.g. "does the API page at 100?" → the planner calls the API and writes the answer as a D line
 FR-20.4 WHEN someone reads the README THE SYSTEM SHALL say in its opening that sdd checks its
 workflow (approval, test-first tasks, check results, finish gate) rather than asking the
 agent to follow rules.
@@ -48,11 +52,11 @@ judged by a script; sdd already gates what a script can (red-first tasks, check 
 none: prompt and README text only; no new input, command or dependency.
 
 ## Done when
-DOD-20.1 `sdd check` passes, with a test naming FR-20.1 to FR-20.3.
+DOD-20.1 `sdd check` passes, with a test naming FR-20.1, FR-20.2, FR-20.3 and FR-20.5.
 
 ## Tasks (optional)
 - [ ] T-20.1 Build prompt rules, FR-20.1, FR-20.2 (files: .sdd/core/prompts/build.md, tests/t_discipline.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_discipline.sh)
-- [ ] T-20.2 Plan prompt rule, FR-20.3 (files: .sdd/core/prompts/plan.md, tests/t_discipline.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_discipline.sh)
+- [ ] T-20.2 Plan prompt rules, FR-20.3, FR-20.5 (files: .sdd/core/prompts/plan.md, tests/t_discipline.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_discipline.sh)
 - [ ] T-20.3 README opening, FR-20.4 (files: README.md)
 
 ## Built
