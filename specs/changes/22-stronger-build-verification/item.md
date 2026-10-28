@@ -133,8 +133,9 @@ Deviations and choices:
 - The `Verified by:` line may be a list item (`- Verified by: …`), because agents write Built as
   bullets.
 - next.sh is not in T-22.1's files but shows the expected text to the builder (4 lines).
-- Amendment items get the new gates at the profile's levels (core/config pins only the older
-  gates to block for amendments). Pin `verified`/`reviewed` there if amendments should block too.
+- Amendments: `verified` and `reviewed` are pinned to block like the other gates (core/config
+  [type "amendment"], decided in the main session after the build). tests/t_constitution.sh
+  adds a verifier line before its amendment ships and checks that ship refuses without one.
 - No existing test setup needed changing: no existing test ships in strict, and the warnings in
   lite/standard broke no assertion. t_verified.sh runs `sdd review` before its strict ship.
 

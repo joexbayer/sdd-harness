@@ -72,6 +72,8 @@
 	approved = block
 	check = block
 	built = block
+	verified = block
+	reviewed = block
 	tasks = off
 [type "fix"]
 	tasks = off
