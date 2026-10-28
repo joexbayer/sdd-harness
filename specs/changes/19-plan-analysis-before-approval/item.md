@@ -57,7 +57,7 @@ none: reads the item file only; no new input, dependency, command or network use
 
 ## Questions (optional)
 Q-19.1 Should the gate block in standard and strict, or only warn everywhere? → recommend:
-block in standard and strict, warn in lite (this repo is lite, so it warns here).
+block in standard and strict, warn in lite (this repo is lite, so it warns here). → decided: as recommended (joexbayer, 2026-10-28)
 
 ## Done when
 DOD-19.1 `sdd analyze` on items 16, 17 and 18 in this repo gives a correct list (checked by hand).
