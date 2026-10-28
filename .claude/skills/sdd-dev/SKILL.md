@@ -152,3 +152,18 @@ so inspect the repo itself.
   (no code while planning, write Built, commit, name FRs in tests) was ignored. What worked
   was a gate, or a human note at review. Single runs lie (k≈5 per app to see ~10 pp). Judge results against design.md §1
   (learning, simple, pragmatic, no bloat), not just pass/fail.
+- Role runs (`sdd run builder|verifier <id>`) in a scratch repo: set `[role "builder"] tier =
+  small` (narrow, qwen3-coder-30b, `args = --profile local --yolo`) and `[role
+  "verifier"] tier = big` (claude, claude-sonnet-5-5, `args = --allowedTools
+  Bash(sh:*),Bash(.sdd/bin/sdd:*),Read,Grep,Glob`). Claude Code's auto-mode classifier refuses
+  to start these runs ("Create Unsafe Agents"): the human runs them with `! cd <repo> && ...`.
+  Each `sdd run builder` does one batch; loop with `;`, not `||`: narrow exits 3
+  ("unverified") after a red batch though sdd's tick passed. Outputs: `.git/sdd/runs/<n>/`
+  (`out` is narrow's JSON events: `jq -r 'select(.type=="tool_call") | .title'`).
+- Lessons (2026-10-28, item 22 trial): qwen ignores the finish steps (security pass, verifier,
+  Built) even when its prompt has them, so the orchestrator runs them; a red task batched with
+  its code made qwen write both (fixed: a red task ends its batch); the Sonnet verifier found
+  real bugs qwen's own tests missed (a test checking only the exit code, macOS `wc` padding).
+- `sdd check` under load from other sessions (load average >10): t_perf's `hook stop` (~14
+  processes, ~0.15 s idle) goes over 0.2 s. Compare against main with `SDD_PERF_SLACK=0.3` (it
+  prints every time); if both match, rerun with `SDD_PERF_SLACK=1.5` and say so under Built.
