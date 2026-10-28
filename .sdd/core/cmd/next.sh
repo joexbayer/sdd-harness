@@ -20,6 +20,19 @@ prompt() {
 
 if ! current_item; then
 	prompt none '' '' ''
+	# The entries of shipped roadmaps that can be opened now (FR-24.5): not opened on any branch sdd
+	# sees, every after: shipped. No roadmap on the base branch: nothing more is read.
+	if rms=$(shipped_roadmaps); then
+		ready=$(printf '%s\n' "$rms" | ROWS=$(item_rows) C=$CMD awk -F '\t' "$AWK_DEPS"'
+			BEGIN { deps_load() }
+			$7 != "" || entry_item($3) != "" { next }
+			{ n = split($6, a, " "); for (i = 1; i <= n; i++) if (!dep_met(a[i])) next
+				print "Ready in roadmap " $1 " (" $2 "): " $3 " " $4 ": " $5 " → " ENVIRON["C"] " new --from " $3 }')
+		if [ -n "$ready" ]; then
+			echo
+			printf '%s\n' "$ready"
+		fi
+	fi
 	exit 0
 fi
 

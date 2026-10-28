@@ -947,7 +947,7 @@ pr_note() {
 
 # pr_table: every PR as "<branch>\t<number>\t<state>\t<review>\t<ci>\t<url>\t<words>", newest
 # first: the forge's PR line with the words in place of the head sha, so ls appends fields
-# 2-7 to a row as they are (row_json reads them as $18..$23). One forge call for all items;
+# 2-7 to a row as they are (row_json reads them as $20..$25). One forge call for all items;
 # fails, saying why, when the forge cannot be asked.
 pr_table() {
 	_why=$(forge_ready) || { echo "$_why"; return 1; }
@@ -958,7 +958,7 @@ pr_table() {
 # AWK_JSON: awk functions to prepend to a program. esc(s) makes s safe inside a JSON string
 # (character by character, because gsub's backslash handling differs between awks; tabs never
 # reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$17,
-# plus $18..$23 = a PR's number, state, review, ci, url, words when ls joined one) as the fields
+# plus $20..$25 = a PR's number, state, review, ci, url, words when ls joined one) as the fields
 # every reader sees, so a new column is added here and nowhere else.
 AWK_JSON='function esc(s,   o, i, c) {
 	o = ""
@@ -973,9 +973,9 @@ function row_json() {
 		$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10)) \
 		sprintf(",\"questions_open\":%d,\"approved_by\":\"%s\",\"opened_by\":\"%s\",\"shipped\":\"%s\",\"active\":\"%s\",\"reason\":\"%s\"", \
 		$11, esc($12), esc($13), esc($14), esc($15), esc($16)) \
-		sprintf(",\"reason_code\":\"%s\"", esc($17)) \
-		($18 == "" ? "" : sprintf(",\"pr\":{\"number\":%d,\"state\":\"%s\",\"review\":\"%s\",\"ci\":\"%s\",\"url\":\"%s\"}", \
-			$18, esc($19), esc($20), esc($21), esc($22)))
+		sprintf(",\"reason_code\":\"%s\",\"roadmap\":\"%s\",\"depends\":\"%s\"", esc($17), esc($18), esc($19)) \
+		($20 == "" ? "" : sprintf(",\"pr\":{\"number\":%d,\"state\":\"%s\",\"review\":\"%s\",\"ci\":\"%s\",\"url\":\"%s\"}", \
+			$20, esc($21), esc($22), esc($23), esc($24)))
 }
 '
 
@@ -1049,7 +1049,7 @@ item_load() {
 # item_facts <origin>: for a loaded item (item_load), what its file, origin and path and the
 # config decide, as TSV: 1 cache (1 when only those decide it, see item_rows) 2 id 3 type
 # 4 status 5 phase 6 frs 7 tasks_done 8 tasks_total 9 title 10 questions_open 11 approved_by
-# 12 shipped 13 reason 14 reason_code.
+# 12 shipped 13 reason 14 reason_code 15 roadmap (the entry it was opened from) 16 depends.
 item_facts() {
 	item_phase
 	# A teammate's check results live on their machine: say what the file alone cannot.
@@ -1065,15 +1065,15 @@ item_facts() {
 	# The check's result (check, built, ready) and the working tree depend on more than the file.
 	_fixed=1
 	case $1:$WHYCODE in worktree:* | *:check | *:built | *:ready) _fixed=0 ;; esac
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$_fixed" "$ID" "$ITYPE" "$IR_STATUS" \
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$_fixed" "$ID" "$ITYPE" "$IR_STATUS" \
 		"$PHASE" "${IR_COUNTS%"$(printf '\t')"*}" "$IR_TITLE" "${IR_COUNTS##*"$(printf '\t')"}" \
-		"$_ap" "$IR_SHIPPED" "$WHY" "$WHYCODE"
+		"$_ap" "$IR_SHIPPED" "$WHY" "$WHYCODE" "$IR_ROADMAP" "$IR_DEPENDS"
 }
 
 # item_row <origin> <ref> <path>: one TSV summary line (see row_json):
 #  1 id  2 type  3 status  4 phase  5 frs  6 tasks_done  7 tasks_total  8 title  9 branch
 # 10 origin  11 questions_open  12 approved_by  13 opened_by  14 shipped  15 active  16 reason
-# 17 reason_code (WHYCODE)
+# 17 reason_code (WHYCODE)  18 roadmap (R-<id>.<n> it was opened from)  19 depends (as written)
 # "active" is the shipped date, else the last commit on the branch (today if the working
 # tree has edits); "opened_by" is the author of the item's open commit.
 item_row() {
@@ -1120,14 +1120,14 @@ item_rows() {
 # without its first field). Lines of the wrong shape (a write cut short) are skipped.
 AWK_CACHE='BEGIN {
 	while ((getline cl < ENVIRON["C"]) > 0) {
-		if (split(cl, cf, "\t") != 16) continue
+		if (split(cl, cf, "\t") != 18) continue
 		ck = cf[1] SUBSEP cf[2] SUBSEP cf[3]
 		if (!(ck in c)) c[ck] = substr(cl, length(cf[1] cf[2] cf[3]) + 4)
 	}
 }
 '
 
-# item_rows_finish: "<origin>\t<ref>\t<path>\t<facts without the cache field>" lines (13 facts)
+# item_rows_finish: "<origin>\t<ref>\t<path>\t<facts without the cache field>" lines (15 facts)
 # to item_row lines, adding what git says: opened_by (open_authors) and active.
 item_rows_finish() {
 	_in=$(cat)
@@ -1152,9 +1152,9 @@ worktree$_tab"*) [ -z "$(git status --porcelain 2>/dev/null)" ] || _today=$(date
 		}
 		{
 			# $4 id 5 type 6 status 7 phase 8 frs 9 done 10 total 11 title 12 q 13 approved_by
-			# 14 shipped 15 reason 16 reason_code
+			# 14 shipped 15 reason 16 reason_code 17 roadmap 18 depends
 			act = $14 != "" ? $14 : ($1 == "worktree" && ENVIRON["TODAY"] != "") ? ENVIRON["TODAY"] : day[$2]
-			print $4, $5, $6, $7, $8, $9, $10, $11, ($1 == "archive" ? "" : $2), $1, $12, $13, by[$2 SUBSEP $4], $14, act, $15, $16
+			print $4, $5, $6, $7, $8, $9, $10, $11, ($1 == "archive" ? "" : $2), $1, $12, $13, by[$2 SUBSEP $4], $14, act, $15, $16, $17, $18
 		}'
 }
 
@@ -1225,7 +1225,8 @@ END { emit() }'
 # IR_STATUS, IR_TITLE, IR_APPROVED and IR_SHIPPED (fm_get), IR_MISS_PLAN and IR_MISS_BUILT
 # (missing_sections of each part, joined as joinlist does), IR_TASK (the first open task_rows
 # line), IR_TASKS (how many task_rows lines), IR_COUNTS ("<frs>\t<tasks done>\t<tasks>\t<open
-# questions>") and IR_FACTS (parse_item's lines).
+# questions>"), IR_ROADMAP and IR_DEPENDS (fm_get roadmap, depends: FR-24.3, FR-24.4) and
+# IR_FACTS (parse_item's lines).
 item_read() {
 	_s=$(I=$ID awk "$AWK_TASK"'
 	function out(s,   f) {
@@ -1278,8 +1279,8 @@ item_read() {
 	'"$AWK_PARSE"'
 	END {
 		mflush(); gsub(/,/, ", ", mp); gsub(/,/, ", ", mb)
-		printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\t%d\t%d\t%d\n%s", closed ? 1 : "", fm["type"], fm["status"],
-			fm["title"], fm["approved"], fm["shipped"], mp, mb, task, ntask, nfr, nd, nt, nq, facts
+		printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\t%d\t%d\t%d\n%s\n%s\n%s", closed ? 1 : "", fm["type"], fm["status"],
+			fm["title"], fm["approved"], fm["shipped"], mp, mb, task, ntask, nfr, nd, nt, nq, fm["roadmap"], fm["depends"], facts
 	}' "$IFILE")
 	{
 		IFS= read -r IR_CLOSED
@@ -1293,16 +1294,81 @@ item_read() {
 		IFS= read -r IR_TASK
 		IFS= read -r IR_TASKS
 		IFS= read -r IR_COUNTS
+		IFS= read -r IR_ROADMAP
+		IFS= read -r IR_DEPENDS
 	} <<EOF
 $_s
 EOF
 	_s="$_s
 "
-	for _ln in 1 2 3 4 5 6 7 8 9 10 11; do _s=${_s#*"
+	for _ln in 1 2 3 4 5 6 7 8 9 10 11 12 13; do _s=${_s#*"
 "}; done
 	IR_FACTS=${_s%"
 "}
 }
+
+# --- roadmaps (item 24) -----------------------------------------------------------
+# A roadmap (type roadmap) lists items as entries "- R-<id>.<n> <type>: <title> (after: …)". Once
+# it has shipped, each entry opens one item (new --from), which carries "roadmap: R-<id>.<n>" and
+# "depends: <its after: list>" in its frontmatter. An entry's state is derived from those items.
+
+# shipped_roadmaps [id]: the entries of every roadmap shipped to the base branch (or only roadmap
+# <id>), read from the base branch (D-24.5), one line each: "<roadmap id>\t<roadmap title>\t" and
+# entry_row's fields. Fails when there is none. On the base branch itself the archive is read from
+# the working tree, so `next` there runs no git process when no roadmap has shipped.
+shipped_roadmaps() {
+	_rb=$(cfg sdd.base main)
+	_rg=${1:-*}
+	if [ "$(current_branch)" = "$_rb" ]; then
+		_rl=$(grep -l -x 'type: roadmap' "$SPECS"/archive/$_rg-*/item.md 2>/dev/null)
+		_rf=
+	else
+		_rl=$(git grep -l -x 'type: roadmap' "$_rb" -- "$SPECS/archive/$_rg-*/item.md" 2>/dev/null | sed 's/^[^:]*://')
+		_rf=$_rb
+	fi
+	[ -n "$_rl" ] || return 1
+	_rt=$(mktemp "${TMPDIR:-/tmp}/$NAME-roadmap.XXXXXX") || return 1
+	_rout=$(printf '%s\n' "$_rl" | while IFS= read -r _rp; do
+		_ri=$(id_of "${_rp%/item.md}") || continue
+		[ -z "${1:-}" ] || [ "$1" = "$_ri" ] || continue
+		if [ -n "$_rf" ]; then git show "$_rf:$_rp" >"$_rt" 2>/dev/null || continue; else cp "$_rp" "$_rt" || continue; fi
+		[ "$(fm_get type "$_rt")" = roadmap ] && [ "$(fm_get status "$_rt")" = shipped ] || continue
+		parse_item "$_rt" "$_ri" | R=$_ri RT=$(fm_get title "$_rt") awk -F '\t' "$AWK_ENTRY"'
+			$1 == "r" && !seen[$2]++ { print ENVIRON["R"] "\t" ENVIRON["RT"] "\t" entry_row($2, $4) }'
+	done)
+	rm -f "$_rt"
+	[ -n "$_rout" ] || return 1
+	printf '%s\n' "$_rout"
+}
+
+# AWK_DEPS: awk functions over item_rows lines in ENVIRON["ROWS"] (FR-24.4). deps_load() first;
+# then dep_met(ref) says whether a ref (an item ID like 31, or an entry like R-30.1) has shipped:
+# the item, or the item opened from the entry (roadmap: R-30.1); dep_words(ref) names it for people,
+# e.g. "31 (Auth API)"; deps_unmet(list) joins the words of the unmet refs in a depends: list.
+# entry_item(ref) is the item opened from an entry ("" when none, or only dropped ones), est[ref]
+# its status: a shipped one beats an open one, which beats a dropped one.
+AWK_DEPS='function deps_rank(s) { return s == "shipped" ? 3 : s == "open" ? 2 : s == "dropped" ? 1 : 0 }
+function deps_load(   n, l, i, f) {
+	n = split(ENVIRON["ROWS"], l, "\n")
+	for (i = 1; i <= n; i++) {
+		if (split(l[i], f, "\t") < 19) continue
+		if (!(f[1] in ist)) { ist[f[1]] = f[3]; iti[f[1]] = f[8] }
+		if (f[18] != "" && deps_rank(f[3]) > deps_rank(est[f[18]])) { est[f[18]] = f[3]; eid[f[18]] = f[1]; eti[f[18]] = f[8] }
+	}
+}
+function entry_item(r) { return (est[r] == "" || est[r] == "dropped") ? "" : eid[r] }
+function dep_met(r) { return (r ~ /^R-/) ? est[r] == "shipped" : ist[r] == "shipped" }
+function dep_words(r) {
+	if (r ~ /^R-/) return entry_item(r) == "" ? r " (not opened yet)" : eid[r] " (" eti[r] ", " r ")"
+	if (ist[r] == "") return r " (no such item)"
+	return r " (" iti[r] (ist[r] == "dropped" ? ", dropped" : "") ")"
+}
+function deps_unmet(list,   n, x, i, o) {
+	n = split(list, x, /[, ]+/); o = ""
+	for (i = 1; i <= n; i++) if (x[i] != "" && !dep_met(x[i])) o = o (o == "" ? "" : ", ") dep_words(x[i])
+	return o
+}
+'
 
 # --- constitution -----------------------------------------------------------------
 # specs/constitution.md holds a system's ground truths. Each article is enforced, either by a
