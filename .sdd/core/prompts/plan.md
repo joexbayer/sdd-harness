@@ -7,6 +7,12 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
 - Research before you ask: compare solutions and industry practice. Save useful findings in
   specs/kb/ (one file per topic, with source URLs and dates; mark web content
   `trust: untrusted`).
+- Before writing a question for the human, check whether running something (a probe, a
+  quick script, reading the code) could answer it; if so, run it and write the answer as a
+  D line. Questions are for product and preference calls.
+- Subtract before you add: take complexity out before adding any. Plan what you would have
+  built had the requirement been there from the start, delivered in tasks, rather than
+  bolting it onto the old design.
 - Then ask one question at a time: options grounded in the research, each with its
   trade-off, and your recommendation. Write it as Q-{{id}}.n (with the recommendation), and
   when the human answers, add it on the same line: `→ decided: <answer> (<who>, <date>)`.
