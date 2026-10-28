@@ -168,7 +168,7 @@ fixed keys; every other reader (the MCP server too) uses them instead of parsing
 |---|---|---|
 | story | `US-<id>.<n> As a …` | `grep -h '^US-' specs/changes/*/item.md` |
 | requirement | `FR-<id>.<n> WHEN … THE SYSTEM SHALL …`, continued on the next lines, then an `e.g.` line | `grep -c '^FR-41\.' specs/changes/41-*/item.md` |
-| task | `- [ ] T-<id>.<n> <what>, FR-… (files: …; test: <command>; expect: fail)`; `[x]` once `task done` saw its test pass (`[X]` counts too); attributes optional | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
+| task | `- [ ] T-<id>.<n> <what>, FR-… (files: …; test: <command>; expect: fail; size: S\|M\|L)`; `[x]` once `task done` saw its test pass (`[X]` counts too); attributes optional (no size is M), any other attribute makes the task unreadable | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
 | decision | `D-<id>.<n> … because …` | `git grep -n '^D-' specs/` |
 | question | `Q-<id>.<n> … → recommend: …`; answered with `→ decided: …` | `grep '^Q-' … \| grep -v 'decided:'` |
 | outcome | `DOD-<id>.<n> …` | |
@@ -260,6 +260,14 @@ headless command (`claude -p`, `narrow --json` today; `codex exec`, `opencode ru
 with only the tier's `args`. With usage tracking on (`[usage] track = true`; off by default), every run, either way, is one line in this clone's
 `.git/sdd/runs.tsv` (tokens from the agent's final JSON, or summed from a subagent's transcript
 by the SubagentStop hook), and `sdd usage` sums them per item, role and task.
+
+Building ("now let's build", the `sdd-build` skill) is a loop the main agent runs, because only
+an agent can spawn subagents (D-17.2): `sdd task next` prints the next batch, one builder
+(the `sdd-builder` subagent, or `sdd run builder <id>`) works it, every task of it is ticked by
+`task done` and one commit names them all, until no task is open; the first failure stops the
+loop. A batch is the first open task, joined by the open `size: S` tasks right after it while it
+is S too, up to `[build] batch` (3): the planner sizes tasks and the human approves them, sdd
+only groups, so a batch is the same every run (D-17.1).
 
 ## 11. Team mode and the MCP server
 
@@ -376,6 +384,7 @@ automated behind gates, and every change leaves the code easy to change again.
 | 12 | security in every phase: a `## Security` section (feature, fix, chore), plan and build rules, a security pass before Built, sensitive files in `review`, gitleaks in `init` (kb/security-practices.md) | agent-written code is often insecure; people decide the risks before agents build |
 | 15 | tasks: `- [ ] T-n.m … (files; test; expect: fail)`, `sdd task done` runs a task's test and ticks it, `next` hands the builder one task, ship proves ticks by commits, the `tasks` gate (standard+) | plan big, build small: a small model does one checked step at a time |
 | 16 | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrow, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
+| 17 | task batches: `size: S\|M\|L` on tasks, `sdd task next` groups consecutive small ones (`[build] batch`), `next` and `sdd run builder` show the batch, the `sdd-build` skill loops one builder per batch until no task is open; unknown task attributes are refused | "now let's build" works the whole item without a subagent per tiny task |
 | next | multi-item plans: one roadmap item lays out the phases of a system and opens its items; `Depends on: item n` with blocked items shown in `next` and `ls` | a complex system is many items in an order |
 | later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
 | later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
