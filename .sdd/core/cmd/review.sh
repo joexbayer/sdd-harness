@@ -30,6 +30,8 @@ elif [ -f "$ST/checks/$ID" ]; then
 else
 	echo "check   never run; run: $CMD check"
 fi
+vline=$(verified_by)
+echo "verify  ${vline:-Verified by: (missing)}"
 pr=$(pr_note "$BRANCH")
 [ -z "$pr" ] || echo "pr      $pr"
 

@@ -6,7 +6,7 @@
 	mode = solo
 	base = main
 	branch = {type}/{id}-{slug}
-	gates = planned analyzed approved tasks check built
+	gates = planned analyzed approved tasks check built verified
 
 # Gate levels per profile: off, warn or block.
 #   planned    every required plan section (above "## Built") has content
@@ -16,6 +16,8 @@
 #              committed before the approval
 #   check      the configured checks pass for exactly the code being shipped
 #   built      "## Built" (what was built, how it was verified) is written
+#   verified   "## Built" has a "Verified by:" line other than "none": someone other than the
+#              builder (the verifier role) proved the requirements by running them
 #   tasks      the plan has tasks and every one is ticked (off for fix, refactor and amendment);
 #              a ticked task needs a commit naming it in every profile, whatever this level
 #   finish     agent stop hook: no stopping with unplanned, unapproved, unverified or
@@ -27,6 +29,7 @@
 	check = block
 	built = warn
 	tasks = warn
+	verified = off
 	finish = block
 [profile "standard"]
 	planned = block
@@ -35,6 +38,7 @@
 	check = block
 	built = block
 	tasks = block
+	verified = warn
 	finish = block
 [profile "strict"]
 	planned = block
@@ -43,6 +47,7 @@
 	check = block
 	built = block
 	tasks = block
+	verified = block
 	finish = block
 
 # A type exists when templates/<type>.md exists. Settings here are optional:

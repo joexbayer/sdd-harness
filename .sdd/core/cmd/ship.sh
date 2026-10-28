@@ -190,6 +190,9 @@ if [ "$(gate_level approved "$ITYPE")" != off ]; then
 	fi
 fi
 [ -z "$(missing_sections "$IFILE" built)" ] || gate built "item $ID: \"## Built\" is not written yet"
+# FR-22.3: someone other than the builder proved the requirements (the verifier, see finish.md).
+[ "$(gate_level verified "$ITYPE")" = off ] || verified ||
+	gate verified "item $ID: not verified (gate verified): \"## Built\" needs a \"Verified by: <model>: …\" line, not none (the verifier step in $CMD next)"
 # Tasks: sdd ticks a box when its test passes, git proves it: a ticked task needs a commit
 # naming it, in every profile, and, when that commit is yours, the note task done left in this
 # clone (a teammate's tick was proven on their machine). Features also need tasks, all ticked.

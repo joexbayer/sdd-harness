@@ -72,7 +72,7 @@ DOD-22.2 On a scratch repo, a qwen build verified by an Opus or Sonnet verifier 
 
 ## Tasks (optional)
 - [x] T-22.1 Expected failure text, FR-22.1 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/prompts/plan.md, .sdd/core/templates/feature.md, tests/t_expect.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_expect.sh; size: S)
-- [ ] T-22.2 Verifier step, role prompt and the verified gate, FR-22.2, FR-22.3 (files: .sdd/core/prompts/finish.md, .sdd/core/prompts/role-verifier.md, .sdd/core/cmd/ship.sh, .sdd/core/cmd/review.sh, .sdd/core/config, tests/t_verified.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_verified.sh; size: M)
+- [x] T-22.2 Verifier step, role prompt and the verified gate, FR-22.2, FR-22.3 (files: .sdd/core/prompts/finish.md, .sdd/core/prompts/role-verifier.md, .sdd/core/cmd/ship.sh, .sdd/core/cmd/review.sh, .sdd/core/config, tests/t_verified.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_verified.sh; size: M)
 - [ ] T-22.3 Review fingerprint and the reviewed gate, FR-22.4 (files: .sdd/core/cmd/review.sh, .sdd/core/cmd/ship.sh, .sdd/core/config, tests/t_reviewed.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_reviewed.sh; size: M)
 - [ ] T-22.4 Help, design and README (files: .sdd/core/cmd/help.sh, specs/design.md, README.md; size: S)
 

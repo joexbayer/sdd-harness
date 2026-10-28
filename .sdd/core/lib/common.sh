@@ -294,6 +294,22 @@ approval_ok() {
 	[ -n "$_ap" ] && [ "${_ap%% *}" = "$(plan_hash "$IFILE")" ]
 }
 
+# verified_by: the last "Verified by:" line in "## Built" (FR-22.3), a list bullet and guidance
+# removed; empty when there is none. Built runs up to "## Review", as in missing_sections.
+verified_by() {
+	uncomment "$IFILE" | awk '
+		/^## / && !(on && $0 !~ /^## Review/) { on = ($0 == "## Built"); next }
+		on { s = $0; sub(/^[ \t]*([-*][ \t]+)?/, "", s); if (index(s, "Verified by:") == 1) v = s }
+		END { if (v != "") print v }'
+}
+
+# verified: "## Built" names a verifier run, not "Verified by: none" (or none at all).
+verified() {
+	_v=$(verified_by)
+	_v=$(printf '%s\n' "${_v#Verified by:}" | tr -d ' \t' | tr 'A-Z' 'a-z')
+	case $_v in '' | none*) return 1 ;; esac
+}
+
 # plan_frs: the requirement ids (FR-<id>.<n>) written in the plan, guidance excluded.
 plan_frs() {
 	plan_part "$IFILE" | uncomment | grep -oE "FR-$ID\.[0-9]+" | sort -u -t . -k 2,2n
