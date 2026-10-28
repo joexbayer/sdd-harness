@@ -4,6 +4,7 @@ type: feature
 title: Stronger build verification
 status: open
 created: 2026-10-28
+approved: dfa4699ca34676de9d607f8e7adc86fb1d6fc859 2026-10-28 joexbayer
 ---
 # 22 Stronger build verification
 
