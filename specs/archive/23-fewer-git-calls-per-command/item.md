@@ -2,9 +2,10 @@
 id: 23
 type: refactor
 title: Fewer git calls per command
-status: open
+status: shipped
 created: 2026-10-28
 approved: 9d43500160e0f00618d8a41bd7cf31ee74e1f9ed 2026-10-28 joexbayer
+shipped: 2026-10-28
 ---
 # 23 Fewer git calls per command
 
