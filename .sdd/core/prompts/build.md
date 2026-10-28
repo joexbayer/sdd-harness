@@ -20,5 +20,11 @@ hands-off until the item is done; do not stop to ask questions.
 - Every requirement gets a test that names it (e.g. a comment `// FR-{{id}}.1`).
 - Do not weaken, skip or delete tests to make them pass. If a test is wrong, say so under
   "## Built".
+- A test calls the code the way its user does and checks what that user sees. If it would
+  still pass if every function returned nothing, or fail after a change that keeps the
+  behaviour, rewrite it.
+- After two fixes resting on the same assumption fail, do not try a third: write that
+  assumption in one sentence under "## Built" (e.g. "assumed dates are UTC; the fixture is
+  local time") and stop.
 - Verify with `{{cmd}} check` (exit 0 = passed, 1 = failed, 3 = zero tests ran: that
   proves nothing). Commit your work as you go.
