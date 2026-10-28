@@ -105,6 +105,10 @@
 	sensitive = .mcp.json
 	sensitive = .codex/*
 	sensitive = .cursor/*
+# Building: `sdd task next` gives the builder the first open task, joined by the open
+# `size: S` tasks right after it (while it is S too), up to this many; M and L tasks run alone.
+[build]
+	batch = 3
 # Usage tracking: one line per role run (sdd run, role subagents) in .git/sdd/runs.tsv, read by
 # `sdd usage`. Off unless someone asks for it, here or in their own ~/.config/sdd/config.
 [usage]

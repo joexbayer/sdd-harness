@@ -75,6 +75,13 @@ refuses a dirty tree), and `fill`.
 - Forges: only `core/forges/<forge>.sh` calls `gh` (the C-4 check enforces it). Tests use a
   stub `gh` on PATH over a bare origin (tests/t_forge.sh); the PR jq lives in `FORGE_JQ` and
   can be tried offline with `jq -r ".[] | $FORGE_JQ" sample.json`.
+- Tasks: `task_rows` field 8 is why sdd cannot read the line (empty when fine), field 9 the size
+  (S|M|L, M by default). A new task attribute must be added to `AWK_TASK`'s known keys (and its
+  start-of-block list), or every task using it becomes unreadable (FR-17.5).
+- Dogfooding a grammar change: this repo's own plan is parsed by the code being changed. Until
+  the new parsing is in the working tree, `sdd next`/`task done` read the new attribute wrongly
+  (item 17: `; size: M` became part of the test command). Build the parser task first, then run
+  `task done` with the working-tree `.sdd/bin/sdd`.
 - sh has no local variables: lib helpers use short `_x` names (`_n`, `_f`, `_b`) and
   overwrite any caller's variable of that name. In `cmd/` scripts, keep values that must
   survive a helper call in descriptive names (`pr_num`, not `_n`); item 13 was `_n` clobbered
@@ -96,6 +103,10 @@ A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git c
   ref. `rm -rf .git/sdd/cache` changes nothing but speed; tests/t_cache.sh poisons the cache to
   prove each input change misses. A new row field goes in `item_facts` (and the cache line
   width, 16, in `AWK_CACHE`).
+- `t_perf.sh` is sensitive to machine load (other sessions running suites: load average 14 put
+  `next` at 0.27 s and `ls` at 1.3 s with unchanged code). Before blaming a change, time old vs
+  new in one generated repo: copy `.sdd/core` and `.sdd/bin` from a `git worktree add … main` and
+  from the branch into the perf repo in turn, best of 7 each, interleaved.
 - To check a refactor prints the same: run each command with the old and the new `.sdd/` in a
   copy of a repo and diff; mark `.sdd` files `git update-index --assume-unchanged` first, or the
   swapped copy itself shows up as a code change (hook stop, review).

@@ -1,9 +1,10 @@
 # shellcheck shell=sh
-# task [done <T-id>]: the current item's tasks, each with its test and whether a commit names it.
+# task [next | done <T-id>]: the current item's tasks, each with its test and whether a commit names
+# it. `task next` prints the next batch: the tasks the builder works at once (task_batch).
 # `task done` runs one task's test (the check, if it names none) and, when it passes, ticks the
 # task's box and notes it in this clone's state (.git/sdd/checks/<id>.tasks), which ship asks
 # for. It never commits (C-4): the agent commits the code and the tick, naming the task.
-usage="usage: $NAME task [done T-<id>.<n>]"
+usage="usage: $NAME task [next | done T-<id>.<n>]"
 need_repo
 current_item || die "not on an item branch (see: $CMD status)"
 fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
@@ -22,9 +23,26 @@ if [ $# -eq 0 ]; then
 		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail)"
 		[ -z "$(tsv 5 "$r")" ] || printf '      test: %s%s\n' "$(tsv 5 "$r")" "$ex"
 		[ -z "$(tsv 7 "$r")" ] || printf '      serves: %s\n' "$(tsv 7 "$r")"
-		[ "$(tsv 8 "$r")" != 1 ] || echo "      ✗ its attributes do not end the line: put (files: …; test: …) last"
+		[ -z "$(tsv 8 "$r")" ] || echo "      ✗ $(tsv 8 "$r")"
 		if [ -n "$c" ]; then echo "      commit $c"; else echo "      no commit names it yet"; fi
 		[ "$box" = "[ ]" ] || grep -qx "$t" "$record" 2>/dev/null || echo "      ticked without $NAME task done in this clone"
+	done
+	exit 0
+fi
+if [ "$1" = next ] && [ $# -eq 1 ]; then
+	rows=$(task_rows)
+	[ -n "$rows" ] || { echo "item $ID has no tasks (add - [ ] T-$ID.1 … to the plan)"; exit 0; }
+	batch=$(printf '%s\n' "$rows" | task_batch)
+	[ -n "$batch" ] || { echo "no open tasks: the check and \"## Built\" are next (see: $CMD next)"; exit 0; }
+	echo "batch   $(printf '%s\n' "$batch" | cut -f1 | paste -sd ' ' -)"
+	printf '%s\n' "$batch" | while IFS= read -r r; do
+		printf '[ ] %s %s (size: %s)\n' "$(tsv 1 "$r")" "$(tsv 3 "$r")" "$(tsv 9 "$r")"
+		[ -z "$(tsv 4 "$r")" ] || printf '      files: %s\n' "$(tsv 4 "$r")"
+		ex=
+		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail)"
+		if [ -n "$(tsv 5 "$r")" ]; then printf '      test: %s%s\n' "$(tsv 5 "$r")" "$ex"; else echo "      test: the full check ($CMD check)"; fi
+		[ -z "$(tsv 7 "$r")" ] || printf '      serves: %s\n' "$(tsv 7 "$r")"
+		[ -z "$(tsv 8 "$r")" ] || echo "      ✗ $(tsv 8 "$r")"
 	done
 	exit 0
 fi
@@ -34,7 +52,8 @@ tid=$2
 row=$(task_rows | T=$tid awk -F '\t' '$1 == ENVIRON["T"]')
 [ -n "$row" ] || die "no task $tid in item $ID (see: $CMD task)"
 [ "$(tsv 2 "$row")" = open ] || die "$tid is already ticked"
-[ "$(tsv 8 "$row")" != 1 ] || die "$tid: its attributes must end its line, e.g. … (files: a.js; test: npm test)"
+bad=$(tsv 8 "$row")
+[ -z "$bad" ] || die "$tid: $bad"
 # The test is a shell command from the item: run it only for the plan the human approved. Types
 # without an approval step (hotfix, chore) trust it like the check commands in config.
 [ "$(gate_level approved "$ITYPE")" = off ] || approval_ok ||

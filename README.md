@@ -102,6 +102,7 @@ and the hooks. Windows works through WSL or Git Bash.
 | `sdd ls [--all] [--json]` | every item and its progress, across all branches |
 | `sdd show <id> [--json]` | one item's stories, requirements, tasks, decisions, questions |
 | `sdd summary [--since <when>] [--last <n>] [--mine] [--md]` | recent work as a table |
+| `sdd task [next \| done <T-id>]` | the item's tasks; `next` is the batch to build now, `done` runs a task's test and ticks it |
 | `sdd run <role> <id>` | one step of an item on the role's agent and model, logged |
 | `sdd usage [<id>] [--md]` | tokens, cost and time of the logged runs |
 | `sdd sync <agent>` | per-developer hooks and skills for an agent, never committed |
@@ -157,6 +158,11 @@ model = qwen3-coder-30b` in `~/.config/sdd/config`). Ask your agent to "run the 
 item 16": a role on a Claude model runs as a subagent (`sync claude` writes them), any other
 through `sdd run builder 16`. With `[usage] track = true` every run is logged with its tokens, and
 `sdd usage` sums them (off by default).
+
+**Now let's build.** Say it once the plan is approved: the `sdd-build` skill loops over the
+tasks, giving each batch to one builder and committing it, and stops at the first failure.
+The planner sizes each task (`size: S|M|L`); consecutive small ones share a builder
+(`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each.
 
 Gates are scripts, not prose. In testing with a small local model (qwen3-coder 30B), the
 model ignored written rules but obeyed the gates (see `specs/kb/narrow-lessons.md`).

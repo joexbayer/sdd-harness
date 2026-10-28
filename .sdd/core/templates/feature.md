@@ -40,9 +40,10 @@ what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>
 ## Tasks (optional)
 <!-- Small, ordered steps the builder does one at a time, each in one sitting, each with a test
 of its own (so it can pass before the next task exists):
-    - [ ] T-{{id}}.1 Page the orders query, FR-{{id}}.1 (files: src/orders.js; test: npm test -- orders)
-Add `; expect: fail` for a test written first (it must fail); without `test:` the full check
-runs. `{{cmd}} task done T-{{id}}.1` ticks a task when its test passes. -->
+    - [ ] T-{{id}}.1 Page the orders query, FR-{{id}}.1 (files: src/orders.js; test: npm test -- orders; size: S)
+Size each task `S`, `M` or `L` (none is M): consecutive S tasks go to one builder together, M and
+L ones alone. Add `; expect: fail` for a test written first (it must fail); without `test:` the
+full check runs. `{{cmd}} task done T-{{id}}.1` ticks a task when its test passes. -->
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

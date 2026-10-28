@@ -24,39 +24,63 @@ echo "Item $ID ($ITYPE): $title"
 echo "File: $IFILE"
 echo "Phase: $PHASE ($WHY)"
 echo
-# One task at a time: the current task first, with the requirements it serves.
+# One batch at a time (task_batch): its tasks first, each with the requirements it serves.
 if [ "$WHYCODE" = task ]; then
-	# The task_rows fields of the current task, split without a process per field.
+	batch=$(ir_batch)
+	nl='
+'
+	ids=
+	whats=
 	tab=$(printf '\t')
-	t=$IR_TASK
-	tid=${t%%"$tab"*}
-	t=${t#*"$tab"}
-	t=${t#*"$tab"}
-	what=${t%%"$tab"*}
-	t=${t#*"$tab"}
-	files=${t%%"$tab"*}
-	t=${t#*"$tab"}
-	test=${t%%"$tab"*}
-	t=${t#*"$tab"}
-	expect=${t%%"$tab"*}
-	t=${t#*"$tab"}
-	frs=${t%%"$tab"*}
-	echo "Current task: $tid $what"
-	[ -z "$files" ] || echo "  files   $files"
-	if [ -n "$test" ]; then
-		echo "  test    $test"
-	else
-		echo "  test    the full check ($CMD check)"
-	fi
-	[ "$expect" != fail ] || echo "  expect  fail: write the test first: it must fail (the next task makes it pass)"
-	for fr in $frs; do
-		printf '%s\n' "$IR_FACTS" | F=$fr awk -F '\t' '$1 == "fr" && $2 == ENVIRON["F"] {
-			print "  serves  " $2 " " $4; if ($5 != "") print "          e.g. " $5 }'
-	done
+	# The task_rows fields of each task, split without a process per field.
+	while IFS= read -r t; do
+		tid=${t%%"$tab"*}
+		t=${t#*"$tab"}
+		t=${t#*"$tab"}
+		what=${t%%"$tab"*}
+		t=${t#*"$tab"}
+		files=${t%%"$tab"*}
+		t=${t#*"$tab"}
+		test=${t%%"$tab"*}
+		t=${t#*"$tab"}
+		expect=${t%%"$tab"*}
+		t=${t#*"$tab"}
+		frs=${t%%"$tab"*}
+		t=${t#*"$tab"}
+		bad=${t%%"$tab"*}
+		case $batch in
+		*"$nl"*)
+			[ -n "$ids" ] || echo "Current batch: $(printf '%s\n' "$batch" | cut -f1 | paste -sd ' ' -) (small tasks, worked together, in order)"
+			echo "Task: $tid $what"
+			;;
+		*) echo "Current task: $tid $what" ;;
+		esac
+		ids="${ids:+$ids }$tid"
+		whats="${whats:+$whats; }$what"
+		[ -z "$files" ] || echo "  files   $files"
+		if [ -n "$test" ]; then
+			echo "  test    $test"
+		else
+			echo "  test    the full check ($CMD check)"
+		fi
+		[ "$expect" != fail ] || echo "  expect  fail: write the test first: it must fail (the next task makes it pass)"
+		[ -z "$bad" ] || echo "  ✗       $bad: the human fixes the plan and approves it again"
+		for fr in $frs; do
+			printf '%s\n' "$IR_FACTS" | F=$fr awk -F '\t' '$1 == "fr" && $2 == ENVIRON["F"] {
+				print "  serves  " $2 " " $4; if ($5 != "") print "          e.g. " $5 }'
+		done
+	done <<BATCH
+$batch
+BATCH
 	case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
 	echo
-	echo "Do only this task. When its test passes, run: $CMD task done $tid, then commit the code and"
-	echo "$IFILE together with the task in the subject, e.g. $kind($ID): $tid $what"
+	if [ "$ids" = "$tid" ]; then
+		echo "Do only this task. When its test passes, run: $CMD task done $tid, then commit the code and"
+		echo "$IFILE together with the task in the subject, e.g. $kind($ID): $tid $what"
+	else
+		echo "Do only these tasks, in order. As each one's test passes, run: $CMD task done <its id>. Then"
+		echo "commit the code and $IFILE together, all the tasks in the subject, e.g. $kind($ID): $ids $whats"
+	fi
 	echo
 fi
 prompt "$PHASE" "$ID" "$title" "$ITYPE"

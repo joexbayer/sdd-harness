@@ -205,7 +205,12 @@ done)
 if [ "$(gate_level tasks "$ITYPE")" != off ]; then
 	[ -n "$trows" ] || gate tasks "item $ID: the plan has no tasks (- [ ] T-$ID.1 …)"
 	open=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "open" { print $1 }')
-	[ -z "$open" ] || gate tasks "item $ID: tasks not done: $(joinlist "$open")"
+	# A task whose line sdd cannot read (task_rows) is refused, ticked or not.
+	unread=$(printf '%s\n' "$trows" | awk -F '\t' '$8 != "" { s = s (s == "" ? "" : "; ") $1 " (" $8 ")" } END { print s }')
+	tmsg=
+	[ -z "$open" ] || tmsg="tasks not done: $(joinlist "$open")"
+	[ -z "$unread" ] || tmsg="${tmsg:+$tmsg; }tasks $NAME cannot read: $unread"
+	[ -z "$tmsg" ] || gate tasks "item $ID: $tmsg"
 fi
 # The constitution blocks in every profile.
 guard=$(constitution_guard) || fail "item $ID: $guard"
