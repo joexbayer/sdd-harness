@@ -57,7 +57,7 @@ DOD-20.1 `sdd check` passes, with a test naming FR-20.1, FR-20.2, FR-20.3 and FR
 ## Tasks (optional)
 - [x] T-20.1 Build prompt rules, FR-20.1, FR-20.2 (files: .sdd/core/prompts/build.md, tests/t_discipline.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_discipline.sh)
 - [x] T-20.2 Plan prompt rules, FR-20.3, FR-20.5 (files: .sdd/core/prompts/plan.md, tests/t_discipline.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_discipline.sh)
-- [ ] T-20.3 README opening, FR-20.4 (files: README.md)
+- [x] T-20.3 README opening, FR-20.4 (files: README.md)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
