@@ -32,15 +32,27 @@ need_repo() { find_repo || die "not inside a git repository"; }
 
 # find_repo: need_repo, but fails quietly outside a repository (hooks). A no-op when it already
 # ran in this process (a command run inside another, like status in hook session-start).
+# Also sets GD, this worktree's own git dir. bin/sdd's rev-parse (RP) is reused when it ran here.
 ROOT=
+GD=
+RP=
+RP_PWD=
 find_repo() {
 	[ -z "$ROOT" ] || [ "$PWD" != "$ROOT" ] || return 0
-	_rp=$(git rev-parse --show-toplevel --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+	if [ -n "$RP" ] && [ "$RP_PWD" = "$PWD" ]; then
+		_rp=$RP
+	else
+		_rp=$(git rev-parse --show-toplevel --path-format=absolute --git-common-dir --absolute-git-dir 2>/dev/null) || return 1
+	fi
 	ROOT=${_rp%%"
 "*}
+	_rp=${_rp#*"
+"}
+	ST="${_rp%%"
+"*}/$NAME"
+	GD=${_rp#*"
+"}
 	cd "$ROOT" || exit 1
-	ST="${_rp#*"
-"}/$NAME"
 	[ -d "$ST/checks" ] || mkdir -p "$ST/checks"
 	cfg_load
 }
@@ -64,18 +76,46 @@ user_config() { printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/$NAME/config"; 
 # `git config --list` prints them (git parses the files), n = 1 project, 2 user, 3 core. cfg,
 # cfg_all, cfg_every, cfg_mine and gate_level look keys up there instead of running git each
 # time. need_repo loads it; a lookup before that loads it itself.
+# Inside a repo it is cached in <git dir>/sdd-config, a file the shell sources (no process runs),
+# used while it is strictly newer than each config file and the files (and which of them
+# exist) are the same; an edit, even in the second the cache was written, rebuilds it.
 CFG_TAB=
 CFG_ON=
+CFG_KEY=
 cfg_load() {
+	_key=
+	_uc="${XDG_CONFIG_HOME:-$HOME/.config}/$NAME/config"
+	for _f in "$SDD_HOME/config" "$_uc" "$SDD_HOME/core/config"; do
+		if [ -f "$_f" ]; then _key="$_key+$_f"; else _key="$_key-$_f"; fi
+	done
+	_cc=${GD:+$GD/$NAME-config}
+	if [ -n "$_cc" ] && [ -f "$_cc" ] && cfg_fresh "$_cc"; then
+		# shellcheck source=/dev/null
+		. "$_cc"
+		[ "$CFG_KEY" != "$_key" ] || { CFG_ON=1; return 0; }
+	fi
 	CFG_TAB=$(
 		_n=0
-		for _f in "$SDD_HOME/config" "$(user_config)" "$SDD_HOME/core/config"; do
+		for _f in "$SDD_HOME/config" "$_uc" "$SDD_HOME/core/config"; do
 			_n=$((_n + 1))
 			[ -f "$_f" ] || continue
 			echo "#$_n"
 			git config -f "$_f" --list
 		done | awk '/^#[123]$/ { n = substr($0, 2); next } { print n " " $0 }')
 	CFG_ON=1
+	[ -n "$_cc" ] || return 0
+	{
+		printf "CFG_KEY='%s'\nCFG_TAB='" "$(printf '%s' "$_key" | sed "s/'/'\\\\''/g")"
+		printf '%s' "$CFG_TAB" | sed "s/'/'\\\\''/g"
+		printf "'\n"
+	} >"$_cc.$$" 2>/dev/null && mv -f "$_cc.$$" "$_cc" 2>/dev/null || rm -f "$_cc.$$"
+}
+
+# cfg_fresh <cache>: the cache is newer than every config file that exists (_uc: cfg_load's).
+cfg_fresh() {
+	for _f in "$SDD_HOME/config" "$_uc" "$SDD_HOME/core/config"; do
+		[ ! -e "$_f" ] || [ "$1" -nt "$_f" ] || return 1
+	done
 }
 
 # AWK_CFG: cfg_get(key, files) in awk, over ENVIRON["CFG_TAB"]: the last value of <key> in the
@@ -282,10 +322,23 @@ plan_part() {
 }
 
 # plan_hash <file>: what approval pins. Task boxes count as unticked: sdd ticks them as tasks pass
-# (task done), which must not void the approval; every other plan edit does.
+# (task done), which must not void the approval; every other plan edit does. Cached for one file
+# in <git dir>/sdd-plan ("<file> <hash>"), used while strictly newer than the file.
 plan_hash() {
-	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit }
-		/^- \[[xX]\] T-/ { $0 = "- [ ] T-" substr($0, 9) } { print }' "$1" | git hash-object --stdin
+	_pc=${GD:+$GD/$NAME-plan}
+	if [ -n "$_pc" ] && [ "$PWD" = "$ROOT" ] && [ "$_pc" -nt "$1" ] 2>/dev/null &&
+		{ IFS=' ' read -r _pf _ph <"$_pc"; } 2>/dev/null && [ "$_pf" = "$1" ] && [ -n "$_ph" ]; then
+		printf '%s\n' "$_ph"
+		return 0
+	fi
+	_ph=$(awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit }
+		/^- \[[xX]\] T-/ { $0 = "- [ ] T-" substr($0, 9) } { print }' "$1" | git hash-object --stdin) || return 1
+	case $1 in *' '* | '') ;; *)
+		[ -z "$_pc" ] || [ "$PWD" != "$ROOT" ] ||
+			{ printf '%s %s\n' "$1" "$_ph" >"$_pc.$$" && mv -f "$_pc.$$" "$_pc"; } 2>/dev/null || rm -f "$_pc.$$"
+		;;
+	esac
+	printf '%s\n' "$_ph"
 }
 
 # approval_ok: approved, and the plan has not changed since.
@@ -378,7 +431,20 @@ findings_lines() { awk -F '\t' '{ printf "✗ %s%s: %s\n", $1, ($2 == "" ? "" : 
 
 # --- git helpers ------------------------------------------------------------------
 
-current_branch() { git symbolic-ref --quiet --short HEAD 2>/dev/null; }
+# current_branch: read from this worktree's HEAD file when still in it (no process); git answers
+# anywhere else, and for a HEAD that names no branch file (reftable writes refs/heads/.invalid).
+current_branch() {
+	_h=
+	if [ -n "$GD" ] && [ "$PWD" = "$ROOT" ] && { IFS= read -r _h <"$GD/HEAD" || [ -n "$_h" ]; } 2>/dev/null; then
+		case $_h in
+		'ref: refs/heads/.invalid') ;;
+		'ref: refs/heads/'*) printf '%s\n' "${_h#ref: refs/heads/}"; return 0 ;;
+		'ref: '*) ;;
+		*) return 1 ;;
+		esac
+	fi
+	git symbolic-ref --quiet --short HEAD 2>/dev/null
+}
 
 # main_root: the main checkout's folder (first in `git worktree list`), from any worktree.
 main_root() { git worktree list --porcelain | awk '/^worktree / { print substr($0, 10); exit }'; }
@@ -455,12 +521,15 @@ fingerprint() {
 
 # code_changed: does this branch change anything outside specs/ (committed, staged,
 # unstaged or untracked) compared with where it left the base branch?
+# One diff from the merge base (git 2.30+, else merge-base then diff); untracked files are listed
+# only when no tracked file outside specs/ changed.
 code_changed() {
-	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD 2>/dev/null) || _mb=HEAD
-	{
+	_b=$(cfg sdd.base main)
+	{ git diff --name-only --merge-base "$_b" 2>/dev/null || {
+		_mb=$(git merge-base "$_b" HEAD 2>/dev/null) || _mb=HEAD
 		git diff --name-only "$_mb"
-		git ls-files --others --exclude-standard
-	} | grep -v "^$SPECS/" | grep -q .
+	}; } | grep -v "^$SPECS/" | grep -q . && return 0
+	git ls-files --others --exclude-standard | grep -v "^$SPECS/" | grep -q .
 }
 
 # next_id: allocate an item id, unique across all worktrees of this clone.

@@ -115,6 +115,14 @@ A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git c
 - Config is read once per process (`cfg_load` in need_repo: `git config --list` per file into
   `CFG_TAB`); `cfg`, `cfg_all`, `cfg_every`, `cfg_mine`, `gate_level` look up in awk
   (`AWK_CFG`). A command that writes the config and then reads it must call `cfg_load` again.
+- Item 23: one `git rev-parse` per command (bin/sdd's, reused by `find_repo` as `RP`; it also
+  sets `GD`, the worktree's own git dir). Per-worktree caches in `GD`: `sdd-config` (CFG_TAB as
+  a sourced file) and `sdd-plan` (one item's plan hash), each used only while strictly newer
+  (`test -nt`) than its source files; `current_branch` reads `GD/HEAD` while `PWD = ROOT`.
+  `rm -f .git/sdd-config .git/sdd-plan` changes nothing but speed. tests/t_gitcalls.sh counts
+  git processes (a logging `git` first on PATH): hook stop ≤ 3, next and status ≤ 2. A new git
+  call on those paths fails it on any machine, unlike t_perf. `$(func)` forks a subshell in
+  dash: set a variable instead on hot paths.
 - `item_phase` reads the item once (`item_read`, one awk) and leaves `IR_*` (title, approved,
   first open task, facts, …) for the command: use those instead of `fm_get`/`parse_item` again.
   `parse_item`, `task_rows`, `missing_sections` and `fm_get` still exist for other callers and
