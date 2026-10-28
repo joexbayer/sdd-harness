@@ -2,9 +2,10 @@
 id: 16
 type: feature
 title: Model roles and usage tracking
-status: open
+status: shipped
 created: 2026-10-27
 approved: 04692f78716df8b7699a9cb4a114c4b29ee3c27f 2026-10-27 joexbayer
+shipped: 2026-10-28
 ---
 # 16 Model roles and usage tracking
 
