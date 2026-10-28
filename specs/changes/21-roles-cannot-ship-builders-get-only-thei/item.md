@@ -56,7 +56,7 @@ tasks are done, and the build rules name the human-only verbs (FR-21.2, FR-21.3)
 with a batch row stays aligned (FR-21.4). It fails before the fix.
 
 ## Tasks (optional)
-- [ ] T-21.1 The regression test, FR-21.1, FR-21.2, FR-21.3, FR-21.4 (files: tests/t_role_guard.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_role_guard.sh; expect: fail; size: S)
+- [x] T-21.1 The regression test, FR-21.1, FR-21.2, FR-21.3, FR-21.4 (files: tests/t_role_guard.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_role_guard.sh; expect: fail; size: S)
 - [ ] T-21.2 The fix: SDD_RUN set by run and refused by approve, ship and tidy --remote; finish steps only when no task is open; human-only verbs in the build rules; usage column width, FR-21.1, FR-21.2, FR-21.3, FR-21.4 (files: .sdd/core/cmd/run.sh, .sdd/core/cmd/approve.sh, .sdd/core/cmd/ship.sh, .sdd/core/cmd/tidy.sh, .sdd/core/lib/common.sh, .sdd/core/prompts/build.md, .sdd/core/prompts/finish.md, .sdd/core/cmd/next.sh, .sdd/core/cmd/usage.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_role_guard.sh; size: M)
 
 ## Built
