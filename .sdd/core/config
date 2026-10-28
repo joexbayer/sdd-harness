@@ -6,10 +6,12 @@
 	mode = solo
 	base = main
 	branch = {type}/{id}-{slug}
-	gates = planned approved tasks check built
+	gates = planned analyzed approved tasks check built
 
 # Gate levels per profile: off, warn or block.
 #   planned    every required plan section (above "## Built") has content
+#   analyzed   at approve: `sdd analyze` finds no problem in the plan (an FR no task names, an
+#              FR with no example, an open question, an ID written twice, an unreadable task)
 #   approved   the human approved the plan, it has not changed since, and no code was
 #              committed before the approval
 #   check      the configured checks pass for exactly the code being shipped
@@ -20,6 +22,7 @@
 #              unwritten-up code changes (blocks once, then lets it stop with a warning)
 [profile "lite"]
 	planned = warn
+	analyzed = warn
 	approved = block
 	check = block
 	built = warn
@@ -27,6 +30,7 @@
 	finish = block
 [profile "standard"]
 	planned = block
+	analyzed = block
 	approved = block
 	check = block
 	built = block
@@ -34,6 +38,7 @@
 	finish = block
 [profile "strict"]
 	planned = block
+	analyzed = block
 	approved = block
 	check = block
 	built = block
@@ -53,6 +58,7 @@
 [type "amendment"]
 	# Changes the constitution: every gate blocks, in every profile.
 	planned = block
+	analyzed = block
 	approved = block
 	check = block
 	built = block
