@@ -310,6 +310,19 @@ verified() {
 	case $_v in '' | none*) return 1 ;; esac
 }
 
+# review_print: what sdd review records of the item's code change (FR-22.4): a first line
+# "patch=<git patch-id of the diff from the merge base, specs/ left out>" (empty when no code
+# changed), then "<blob after>\t<path>" per changed file, to name what changed since. A rebase
+# that keeps the change keeps the patch id.
+review_print() {
+	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD) || return 1
+	_p=$(git diff --binary --no-color --no-ext-diff --no-renames "$_mb" HEAD -- . ":(exclude)$SPECS" |
+		git patch-id --stable | cut -d ' ' -f 1)
+	echo "patch=$_p"
+	git -c core.quotePath=false diff --raw --no-abbrev --no-renames "$_mb" HEAD -- . ":(exclude)$SPECS" |
+		awk -F '\t' '{ split($1, m, " "); print m[4] "\t" $2 }'
+}
+
 # plan_frs: the requirement ids (FR-<id>.<n>) written in the plan, guidance excluded.
 plan_frs() {
 	plan_part "$IFILE" | uncomment | grep -oE "FR-$ID\.[0-9]+" | sort -u -t . -k 2,2n

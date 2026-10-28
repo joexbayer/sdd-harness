@@ -6,7 +6,7 @@
 	mode = solo
 	base = main
 	branch = {type}/{id}-{slug}
-	gates = planned analyzed approved tasks check built verified
+	gates = planned analyzed approved tasks check built verified reviewed
 
 # Gate levels per profile: off, warn or block.
 #   planned    every required plan section (above "## Built") has content
@@ -18,6 +18,8 @@
 #   built      "## Built" (what was built, how it was verified) is written
 #   verified   "## Built" has a "Verified by:" line other than "none": someone other than the
 #              builder (the verifier role) proved the requirements by running them
+#   reviewed   the code is what the human last saw in `sdd review` in this clone (a rebase that
+#              keeps the change keeps it reviewed; an item that changes no code needs none)
 #   tasks      the plan has tasks and every one is ticked (off for fix, refactor and amendment);
 #              a ticked task needs a commit naming it in every profile, whatever this level
 #   finish     agent stop hook: no stopping with unplanned, unapproved, unverified or
@@ -30,6 +32,7 @@
 	built = warn
 	tasks = warn
 	verified = off
+	reviewed = warn
 	finish = block
 [profile "standard"]
 	planned = block
@@ -39,6 +42,7 @@
 	built = block
 	tasks = block
 	verified = warn
+	reviewed = warn
 	finish = block
 [profile "strict"]
 	planned = block
@@ -48,6 +52,7 @@
 	built = block
 	tasks = block
 	verified = block
+	reviewed = block
 	finish = block
 
 # A type exists when templates/<type>.md exists. Settings here are optional:
