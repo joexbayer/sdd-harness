@@ -2,9 +2,10 @@
 id: 17
 type: feature
 title: Task batches and the build loop
-status: open
+status: shipped
 created: 2026-10-27
 approved: ba82644b3545320ba482d389e62a9c80d57fd257 2026-10-28 joexbayer
+shipped: 2026-10-28
 ---
 # 17 Task batches and the build loop
 
