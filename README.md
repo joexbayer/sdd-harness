@@ -3,6 +3,11 @@
 Spec-driven changes for people working with coding agents. Humans plan and review; agents
 build. One short file per change, plain shell scripts, and any agent.
 
+sdd checks its workflow instead of asking the agent to follow rules: the build waits for the
+human's approval and editing the plan cancels it, a test written first must fail before its
+task can be ticked, a check result counts only for the exact code it ran on, and the agent
+cannot stop with unfinished work (a finish gate on its stop hook).
+
 You talk to your agent; the agent runs sdd. In Claude Code:
 
 ```
