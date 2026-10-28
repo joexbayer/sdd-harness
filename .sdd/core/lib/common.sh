@@ -559,9 +559,11 @@ item_phase() {
 }
 
 # task_rows: the current item's tasks (IFILE, ID), one per line, in plan order:
-# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>\t<size>". <bad> is
-# empty, or why sdd cannot read the line (attributes that do not end it, an attribute it does not
-# know, a size not S, M or L): sdd must not guess. <size> is S, M or L (M when none is given).
+# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>\t<size>\t<reason>".
+# <bad> is empty, or why sdd cannot read the line (attributes that do not end it, an attribute it
+# does not know, a size not S, M or L, an expect: fail… it cannot read): sdd must not guess. <size>
+# is S, M or L (M when none is given). <expect> is "fail" for `expect: fail` and
+# `expect: fail "<text>"`; <reason> is that text, which the red run's output must contain (FR-22.1).
 # Attributes sit in a final "(files: …; test: …; expect: fail; size: S)"; a value runs to the
 # next "; <key>:", so a test command may contain ";" and parentheses.
 task_rows() {
@@ -569,8 +571,8 @@ task_rows() {
 }
 
 # AWK_TASK: task_row(id, state, text) in awk: a task fact (parse_item) as a task_rows line.
-AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, size, frs, bad, p, k, key, i, a, n, kk, val, name, j, s) {
-	what = txt; files = ""; test = ""; expect = ""; size = "M"; frs = ""; bad = ""
+AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, size, frs, bad, p, k, key, i, a, n, kk, val, name, j, s, why) {
+	what = txt; files = ""; test = ""; expect = ""; size = "M"; frs = ""; bad = ""; why = ""
 	p = 0
 	for (k = 1; k <= 4; k++) {
 		key = (k == 1 ? "files:" : k == 2 ? "test:" : k == 3 ? "expect:" : "size:")
@@ -591,11 +593,13 @@ AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, size, frs,
 			else if (bad == "") bad = "unknown attribute " name[j] " (known: files, test, expect, size)"
 		}
 		if (bad == "" && size !~ /^[SML]$/) bad = "size must be S, M or L, not " size
+		if (expect ~ /^fail ".+"$/) { why = substr(expect, 7, length(expect) - 7); expect = "fail" }
+		else if (bad == "" && expect ~ /^fail/ && expect != "fail") bad = "expect must be fail or fail \"<text>\", not " expect
 	}
 	s = what
 	while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
 	sub(/(,? FR-[0-9]+\.[0-9]+)+[ ,]*$/, "", what); sub(/[ ,]+$/, "", what)
-	return id "\t" st "\t" what "\t" files "\t" test "\t" expect "\t" frs "\t" bad "\t" size
+	return id "\t" st "\t" what "\t" files "\t" test "\t" expect "\t" frs "\t" bad "\t" size "\t" why
 }
 '
 

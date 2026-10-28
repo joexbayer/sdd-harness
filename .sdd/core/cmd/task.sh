@@ -20,7 +20,7 @@ if [ $# -eq 0 ]; then
 		c=$(task_commit "$t")
 		printf '%s %s %s\n' "$box" "$t" "$(tsv 3 "$r")"
 		ex=
-		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail)"
+		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail$(tsv 10 "$r" | sed 's/..*/ "&"/'))"
 		[ -z "$(tsv 5 "$r")" ] || printf '      test: %s%s\n' "$(tsv 5 "$r")" "$ex"
 		[ -z "$(tsv 7 "$r")" ] || printf '      serves: %s\n' "$(tsv 7 "$r")"
 		[ -z "$(tsv 8 "$r")" ] || echo "      ✗ $(tsv 8 "$r")"
@@ -39,7 +39,7 @@ if [ "$1" = next ] && [ $# -eq 1 ]; then
 		printf '[ ] %s %s (size: %s)\n' "$(tsv 1 "$r")" "$(tsv 3 "$r")" "$(tsv 9 "$r")"
 		[ -z "$(tsv 4 "$r")" ] || printf '      files: %s\n' "$(tsv 4 "$r")"
 		ex=
-		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail)"
+		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail$(tsv 10 "$r" | sed 's/..*/ "&"/'))"
 		if [ -n "$(tsv 5 "$r")" ]; then printf '      test: %s%s\n' "$(tsv 5 "$r")" "$ex"; else echo "      test: the full check ($CMD check)"; fi
 		[ -z "$(tsv 7 "$r")" ] || printf '      serves: %s\n' "$(tsv 7 "$r")"
 		[ -z "$(tsv 8 "$r")" ] || echo "      ✗ $(tsv 8 "$r")"
@@ -61,6 +61,7 @@ bad=$(tsv 8 "$row")
 
 test=$(tsv 5 "$row")
 expect=$(tsv 6 "$row")
+reason=$(tsv 10 "$row")
 if [ -z "$test" ]; then
 	[ "$expect" != fail ] || die "$tid says expect: fail but names no test"
 	run_check "$ID"
@@ -88,7 +89,15 @@ else
 		nt=$(cfg_all check.no-tests | paste -sd '|' -)
 		[ -z "$nt" ] || ! grep -qiE "$nt" "$log" ||
 			die "$tid: its test ran no tests (log: $log): a failing test must run"
+		# FR-22.1: a red run counts only when it fails for the reason the plan names (a fixed string:
+		# an argument to grep -F, never part of a shell string).
+		if [ -n "$reason" ] && ! grep -qF -- "$reason" "$log"; then
+			tail -n 20 "$log"
+			echo "✗ $tid failed, but not for the expected reason ($reason); log: $log"
+			exit 1
+		fi
 		how="its test fails, as expected"
+		[ -z "$reason" ] || how="its test fails, as expected: $reason"
 	else
 		[ "$rc" -eq 0 ] || { tail -n 20 "$log"; echo "✗ $tid: its test failed (exit $rc; log: $log)"; exit 1; }
 		how="its test passed"
