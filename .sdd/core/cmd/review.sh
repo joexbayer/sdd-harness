@@ -8,6 +8,8 @@ item_phase
 
 base=$(cfg sdd.base main)
 mb=$(git merge-base "$base" HEAD)
+# FR-22.4: the code this review shows, so ship can tell when it changes afterwards (this clone).
+review_print >"$ST/checks/$ID.reviewed" || rm -f "$ST/checks/$ID.reviewed"
 title=$IR_TITLE
 echo "Review: $ID $ITYPE · $title   ($BRANCH → $base)"
 echo "phase   $PHASE   ($WHY)"
@@ -30,6 +32,8 @@ elif [ -f "$ST/checks/$ID" ]; then
 else
 	echo "check   never run; run: $CMD check"
 fi
+vline=$(verified_by)
+echo "verify  ${vline:-Verified by: (missing)}"
 pr=$(pr_note "$BRANCH")
 [ -z "$pr" ] || echo "pr      $pr"
 

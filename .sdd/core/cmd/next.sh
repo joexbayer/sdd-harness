@@ -53,6 +53,9 @@ if [ "$WHYCODE" = task ]; then
 		frs=${t%%"$tab"*}
 		t=${t#*"$tab"}
 		bad=${t%%"$tab"*}
+		t=${t#*"$tab"}
+		t=${t#*"$tab"}
+		reason=$t
 		case $batch in
 		*"$nl"*)
 			[ -n "$ids" ] || echo "Current batch: $(printf '%s\n' "$batch" | cut -f1 | paste -sd ' ' -) (small tasks, worked together, in order)"
@@ -68,7 +71,11 @@ if [ "$WHYCODE" = task ]; then
 		else
 			echo "  test    the full check ($CMD check)"
 		fi
-		[ "$expect" != fail ] || echo "  expect  fail: write the test first: it must fail (the next task makes it pass)"
+		if [ "$expect" = fail ] && [ -n "$reason" ]; then
+			echo "  expect  fail: write the test first: it must fail with \"$reason\" in its output (the next task makes it pass)"
+		elif [ "$expect" = fail ]; then
+			echo "  expect  fail: write the test first: it must fail (the next task makes it pass)"
+		fi
 		[ -z "$bad" ] || echo "  ✗       $bad: the human fixes the plan and approves it again"
 		for fr in $frs; do
 			printf '%s\n' "$IR_FACTS" | F=$fr awk -F '\t' '$1 == "fr" && $2 == ENVIRON["F"] {

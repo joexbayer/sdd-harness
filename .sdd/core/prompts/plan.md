@@ -29,7 +29,9 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   framework's own auth, escaping and crypto over new code.
 - End the plan with small, ordered tasks under "## Tasks" (a feature needs them in the
   standard profile): each one sitting, naming its files, the FRs it serves and a test of its
-  own that can pass before later tasks exist; `expect: fail` for a test written first. Size
+  own that can pass before later tasks exist; `expect: fail` for a test written first, or
+  `expect: fail "<text>"` when you know what its output must say while it fails (e.g. the
+  missing function's name), so a typo does not count as red. Size
   each one `size: S|M|L` (S: a few lines, M: a sitting, L: a big one): consecutive S tasks
   share a builder, M and L run alone. The builder may be a small model that sees only its
   batch, so say what it needs to know.

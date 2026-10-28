@@ -52,9 +52,11 @@ fi
 echo "run $n · $role · $agent $model · item $ID${task:+ $task} · started"
 start=$(date +%s)
 started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-# The agent knows it is a role run: approve, ship and tidy --remote refuse it (human_only).
+# The agent knows it is a role run: approve, ship and tidy --remote refuse it (human_only), and
+# the finish gate holds only a builder (hook stop).
 SDD_RUN=$n
-export SDD_RUN
+SDD_ROLE=$role
+export SDD_RUN SDD_ROLE
 # args are split on spaces, as written in the tier (no quoting), and never glob-expanded.
 set -f
 agent_run "$bin" "$model" "$dir/prompt.md" "$dir/out" "$args" 2>"$dir/stderr"

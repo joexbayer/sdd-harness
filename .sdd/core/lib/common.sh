@@ -294,6 +294,35 @@ approval_ok() {
 	[ -n "$_ap" ] && [ "${_ap%% *}" = "$(plan_hash "$IFILE")" ]
 }
 
+# verified_by: the last "Verified by:" line in "## Built" (FR-22.3), a list bullet and guidance
+# removed; empty when there is none. Built runs up to "## Review", as in missing_sections.
+verified_by() {
+	uncomment "$IFILE" | awk '
+		/^## / && !(on && $0 !~ /^## Review/) { on = ($0 == "## Built"); next }
+		on { s = $0; sub(/^[ \t]*([-*][ \t]+)?/, "", s); if (index(s, "Verified by:") == 1) v = s }
+		END { if (v != "") print v }'
+}
+
+# verified: "## Built" names a verifier run, not "Verified by: none" (or none at all).
+verified() {
+	_v=$(verified_by)
+	_v=$(printf '%s\n' "${_v#Verified by:}" | tr -d ' \t' | tr 'A-Z' 'a-z')
+	case $_v in '' | none*) return 1 ;; esac
+}
+
+# review_print: what sdd review records of the item's code change (FR-22.4): a first line
+# "patch=<git patch-id of the diff from the merge base, specs/ left out>" (empty when no code
+# changed), then "<blob after>\t<path>" per changed file, to name what changed since. A rebase
+# that keeps the change keeps the patch id.
+review_print() {
+	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD) || return 1
+	_p=$(git diff --binary --no-color --no-ext-diff --no-renames "$_mb" HEAD -- . ":(exclude)$SPECS" |
+		git patch-id --stable | cut -d ' ' -f 1)
+	echo "patch=$_p"
+	git -c core.quotePath=false diff --raw --no-abbrev --no-renames "$_mb" HEAD -- . ":(exclude)$SPECS" |
+		awk -F '\t' '{ split($1, m, " "); print m[4] "\t" $2 }'
+}
+
 # plan_frs: the requirement ids (FR-<id>.<n>) written in the plan, guidance excluded.
 plan_frs() {
 	plan_part "$IFILE" | uncomment | grep -oE "FR-$ID\.[0-9]+" | sort -u -t . -k 2,2n
@@ -559,9 +588,11 @@ item_phase() {
 }
 
 # task_rows: the current item's tasks (IFILE, ID), one per line, in plan order:
-# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>\t<size>". <bad> is
-# empty, or why sdd cannot read the line (attributes that do not end it, an attribute it does not
-# know, a size not S, M or L): sdd must not guess. <size> is S, M or L (M when none is given).
+# "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>\t<size>\t<reason>".
+# <bad> is empty, or why sdd cannot read the line (attributes that do not end it, an attribute it
+# does not know, a size not S, M or L, an expect: fail… it cannot read): sdd must not guess. <size>
+# is S, M or L (M when none is given). <expect> is "fail" for `expect: fail` and
+# `expect: fail "<text>"`; <reason> is that text, which the red run's output must contain (FR-22.1).
 # Attributes sit in a final "(files: …; test: …; expect: fail; size: S)"; a value runs to the
 # next "; <key>:", so a test command may contain ";" and parentheses.
 task_rows() {
@@ -569,8 +600,8 @@ task_rows() {
 }
 
 # AWK_TASK: task_row(id, state, text) in awk: a task fact (parse_item) as a task_rows line.
-AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, size, frs, bad, p, k, key, i, a, n, kk, val, name, j, s) {
-	what = txt; files = ""; test = ""; expect = ""; size = "M"; frs = ""; bad = ""
+AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, size, frs, bad, p, k, key, i, a, n, kk, val, name, j, s, why) {
+	what = txt; files = ""; test = ""; expect = ""; size = "M"; frs = ""; bad = ""; why = ""
 	p = 0
 	for (k = 1; k <= 4; k++) {
 		key = (k == 1 ? "files:" : k == 2 ? "test:" : k == 3 ? "expect:" : "size:")
@@ -591,23 +622,27 @@ AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, size, frs,
 			else if (bad == "") bad = "unknown attribute " name[j] " (known: files, test, expect, size)"
 		}
 		if (bad == "" && size !~ /^[SML]$/) bad = "size must be S, M or L, not " size
+		if (expect ~ /^fail ".+"$/) { why = substr(expect, 7, length(expect) - 7); expect = "fail" }
+		else if (bad == "" && expect ~ /^fail/ && expect != "fail") bad = "expect must be fail or fail \"<text>\", not " expect
 	}
 	s = what
 	while (match(s, /FR-[0-9]+\.[0-9]+/)) { frs = frs (frs == "" ? "" : " ") substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }
 	sub(/(,? FR-[0-9]+\.[0-9]+)+[ ,]*$/, "", what); sub(/[ ,]+$/, "", what)
-	return id "\t" st "\t" what "\t" files "\t" test "\t" expect "\t" frs "\t" bad "\t" size
+	return id "\t" st "\t" what "\t" files "\t" test "\t" expect "\t" frs "\t" bad "\t" size "\t" why
 }
 '
 
 # task_batch: of the task_rows lines on stdin, the next batch the builder works at once: the first
 # open task, joined by the open S tasks right after it while it is S too, up to [build] batch (3).
-# M and L tasks run alone, so a batch is the same every run (D-17.1).
+# M and L tasks run alone, so a batch is the same every run (D-17.1). A batch ends after an
+# `expect: fail` task: its test must be red when ticked, so the code that turns it green waits
+# for the next batch (a builder handed both writes both, and the red run then passes).
 task_batch() {
 	B=$(cfg build.batch 3) awk -F '\t' '
 		$2 != "open" { next }
-		n == 0 { print; n = 1; small = ($9 == "S"); next }
+		n == 0 { print; n = 1; small = ($9 == "S"); if ($6 == "fail") exit; next }
 		!small || $9 != "S" || n >= ENVIRON["B"] + 0 { exit }
-		{ print; n++ }'
+		{ print; n++; if ($6 == "fail") exit }'
 }
 
 # ir_batch: task_batch for the item item_read read (IR_FACTS), without reading it again.

@@ -68,6 +68,11 @@ assert_eq $? 1 "(ship must refuse)"
 assert_contains "$out" 'the constitution changes only through'
 git switch -q main
 
+# vline <item file>: a verifier's line under "## Built".
+vline() {
+	awk '/^## Review/ { print "Verified by: test: 1 of 1 FRs proven; no findings" } { print }' "$1" >"$T/v" && cp "$T/v" "$1"
+}
+
 # FR-3.7: an amendment may change it, lands no code, and every gate blocks even in lite.
 # Its Impact section is required: approve refuses while it is empty.
 sdd new amendment "Allow forbidden.txt in docs" >/dev/null 2>&1
@@ -92,8 +97,12 @@ out=$(sdd ship 2>&1)
 assert_eq $? 1 "(Built blocks for amendments, even in lite)"
 assert_contains "$out" '"## Built" is not written yet'
 
-# FR-3.8: review shows the constitution diff.
+# FR-3.8: review shows the constitution diff. Amendments need a verifier's line too (FR-22.3).
 fill "$f" built && git commit -qam built
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(no verifier line blocks for amendments, even in lite)"
+assert_contains "$out" 'verified'
+vline "$f" && git commit -qam verified
 out=$(sdd review)
 assert_contains "$out" 'Constitution diff'
 assert_contains "$out" '+C-1 Nothing named forbidden.txt, except in docs/.'
@@ -109,7 +118,7 @@ sdd check >/dev/null 2>&1 || fail "in-flight check should pass"
 git switch -q main
 sdd new amendment "No feature.txt" >/dev/null 2>&1
 a=$(ls specs/changes/5-*/item.md)
-fill "$a" plan && sdd approve >/dev/null 2>&1 && fill "$a" built
+fill "$a" plan && sdd approve >/dev/null 2>&1 && fill "$a" built && vline "$a"
 printf '\nC-4 No feature.txt.\n  Why: a test rule.\n  Enforced: check test ! -f feature.txt\n' >>specs/constitution.md
 git add -A && git commit -qm amend && sdd check >/dev/null 2>&1 && sdd ship >/dev/null 2>&1 || fail "amendment 5 ship failed"
 git switch -q feature/4-in-flight
