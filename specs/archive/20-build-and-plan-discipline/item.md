@@ -2,9 +2,10 @@
 id: 20
 type: feature
 title: Build and plan discipline
-status: open
+status: shipped
 created: 2026-10-28
 approved: 65fa153c1d1d1d77bb9896ef1c9154c62250e039 2026-10-28 joexbayer
+shipped: 2026-10-28
 ---
 # 20 Build and plan discipline
 
