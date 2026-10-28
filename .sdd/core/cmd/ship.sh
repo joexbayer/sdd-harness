@@ -5,6 +5,7 @@
 # If anything fails after the item was touched, the branch is reset to where it was, so
 # running ship again is always safe.
 [ $# -eq 0 ] || usage_die "usage: $NAME ship"
+human_only ship
 need_repo
 current_item || die "not on an item branch (see: $CMD status)"
 fm_closed "$IFILE" || die "item $ID: $FM_OPEN"

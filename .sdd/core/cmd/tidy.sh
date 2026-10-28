@@ -12,6 +12,7 @@ for a in "$@"; do
 	*) usage_die "usage: $NAME tidy [--remote] [--dry-run]   (--remote goes first)" ;;
 	esac
 done
+[ -z "$remote" ] || human_only "tidy --remote"
 need_repo
 base=$(cfg sdd.base main)
 main=$(main_root)

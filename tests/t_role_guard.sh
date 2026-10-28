@@ -43,6 +43,10 @@ assert_contains "$(cat "$T/stub/ship.out")" "sdd: ship is the human's: a role ru
 assert_contains "$(cat "$T/stub/tidy.out")" "sdd: tidy --remote is the human's: a role run (run 1) cannot tidy --remote"
 assert_eq "$(git rev-parse HEAD)" "$head" "(no commit)"
 assert_eq "$(git symbolic-ref --short HEAD)" feature/1-guard "(still on the item branch)"
+# With usage tracking off a run has no number ("-"); the refusal says just "a role run".
+out=$( (export SDD_RUN=-; sdd ship) 2>&1)
+assert_eq $? 2 "(ship, untracked run)"
+assert_contains "$out" "sdd: ship is the human's: a role run cannot ship"
 # Everything else still works under a role run; tidy without --remote too.
 (export SDD_RUN=7; sdd tidy --dry-run >/dev/null 2>&1) || fail "tidy without --remote refused under SDD_RUN"
 
@@ -56,7 +60,7 @@ assert_not_contains "$out" 'You are done when'
 assert_contains "$out" 'Never run `.sdd/bin/sdd approve`, `.sdd/bin/sdd ship` or `.sdd/bin/sdd tidy --remote`: they are the human'"'"'s.'
 
 # FR-21.2: once no task is open, the finish steps are back (as today), with the same rule.
-for t in T-1.1 T-1.2 T-1.3; do sdd task done "$t" >/dev/null 2>&1 || fail "task done $t failed"; done
+for t in T-1.1 T-1.2 T-1.3; do sdd task 'done' "$t" >/dev/null 2>&1 || fail "task done $t failed"; done
 git commit -qam "feat(1): work"
 out=$(sdd next)
 assert_not_contains "$out" 'Current task'

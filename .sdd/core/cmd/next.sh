@@ -8,6 +8,11 @@ need_repo
 # prompt <name> <id> <title> <type>: print a prompt and its local .append.md, if any.
 prompt() {
 	_p=$(sdd_path "prompts/$1.md") && render "$_p" "$2" "$3" "$4"
+	# The finish steps (check, security pass, Built) close the build rules once no task is open;
+	# a batch builder gets only its tasks (FR-21.2). Before build's .append.md, as when they were one.
+	if [ "$1" = build ] && [ "$WHYCODE" != task ]; then
+		_p=$(sdd_path prompts/finish.md) && render "$_p" "$2" "$3" "$4"
+	fi
 	_x="$SDD_HOME/local/prompts/$1.append.md"
 	[ -f "$_x" ] && render "$_x" "$2" "$3" "$4"
 	return 0
