@@ -634,13 +634,15 @@ AWK_TASK='function task_row(id, st, txt,   what, files, test, expect, size, frs,
 
 # task_batch: of the task_rows lines on stdin, the next batch the builder works at once: the first
 # open task, joined by the open S tasks right after it while it is S too, up to [build] batch (3).
-# M and L tasks run alone, so a batch is the same every run (D-17.1).
+# M and L tasks run alone, so a batch is the same every run (D-17.1). A batch ends after an
+# `expect: fail` task: its test must be red when ticked, so the code that turns it green waits
+# for the next batch (a builder handed both writes both, and the red run then passes).
 task_batch() {
 	B=$(cfg build.batch 3) awk -F '\t' '
 		$2 != "open" { next }
-		n == 0 { print; n = 1; small = ($9 == "S"); next }
+		n == 0 { print; n = 1; small = ($9 == "S"); if ($6 == "fail") exit; next }
 		!small || $9 != "S" || n >= ENVIRON["B"] + 0 { exit }
-		{ print; n++ }'
+		{ print; n++; if ($6 == "fail") exit }'
 }
 
 # ir_batch: task_batch for the item item_read read (IR_FACTS), without reading it again.

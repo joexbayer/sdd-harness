@@ -72,4 +72,28 @@ printf "echo '\$(rm -f ran) \`touch ran\` ; x'\nexit 1\n" >t4.sh
 out=$(sdd task 'done' T-1.4 2>&1) || fail "red task with shell syntax in its text failed: $out"
 assert_contains "$out" '✓ T-1.4 done'
 assert_no_file ran
+
+# A test written first ends its batch: the code that turns it green is in the next batch, so the
+# builder ticks it while it is still red.
+git add -A && git commit -qm "feat(1): T-1.4 odd reason" && git switch -q main
+sdd new feature "Batches" >/dev/null 2>&1
+f=specs/changes/2-batches/item.md
+fill "$f" plan
+awk '/^## What changes$/ { print; print "FR-2.1 WHEN x THE SYSTEM SHALL y."; print "  e.g. x → y"; print ""; next }
+/^## Tasks \(optional\)$/ { print
+	print "- [ ] T-2.1 Red first, FR-2.1 (files: r1.sh; test: sh r1.sh; expect: fail; size: S)"
+	print "- [ ] T-2.2 Code (test: true; size: S)"
+	print "- [ ] T-2.3 More code (test: true; size: S)"
+	print "- [ ] T-2.4 Red again (files: r4.sh; test: sh r4.sh; expect: fail \"red\"; size: S)"
+	print "- [ ] T-2.5 Its code (test: true; size: S)"
+	print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(2): plan" && sdd approve >/dev/null 2>&1 || fail "approve 2 failed"
+out=$(sdd task next)
+assert_contains "$out" 'batch   T-2.1'
+assert_not_contains "$out" 'T-2.2'
+printf 'echo red\nexit 1\n' >r1.sh
+sdd task 'done' T-2.1 >/dev/null 2>&1 || fail "T-2.1 failed"
+out=$(sdd task next)
+assert_contains "$out" 'batch   T-2.2 T-2.3 T-2.4'
+assert_not_contains "$out" 'T-2.5'
 echo ok

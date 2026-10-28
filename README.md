@@ -167,7 +167,8 @@ through `sdd run builder 16`. With `[usage] track = true` every run is logged wi
 **Now let's build.** Say it once the plan is approved: the `sdd-build` skill loops over the
 tasks, giving each batch to one builder and committing it, and stops at the first failure.
 The planner sizes each task (`size: S|M|L`); consecutive small ones share a builder
-(`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each.
+(`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each. A
+test written first (`expect: fail`) ends its batch, so it is ticked while still red.
 A test written first says `expect: fail "<text>"` to count only when it fails for that reason.
 
 **Verified, then reviewed.** Before writing Built, the agent hands the item to a `verifier`

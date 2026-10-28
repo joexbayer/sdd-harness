@@ -268,7 +268,8 @@ an agent can spawn subagents (D-17.2): `sdd task next` prints the next batch, on
 `task done` and one commit names them all, until no task is open; the first failure stops the
 loop. A batch is the first open task, joined by the open `size: S` tasks right after it while it
 is S too, up to `[build] batch` (3): the planner sizes tasks and the human approves them, sdd
-only groups, so a batch is the same every run (D-17.1).
+only groups, so a batch is the same every run (D-17.1). A batch ends after an `expect: fail`
+task, so the code that makes a test-first task pass is never in the same batch as that test.
 
 Verifying: once no task is open and the check passes, the finish steps hand the item to the
 `verifier` role (its `sdd-verifier` subagent, `sdd run verifier <id>`, or a fresh subagent on

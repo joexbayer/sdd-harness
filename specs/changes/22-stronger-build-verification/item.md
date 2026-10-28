@@ -146,6 +146,13 @@ Follow-ups (for the human to decide):
 - DOD-22.2 (a real qwen build with an Opus/Sonnet verifier on a scratch repo) is left for the
   main session.
 
+Review change (DOD-22.2 trial): qwen's first batch was T-1.1 (test first, `expect: fail "FAIL
+slug"`), T-1.2 (the code) and T-1.3. It wrote both, the red run then passed, `task done` refused
+T-1.1, and qwen thrashed (it even ran `git stash`, hiding its tick) until its 80-step limit.
+`task_batch` (common.sh:638) now ends a batch after an `expect: fail` task, so its code is in the
+next batch. Test: tests/t_expect.sh (a red first task runs alone; a red task ends a batch of S
+tasks). README, design §9 and core/config say so.
+
 Check: `.sdd/bin/sdd check` passed (shellcheck and the suite under /bin/sh and dash).
 Security pass: a fresh subagent (Sonnet) given only the diff found nothing (it traced the expected
 text to `grep -F` arguments and prints only; the review record path uses the numeric ID).
@@ -155,3 +162,5 @@ Verified by: claude-sonnet-5-5: 4 of 4 FRs proven; no findings
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->
+- A test written first must not share a batch with the code that makes it pass (found by the
+  DOD-22.2 trial).
