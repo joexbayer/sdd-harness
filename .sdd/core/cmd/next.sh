@@ -41,6 +41,9 @@ title=$IR_TITLE
 echo "Item $ID ($ITYPE): $title"
 echo "File: $IFILE"
 echo "Phase: $PHASE ($WHY)"
+# FR-24.6: what this item waits for; it blocks only ship (D-24.2).
+waits_for "$IR_DEPENDS"
+[ -z "$WAITS" ] || echo "Waits for: $WAITS (plan and build on; ship waits until they have shipped)"
 echo
 # One batch at a time (task_batch): its tasks first, each with the requirements it serves.
 if [ "$WHYCODE" = task ]; then

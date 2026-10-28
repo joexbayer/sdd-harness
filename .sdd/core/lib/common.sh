@@ -1370,6 +1370,15 @@ function deps_unmet(list,   n, x, i, o) {
 }
 '
 
+# waits_for <depends list>: the refs of an item's depends: that have not shipped, in words
+# (deps_unmet, e.g. "31 (Auth API)"), into WAITS; empty when every one has (FR-24.6). Reads the
+# item rows only when the list is not empty, so items without depends: cost nothing.
+waits_for() {
+	WAITS=
+	[ -n "$1" ] || return 0
+	WAITS=$(ROWS=$(item_rows) D=$1 awk "$AWK_DEPS"'BEGIN { deps_load(); print deps_unmet(ENVIRON["D"]) }')
+}
+
 # --- constitution -----------------------------------------------------------------
 # specs/constitution.md holds a system's ground truths. Each article is enforced, either by a
 # command that runs inside `check` or by the human at every review, and it changes only

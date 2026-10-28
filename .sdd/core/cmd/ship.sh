@@ -208,6 +208,11 @@ if [ "$(gate_level reviewed "$ITYPE")" != off ]; then
 		gate reviewed "item $ID: code changed since your review${since:+ ($(joinlist "$since"))} (gate reviewed): run $CMD review"
 	fi
 fi
+# FR-24.6: an item ships after the items and roadmap entries it depends on (D-24.2: only ship waits).
+if [ "$(gate_level depends "$ITYPE")" != off ]; then
+	waits_for "$(fm_get depends "$IFILE")"
+	[ -z "$WAITS" ] || gate depends "item $ID: waits for $WAITS (gate depends)"
+fi
 # Tasks: sdd ticks a box when its test passes, git proves it: a ticked task needs a commit
 # naming it, in every profile, and, when that commit is yours, the note task done left in this
 # clone (a teammate's tick was proven on their machine). Features also need tasks, all ticked.
