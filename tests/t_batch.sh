@@ -1,5 +1,5 @@
-# Item 17: FR-17.1 task sizes, FR-17.2 sdd task next prints the next batch, FR-17.5 unknown
-# task attributes make the task unreadable.
+# Item 17: FR-17.1 task sizes, FR-17.2 sdd task next prints the next batch, FR-17.3 next and
+# sdd run builder show the batch, FR-17.5 unknown task attributes make the task unreadable.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -63,6 +63,27 @@ git config -f .sdd/config build.batch 2
 assert_contains "$(sdd task next)" 'batch   T-2.1 T-2.2'
 assert_not_contains "$(sdd task next)" 'T-2.3'
 git checkout -q -- .sdd/config
+
+# FR-17.3: next shows the whole batch, each task as for one task, and how to commit it.
+out=$(sdd next)
+assert_contains "$out" 'Current batch: T-2.1 T-2.2 T-2.3'
+assert_contains "$out" 'Task: T-2.1 Small 1'
+assert_contains "$out" 'Task: T-2.3 Small 3'
+assert_not_contains "$out" 'T-2.4'
+assert_contains "$out" 'serves  FR-2.1 WHEN x THE SYSTEM SHALL y.'
+assert_contains "$out" 'e.g. feat(2): T-2.1 T-2.2 T-2.3 Small 1; Small 2; Small 3'
+# FR-17.3: sdd run builder (item 16) runs on that batch: its prompt is next's, its log names it.
+mkdir -p "$T/bin" "$T/stub"
+cat >"$T/bin/narrow" <<'EOF'
+#!/bin/sh
+while [ $# -gt 0 ]; do [ "$1" = -p ] && printf '%s\n' "$2" >"$STUB/narrow.prompt"; shift; done
+echo '{"type":"finish","exit":0,"verdict":"passed","tokens":{"in":1000,"out":100}}'
+EOF
+chmod +x "$T/bin/narrow"
+setcfg role.builder.tier small && setcfg tier.small.agent narrow && setcfg tier.small.model m
+out=$(export PATH="$T/bin:$PATH" STUB="$T/stub"; sdd run builder 2 2>&1) || fail "run failed: $out"
+assert_contains "$out" 'item 2 T-2.1 T-2.2 T-2.3 · started'
+assert_contains "$(cat "$T/stub/narrow.prompt")" 'Current batch: T-2.1 T-2.2 T-2.3'
 
 # FR-17.5: an attribute sdd does not know makes the task unreadable, instead of being read into
 # the attribute before it; so does a size other than S, M or L. task done and the tasks gate refuse.

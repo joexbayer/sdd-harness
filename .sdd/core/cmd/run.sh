@@ -37,7 +37,9 @@ case $WHYCODE in
 approval | changed | ready | pr | status) usage_die "item $ID is waiting for the human ($WHY): no role runs now" ;;
 esac
 phase=$PHASE
+# In build, the role works the current batch of tasks (task_batch), which next shows it.
 task=$TASK
+[ -z "$task" ] || task=$(ir_batch | cut -f1 | paste -sd ' ' -)
 run_slot
 n=$RUN
 dir=$RUNDIR

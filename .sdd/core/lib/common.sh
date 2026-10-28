@@ -553,6 +553,11 @@ task_batch() {
 		{ print; n++ }'
 }
 
+# ir_batch: task_batch for the item item_read read (IR_FACTS), without reading it again.
+ir_batch() {
+	printf '%s\n' "$IR_FACTS" | awk -F '\t' "$AWK_TASK"'$1 == "task" && $2 ~ /^T-[0-9]+\.[0-9]+$/ { print task_row($2, $3, $4) }' | task_batch
+}
+
 # task_commit <task id>: the newest commit on this branch (since the base) whose subject names
 # the task, as a whole ID: T-4.1 is not T-4.10.
 task_commit() {

@@ -74,7 +74,7 @@ subagents (one per batch), ticks all three tasks and stops at review.
 
 ## Tasks (optional)
 - [x] T-17.1 Task sizes, unknown attributes refused, and `sdd task next`, FR-17.1, FR-17.2, FR-17.5 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/config, .sdd/core/prompts/plan.md, .sdd/core/templates/feature.md, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh; size: M)
-- [ ] T-17.2 The batch in `next` and `sdd run builder`, FR-17.3 (files: .sdd/core/cmd/next.sh, .sdd/core/cmd/run.sh, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh; size: S)
+- [x] T-17.2 The batch in `next` and `sdd run builder`, FR-17.3 (files: .sdd/core/cmd/next.sh, .sdd/core/cmd/run.sh, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh; size: S)
 - [ ] T-17.3 The build loop in the sdd-build skill, FR-17.4 (files: .sdd/core/agents/skills/build.md, .sdd/core/agents/skills/build.claude.md, tests/t_build_loop.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_build_loop.sh; size: M)
 - [ ] T-17.4 Help, design and README (files: .sdd/core/cmd/help.sh, specs/design.md, README.md; size: S)
 
