@@ -11,7 +11,7 @@ awk '/^## What changes$/ { print; print "FR-1.1 WHEN a page is asked for THE SYS
 	print "- [ ] T-1.1 Query, FR-1.1 (files: src.txt; test: true)"
 	print "- [ ] T-1.2 Page, FR-1.1 (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
-echo code >src.txt && sdd task done T-1.1 >/dev/null 2>&1 && git add -A && git commit -qm "feat(1): T-1.1 query" || fail "T-1.1 failed"
+echo code >src.txt && sdd task 'done' T-1.1 >/dev/null 2>&1 && git add -A && git commit -qm "feat(1): T-1.1 query" || fail "T-1.1 failed"
 assert_contains "$(sdd next)" 'T-1.2 Page'
 
 # A git that logs each call, first on PATH.
