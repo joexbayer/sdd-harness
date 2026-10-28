@@ -31,6 +31,11 @@ have the main agent loop: `sdd task next`, one builder subagent (or `sdd run bui
 batch, `sdd task done` for each of its tasks and a commit naming them, until no task is open; on
 the first failure it stops and reports; then the check and Built, as today.
   e.g. "now let's build" → batch 1 (T-4.1, T-4.2) ticked and committed → batch 2 (T-4.3) → …
+FR-17.5 WHEN a task line has an attribute sdd does not know (anything but files, test, expect,
+size) THE SYSTEM SHALL mark the task unreadable, as it does other grammar errors, so `task done`
+and the tasks gate refuse it instead of reading the text into the attribute before it.
+  e.g. `(test: make t; colour: red)` → "T-4.1: unknown attribute colour"; before: test was
+  "make t; colour: red"
 
 ## Not in scope (optional)
 Parallel tasks (independent tasks in separate worktrees), building across items (the
@@ -68,7 +73,7 @@ DOD-17.2 On a scratch repo, "now let's build" on an item with S, S, L tasks runs
 subagents (one per batch), ticks all three tasks and stops at review.
 
 ## Tasks (optional)
-- [ ] T-17.1 Task sizes and `sdd task next`, FR-17.1, FR-17.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/config, .sdd/core/prompts/plan.md, .sdd/core/templates/feature.md, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh; size: M)
+- [ ] T-17.1 Task sizes, unknown attributes refused, and `sdd task next`, FR-17.1, FR-17.2, FR-17.5 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/config, .sdd/core/prompts/plan.md, .sdd/core/templates/feature.md, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh; size: M)
 - [ ] T-17.2 The batch in `next` and `sdd run builder`, FR-17.3 (files: .sdd/core/cmd/next.sh, .sdd/core/cmd/run.sh, tests/t_batch.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_batch.sh; size: S)
 - [ ] T-17.3 The build loop in the sdd-build skill, FR-17.4 (files: .sdd/core/agents/skills/build.md, .sdd/core/agents/skills/build.claude.md, tests/t_build_loop.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_build_loop.sh; size: M)
 - [ ] T-17.4 Help, design and README (files: .sdd/core/cmd/help.sh, specs/design.md, README.md; size: S)
