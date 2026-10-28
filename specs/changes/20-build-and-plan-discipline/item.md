@@ -8,42 +8,51 @@ created: 2026-10-28
 # 20 Build and plan discipline
 
 ## Why
-<!-- The problem in plain words: who hurts, and how. 2-4 lines. -->
+The builder may be a small coder model (qwen in item 16's runs). Such models keep patching when
+a fix fails, write tests that pass whatever the code returns, and bolt new requirements onto an
+old design. Uncle Bob's ub-mode skill (github.com/unclebob/ub-mode, read 2026-10-28) names rules
+against each; sdd's prompts lack them.
 
 ## What changes
-<!-- User-visible behaviour. One requirement per entry, each with a concrete example:
-    US-20.1 As a <role> I <action>, so that <outcome>.
-    FR-20.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-      e.g. <input> → <output>
-Start each entry at the beginning of its line, ID first. IDs never change; leave gaps. -->
+FR-20.1 WHEN an agent builds THE SYSTEM SHALL tell it (build prompt): after two fixes resting
+on the same assumption fail, write that assumption in one sentence under "## Built" and stop,
+instead of a third fix.
+  e.g. two edits to the date parser both fail the same test → Built says "assumed dates are
+  UTC; the fixture is local time", the builder stops and reports
+FR-20.2 WHEN an agent builds THE SYSTEM SHALL tell it: a test must call the code the way its
+user does and check what that user sees; a test that would still pass if every function
+returned nothing is to be rewritten.
+  e.g. a test asserting only "no exception" → rewritten to assert the returned rows
+FR-20.3 WHEN an agent plans THE SYSTEM SHALL tell it (plan prompt): take complexity out before
+adding any, and plan what would have been built had the requirement existed from the start,
+delivered in tasks, rather than bolting it on.
+  e.g. a third special case in one function → the plan reshapes the function, then adds the case
+FR-20.4 WHEN someone reads the README THE SYSTEM SHALL say in its opening that sdd checks its
+workflow (approval, test-first tasks, check results, finish gate) rather than asking the
+agent to follow rules.
+  e.g. the first paragraph names those checks
 
 ## Not in scope (optional)
-<!-- What this deliberately leaves out, and where it went. -->
+- Uncle Bob's quality tools (crapper, dryer, mutator): language-specific; any of them already
+  fits a `[check] run` line. Suggesting one in `init` can come later.
+- Glossary, idempotency and shared-state rules: general advice, not sdd's to enforce.
 
 ## How
-<!-- What a reviewer needs: an ASCII sketch of the moving parts, key types or signatures,
-and the decisions they would question, each at the start of its line:
-    D-20.1 <decision>, because <reason>. -->
+Text only: `prompts/build.md` (all build types include it), `prompts/plan.md`, `README.md`.
+A test runs `sdd next` in the build and plan phases and finds each rule.
+D-20.1 Prompt rules, not gates, because neither "same assumption" nor "behaviour test" can be
+judged by a script; sdd already gates what a script can (red-first tasks, check results).
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-20.4 rejects non-images and files over 5 MB -->
-
-## Questions (optional)
-<!-- Q-20.1 <question> → recommend: <answer>. Resolve before building. -->
+none: prompt and README text only; no new input, command or dependency.
 
 ## Done when
-<!-- DOD-20.1 <observable outcome>, e.g. "works against staging". -->
+DOD-20.1 `sdd check` passes, with a test naming FR-20.1 to FR-20.3.
 
 ## Tasks (optional)
-<!-- Small, ordered steps the builder does one at a time, each in one sitting, each with a test
-of its own (so it can pass before the next task exists):
-    - [ ] T-20.1 Page the orders query, FR-20.1 (files: src/orders.js; test: npm test -- orders; size: S)
-Size each task `S`, `M` or `L` (none is M): consecutive S tasks go to one builder together, M and
-L ones alone. Add `; expect: fail` for a test written first (it must fail); without `test:` the
-full check runs. `.sdd/bin/sdd task done T-20.1` ticks a task when its test passes. -->
+- [ ] T-20.1 Build prompt rules, FR-20.1, FR-20.2 (files: .sdd/core/prompts/build.md, tests/t_discipline.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_discipline.sh)
+- [ ] T-20.2 Plan prompt rule, FR-20.3 (files: .sdd/core/prompts/plan.md, tests/t_discipline.sh; test: SH=/bin/sh SRC=$PWD sh tests/t_discipline.sh)
+- [ ] T-20.3 README opening, FR-20.4 (files: README.md)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
