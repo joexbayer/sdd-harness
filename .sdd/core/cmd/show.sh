@@ -13,7 +13,7 @@ done
 [ -n "$id" ] || usage_die "usage: $NAME show <id> [--json]"
 need_repo
 
-src=$(item_sources | while IFS="$(printf '\t')" read -r o r p; do
+src=$(item_sources | while IFS="$(printf '\t')" read -r o r p _; do
 	[ "$(id_of "${p%/item.md}")" = "$id" ] && printf '%s\t%s\t%s\n' "$o" "$r" "$p"
 done | head -n 1)
 [ -n "$src" ] || die "no item $id (see: $CMD ls)"

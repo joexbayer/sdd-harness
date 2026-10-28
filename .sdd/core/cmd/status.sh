@@ -5,9 +5,7 @@ need_repo
 
 # open_items: "<id>\t<type>\t<title>\t<branch>" for every open item on its own local branch.
 open_items() {
-	item_sources | while IFS="$(printf '\t')" read -r o r p; do
-		[ "$o" = local ] && item_row "$o" "$r" "$p"
-	done | awk -F '\t' '$3 == "open" { print $1 "\t" $2 "\t" $8 "\t" $9 }' | sort -n
+	item_rows local | awk -F '\t' '$3 == "open" { print $1 "\t" $2 "\t" $8 "\t" $9 }' | sort -n
 }
 
 if current_item; then

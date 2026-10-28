@@ -26,8 +26,7 @@ need_repo
 me=$(git config user.name || true)
 [ -z "$mine" ] || [ -n "$me" ] || die "--mine needs your git user.name (git config user.name \"…\")"
 
-rows=$(item_sources | while IFS="$(printf '\t')" read -r o r p; do item_row "$o" "$r" "$p"; done |
-	awk -F '\t' '$10 == "archive" || $3 == "open" || $17 == "pr"')
+rows=$(item_rows | awk -F '\t' '$10 == "archive" || $3 == "open" || $17 == "pr"')
 
 # Pick the rows, then turn facts into the four cells: item, state, who, when. The fields are
 # item_row's (lib/common.sh): $1 id, $3 status, $4 phase, $6/$7 tasks, $8 title,

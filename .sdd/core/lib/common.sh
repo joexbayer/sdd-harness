@@ -10,6 +10,7 @@ SPECS=specs
 DIRNAME=${SDD_HOME##*/}
 CMD="$DIRNAME/bin/$NAME"
 PHASE_FP=
+PHASE_REF=
 
 die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 1; }
 usage_die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 2; }
@@ -23,6 +24,7 @@ need_repo() {
 	cd "$ROOT" || exit 1
 	ST="$(git rev-parse --path-format=absolute --git-common-dir)/$NAME"
 	mkdir -p "$ST/checks"
+	cfg_load
 }
 
 # --- paths and config -------------------------------------------------------------
@@ -40,17 +42,71 @@ sdd_path() {
 
 user_config() { printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/$NAME/config"; }
 
+# cfg_load: read the three config files once, into CFG_TAB: lines "<n> <key>=<value>" as
+# `git config --list` prints them (git parses the files), n = 1 project, 2 user, 3 core. cfg,
+# cfg_all, cfg_every and cfg_mine look keys up there instead of running git each time; before
+# need_repo has loaded it (CFG_ON empty) they read the files.
+CFG_TAB=
+CFG_ON=
+cfg_load() {
+	CFG_TAB=$(
+		_n=0
+		for _f in "$SDD_HOME/config" "$(user_config)" "$SDD_HOME/core/config"; do
+			_n=$((_n + 1))
+			[ -f "$_f" ] || continue
+			echo "#$_n"
+			git config -f "$_f" --list
+		done | awk '/^#[123]$/ { n = substr($0, 2); next } { print n " " $0 }')
+	CFG_ON=1
+}
+
+# cfg_tab <get|all|every> <key> <files>: look <key> up in CFG_TAB, in the files listed (e.g.
+# "123", in lookup order). get: the last value in the first file that has it (git config --get);
+# all: every value in the first file that has any (--get-all); every: every value in each file in
+# turn. Fails when no file has it. Sections and names compare case-insensitively, as in git.
+cfg_tab() {
+	CFG_TAB=$CFG_TAB M=$1 K=$2 F=$3 awk '
+	function norm(k,   a, b) {
+		a = index(k, "."); b = k; sub(/.*[.]/, "", b)
+		return a ? tolower(substr(k, 1, a - 1)) substr(k, a, length(k) - a - length(b) + 1) tolower(b) : k
+	}
+	BEGIN {
+		k = norm(ENVIRON["K"]); m = ENVIRON["M"]; fs = ENVIRON["F"]
+		n = split(ENVIRON["CFG_TAB"], l, "\n")
+		for (i = 1; i <= n; i++) {
+			r = substr(l[i], 3); e = index(r, "=")
+			if ((e ? substr(r, 1, e - 1) : r) != k) continue
+			f = substr(l[i], 1, 1); v = e ? substr(r, e + 1) : ""
+			c[f]++; last[f] = v; all[f] = all[f] v "\n"
+		}
+		for (j = 1; j <= length(fs); j++) {
+			f = substr(fs, j, 1)
+			if (!c[f]) continue
+			found = 1
+			if (m == "get") { print last[f]; exit }
+			printf "%s", all[f]
+			if (m == "all") exit
+		}
+		exit !found
+	}'
+}
+
 # cfg <key> [default]: first hit in project, user, core config (git-config format).
 cfg() {
-	for _f in "$SDD_HOME/config" "$(user_config)" "$SDD_HOME/core/config"; do
-		[ -f "$_f" ] && git config -f "$_f" --get "$1" && return 0
-	done
+	if [ -n "$CFG_ON" ]; then
+		cfg_tab get "$1" 123 && return 0
+	else
+		for _f in "$SDD_HOME/config" "$(user_config)" "$SDD_HOME/core/config"; do
+			[ -f "$_f" ] && git config -f "$_f" --get "$1" && return 0
+		done
+	fi
 	[ $# -gt 1 ] && printf '%s\n' "$2" && return 0
 	return 1
 }
 
 # cfg_all <key>: all values of a multi-valued key, from the first file that has any.
 cfg_all() {
+	[ -z "$CFG_ON" ] || { cfg_tab all "$1" 123; return; }
 	for _f in "$SDD_HOME/config" "$(user_config)" "$SDD_HOME/core/config"; do
 		[ -f "$_f" ] && git config -f "$_f" --get-all "$1" && return 0
 	done
@@ -60,6 +116,7 @@ cfg_all() {
 # cfg_every <key>: every value of a multi-valued key from core, user and project config
 # together: a list that adds up, unlike cfg_all, where the first file with any wins.
 cfg_every() {
+	[ -z "$CFG_ON" ] || { cfg_tab every "$1" 321; return 0; }
 	for _f in "$SDD_HOME/core/config" "$(user_config)" "$SDD_HOME/config"; do
 		[ -f "$_f" ] && git config -f "$_f" --get-all "$1"
 	done
@@ -89,9 +146,13 @@ tier_ok() {
 # cfg_mine <key> [default]: a tier or agent setting, the developer's own config first, then the
 # project's: the team names roles, each developer chooses the agent and model behind them.
 cfg_mine() {
-	for _f in "$(user_config)" "$SDD_HOME/config" "$SDD_HOME/core/config"; do
-		[ -f "$_f" ] && git config -f "$_f" --get "$1" && return 0
-	done
+	if [ -n "$CFG_ON" ]; then
+		cfg_tab get "$1" 213 && return 0
+	else
+		for _f in "$(user_config)" "$SDD_HOME/config" "$SDD_HOME/core/config"; do
+			[ -f "$_f" ] && git config -f "$_f" --get "$1" && return 0
+		done
+	fi
 	[ $# -gt 1 ] && printf '%s\n' "$2"
 }
 
@@ -358,6 +419,16 @@ check_passed_here() {
 	grep -qx "fp=$_fp" "$_rec" && grep -qx 'result=pass' "$_rec"
 }
 
+# phase_check_passed: check_passed_here for the code item_phase judges: the working tree, or the
+# committed code of the ref the item was read from (PHASE_REF, see item_load), fingerprinted only
+# when a check was recorded for the item at all.
+phase_check_passed() {
+	[ -f "$ST/checks/$ID" ] || return 1
+	[ -z "${PHASE_REF:-}" ] || [ -n "$PHASE_FP" ] ||
+		PHASE_FP=$(git ls-tree "$PHASE_REF" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
+	check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}
+}
+
 # item_phase: sets PHASE (plan|build|review|done), WHY (one line for people), TASK (the current task,
 # in build), WHYCODE (the same
 # as a stable word for programs: frontmatter|status|fill|approval|changed|task|check|built|ready)
@@ -404,7 +475,7 @@ item_phase() {
 			WHY="task $(tsv 1 "$_t") of $(tsv 3 "$_t"): $(tsv 2 "$_t")"
 			WHYCODE=task
 			TASK=$(tsv 1 "$_t")
-		elif [ "$(gate_level check "$ITYPE")" != off ] && ! check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}; then
+		elif [ "$(gate_level check "$ITYPE")" != off ] && ! phase_check_passed; then
 			PHASE=build
 			WHY="no passing check for the current code"
 			WHYCODE=check
@@ -674,57 +745,98 @@ function row_json() {
 }
 '
 
-# item_sources: "<origin>\t<ref>\t<path>" for every item, the first source of an id winning:
-# archive (on the base branch), worktree (the current item), local and remote branches, then
-# base (specs/changes on the base branch).
+# item_sources: "<origin>\t<ref>\t<path>\t<blob>" for every item, the first source of an id
+# winning: archive (on the base branch), worktree (the current item), local and remote branches,
+# then base (specs/changes on the base branch). <blob> is the item file's hash in <ref>, empty
+# for the worktree (its file may have edits).
 item_sources() {
 	_base=$(cfg sdd.base main)
 	{
-		git ls-tree -r --name-only "$_base" -- "$SPECS/archive" 2>/dev/null | grep '/item\.md$' |
-			sed "s|^|archive	$_base	|"
-		current_item && printf 'worktree\t%s\t%s\n' "$BRANCH" "$IFILE"
+		git ls-tree -r "$_base" -- "$SPECS/archive" 2>/dev/null | O=archive R=$_base P1='' P2='' awk -F '\t' "$AWK_TREE"
+		current_item && printf 'worktree\t%s\t%s\t\n' "$BRANCH" "$IFILE"
 		for _kind in heads remotes; do
 			git for-each-ref --format='%(refname:short)' "refs/$_kind" | while IFS= read -r _b; do
 				case $_b in */HEAD | HEAD) continue ;; esac
 				_bid=$(id_of "$_b") || continue
 				# An item's own branch carries it under changes/, or under archive/ once shipped into a PR.
-				git ls-tree --name-only "$_b" -- "$SPECS/changes/" "$SPECS/archive/" 2>/dev/null |
-					grep -e "^$SPECS/changes/$_bid-" -e "^$SPECS/archive/$_bid-" |
-					while IFS= read -r _d; do
-						git cat-file -e "$_b:$_d/item.md" 2>/dev/null || continue
-						printf '%s\t%s\t%s\n' "$([ $_kind = heads ] && echo local || echo remote)" "$_b" "$_d/item.md"
-					done
+				git ls-tree -r "$_b" -- "$SPECS/changes/" "$SPECS/archive/" 2>/dev/null |
+					O=$([ $_kind = heads ] && echo local || echo remote) R=$_b \
+						P1="$SPECS/changes/$_bid-" P2="$SPECS/archive/$_bid-" awk -F '\t' "$AWK_TREE"
 			done
 		done
-		git ls-tree -r --name-only "$_base" -- "$SPECS/changes" 2>/dev/null | grep '/item\.md$' |
-			sed "s|^|base	$_base	|"
-	} | while IFS="$(printf '\t')" read -r _o _r _p; do
-		_d=${_p%/item.md}
-		_i=$(id_of "$_d") || continue
-		printf '%s\t%s\t%s\t%s\n' "$_i" "$_o" "$_r" "$_p"
-	done | awk -F '\t' '!seen[$1]++ { print $2 "\t" $3 "\t" $4 }'
+		git ls-tree -r "$_base" -- "$SPECS/changes" 2>/dev/null | O=base R=$_base P1='' P2='' awk -F '\t' "$AWK_TREE"
+	} | awk -F '\t' '{
+		# The id from the folder name, as id_of has it: the digits before its first "-".
+		d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
+		if (i == "" || i ~ /[^0-9]/ || i == d || seen[i]++) next
+		print
+	}'
 }
 
+# AWK_TREE: `git ls-tree -r` lines to item_sources lines: every */item.md, as origin O and ref R.
+# With P1 and P2 set, only an item folder directly under one of those prefixes (an item branch's
+# own item).
+AWK_TREE='{
+	p = $2
+	if (p !~ /\/item\.md$/) next
+	if (ENVIRON["P1"] != "") {
+		if (index(p, ENVIRON["P1"]) == 1) r = substr(p, length(ENVIRON["P1"]) + 1)
+		else if (index(p, ENVIRON["P2"]) == 1) r = substr(p, length(ENVIRON["P2"]) + 1)
+		else next
+		if (r !~ /^[^\/]*\/item\.md$/) next
+	}
+	b = $1; sub(/.* /, "", b)
+	print ENVIRON["O"] "\t" ENVIRON["R"] "\t" p "\t" b
+}'
+
 # item_load <origin> <ref> <path>: point IFILE/ID/ITYPE at that item (a temp copy unless it
-# is the working file; ITMP names it for cleanup) and set PHASE_FP to the fingerprint of the
-# ref's committed code, so item_phase judges that code instead of the working tree.
+# is the working file; ITMP names it for cleanup) and set PHASE_REF to the ref, so item_phase
+# judges that ref's committed code instead of the working tree.
 item_load() {
 	ITMP=
 	IPR=
 	PHASE_FP=
+	PHASE_REF=
 	if [ "$1" = worktree ]; then
 		IFILE=$3
 	else
 		ITMP=$(mktemp "${TMPDIR:-/tmp}/$NAME-item.XXXXXX") || return 1
 		git show "$2:$3" >"$ITMP" 2>/dev/null || { rm -f "$ITMP"; return 1; }
 		IFILE=$ITMP
-		PHASE_FP=$(git ls-tree "$2" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
+		PHASE_REF=$2
 	fi
 	# An item archived on a branch but not on the base was shipped into a PR (see current_item).
 	case $1:$3 in archive:*) ;; *:"$SPECS/archive/"*) IPR=1 ;; esac
 	# The id comes from the folder name, like everywhere else; the frontmatter repeats it.
 	ID=$(id_of "${3%/item.md}")
 	ITYPE=$(fm_get type "$IFILE")
+}
+
+# item_facts <origin>: for a loaded item (item_load), what its file, origin and path and the
+# config decide, as TSV: 1 cache (1 when only those decide it, see item_rows) 2 id 3 type
+# 4 status 5 phase 6 frs 7 tasks_done 8 tasks_total 9 title 10 questions_open 11 approved_by
+# 12 shipped 13 reason 14 reason_code.
+item_facts() {
+	item_phase
+	# A teammate's check results live on their machine: say what the file alone cannot.
+	if [ "$1" = remote ] && [ "$PHASE" = build ] && [ -z "$(missing_sections "$IFILE" built)" ]; then
+		PHASE='review?'
+	fi
+	_counts=$(parse_item "$IFILE" "$ID" | awk -F '\t' '
+		$1 == "fr" { f++ } $1 == "task" { t++; if ($3 == "done") d++ } $1 == "q" && $3 == "open" { q++ }
+		END { printf "%d\t%d\t%d\t%d", f, d, t, q }')
+	_ap=$(fm_get approved "$IFILE")
+	# "approved: <plan hash> <date> <name, may contain spaces>"
+	if [ -n "$_ap" ]; then
+		_ap=${_ap#* }
+		_ap=${_ap#* }
+	fi
+	# The check's result (check, built, ready) and the working tree depend on more than the file.
+	_fixed=1
+	case $1:$WHYCODE in worktree:* | *:check | *:built | *:ready) _fixed=0 ;; esac
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$_fixed" "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
+		"$PHASE" "${_counts%"$(printf '\t')"*}" "$(fm_get title "$IFILE")" "${_counts##*"$(printf '\t')"}" \
+		"$_ap" "$(fm_get shipped "$IFILE")" "$WHY" "$WHYCODE"
 }
 
 # item_row <origin> <ref> <path>: one TSV summary line (see row_json):
@@ -735,36 +847,109 @@ item_load() {
 # tree has edits); "opened_by" is the author of the item's open commit.
 item_row() {
 	item_load "$@" || return 1
-	item_phase
-	# A teammate's check results live on their machine: say what the file alone cannot.
-	if [ "$1" = remote ] && [ "$PHASE" = build ] && [ -z "$(missing_sections "$IFILE" built)" ]; then
-		PHASE='review?'
-	fi
-	_counts=$(parse_item "$IFILE" "$ID" | awk -F '\t' '
-		$1 == "fr" { f++ } $1 == "task" { t++; if ($3 == "done") d++ } $1 == "q" && $3 == "open" { q++ }
-		END { printf "%d\t%d\t%d\t%d", f, d, t, q }')
-	_br=$2
-	[ "$1" = archive ] && _br=
-	_ap=$(fm_get approved "$IFILE")
-	# "approved: <plan hash> <date> <name, may contain spaces>"
-	if [ -n "$_ap" ]; then
-		_ap=${_ap#* }
-		_ap=${_ap#* }
-	fi
-	_shipped=$(fm_get shipped "$IFILE")
-	_by=$(git log -1 --format=%an --grep="^docs($ID): open " "$2" 2>/dev/null)
-	if [ -n "$_shipped" ]; then
-		_act=$_shipped
-	elif [ "$1" = worktree ] && [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-		_act=$(date +%F)
-	else
-		_act=$(git log -1 --format=%cs "$2" 2>/dev/null)
-	fi
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$ID" "$ITYPE" "$(fm_get status "$IFILE")" \
-		"$PHASE" "${_counts%"$(printf '\t')"*}" "$(fm_get title "$IFILE")" "$_br" "$1" "${_counts##*"$(printf '\t')"}" \
-		"$_ap" "$_by" "$_shipped" "$_act" "$WHY" "$WHYCODE"
+	_facts=$(item_facts "$1")
 	[ -z "$ITMP" ] || rm -f "$ITMP"
 	PHASE_FP=
+	PHASE_REF=
+	printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "${_facts#*"$(printf '\t')"}" | item_rows_finish
+}
+
+# item_rows [origin]: item_row for every item (item_sources), or only those from <origin>. The
+# facts an item's file decides (item_facts) are cached in .git/sdd/cache/ (cache_file) under the
+# file's hash, its origin and path; the rest (branch, opened_by, active) is read from git for
+# all rows at once. A row whose facts depend on more (a check result, the working tree) is
+# never cached. Deleting the cache changes nothing but speed (C-2).
+item_rows() {
+	_cf=$(cache_file) || _cf=/dev/null
+	_src=$(item_sources | O=${1:-} awk -F '\t' 'ENVIRON["O"] == "" || $1 == ENVIRON["O"]')
+	[ -n "$_src" ] || return 0
+	# Facts for the files the cache does not know yet; the ones only their file decides go into it.
+	_new=$(printf '%s\n' "$_src" | C=$_cf awk -F '\t' "$AWK_CACHE"'!(($4 SUBSEP $1 SUBSEP $3) in c) || $1 == "worktree"' |
+		while IFS="$(printf '\t')" read -r _o _r _p _bl; do
+			item_load "$_o" "$_r" "$_p" || continue
+			_facts=$(item_facts "$_o")
+			[ -z "$ITMP" ] || rm -f "$ITMP"
+			_fixed=${_facts%%"$(printf '\t')"*}
+			_facts=${_facts#*"$(printf '\t')"}
+			[ -z "$_bl" ] || [ "$_fixed" != 1 ] ||
+				printf '%s\t%s\t%s\t%s\n' "$_bl" "$_o" "$_p" "$_facts" >>"$_cf"
+			printf '%s\t%s\t%s\t%s\n' "$_o" "$_r" "$_p" "$_facts"
+		done)
+	printf '%s\n' "$_src" | N=$_new C=$_cf awk -F '\t' "$AWK_CACHE"'
+		BEGIN { n = split(ENVIRON["N"], l, "\n"); for (i = 1; i <= n; i++) { split(l[i], f, "\t"); nf[f[1] SUBSEP f[3]] = substr(l[i], length(f[1] f[2] f[3]) + 4) } }
+		{
+			if (($1 SUBSEP $3) in nf) x = nf[$1 SUBSEP $3]
+			else if (($4 SUBSEP $1 SUBSEP $3) in c) x = c[$4 SUBSEP $1 SUBSEP $3]
+			else next
+			print $1 "\t" $2 "\t" $3 "\t" x
+		}' | item_rows_finish
+}
+
+# AWK_CACHE: load the cache file C into c[<blob>, <origin>, <path>] = the cached facts (item_facts
+# without its first field). Lines of the wrong shape (a write cut short) are skipped.
+AWK_CACHE='BEGIN {
+	while ((getline cl < ENVIRON["C"]) > 0) {
+		if (split(cl, cf, "\t") != 16) continue
+		ck = cf[1] SUBSEP cf[2] SUBSEP cf[3]
+		if (!(ck in c)) c[ck] = substr(cl, length(cf[1] cf[2] cf[3]) + 4)
+	}
+}
+'
+
+# item_rows_finish: "<origin>\t<ref>\t<path>\t<facts without the cache field>" lines (13 facts)
+# to item_row lines, adding what git says: opened_by (open_authors) and active.
+item_rows_finish() {
+	_in=$(cat)
+	[ -n "$_in" ] || return 0
+	_tab=$(printf '\t')
+	# Per ref: who opened which item, and the day of its last commit (for rows not shipped).
+	_git=$(printf '%s\n' "$_in" | cut -f2 | sort -u | while IFS= read -r _r; do
+		open_authors "$_r" | R=$_r awk '{ print "a\t" ENVIRON["R"] "\t" $0 }'
+		printf '%s\n' "$_in" | R=$_r awk -F '\t' '$2 == ENVIRON["R"] && $14 == "" { f = 1 } END { exit !f }' &&
+			printf 'd\t%s\t%s\n' "$_r" "$(git log -1 --format=%cs "$_r" 2>/dev/null)"
+	done)
+	_today=
+	case $_in in worktree"$_tab"* | *"
+worktree$_tab"*) [ -z "$(git status --porcelain 2>/dev/null)" ] || _today=$(date +%F) ;; esac
+	printf '%s\n' "$_in" | G=$_git TODAY=$_today awk -F '\t' -v OFS='\t' '
+		BEGIN {
+			n = split(ENVIRON["G"], l, "\n")
+			for (i = 1; i <= n; i++) {
+				split(l[i], f, "\t")
+				if (f[1] == "a") by[f[2] SUBSEP f[3]] = f[4]; else day[f[2]] = f[3]
+			}
+		}
+		{
+			# $4 id 5 type 6 status 7 phase 8 frs 9 done 10 total 11 title 12 q 13 approved_by
+			# 14 shipped 15 reason 16 reason_code
+			act = $14 != "" ? $14 : ($1 == "worktree" && ENVIRON["TODAY"] != "") ? ENVIRON["TODAY"] : day[$2]
+			print $4, $5, $6, $7, $8, $9, $10, $11, ($1 == "archive" ? "" : $2), $1, $12, $13, by[$2 SUBSEP $4], $14, act, $15, $16
+		}'
+}
+
+# open_authors <ref>: "<id>\t<author>" for every item opened in <ref>'s history: the author of
+# the newest commit with a "docs(<id>): open " line, as `git log -1 --grep` finds it for one id.
+open_authors() {
+	git log --format='%x01%an%n%B' --grep='^docs([0-9][0-9]*): open ' "$1" 2>/dev/null | awk '
+		substr($0, 1, 1) == "\001" { a = substr($0, 2); next }
+		/^docs\([0-9]+\): open / { i = substr($0, 6, index($0, ")") - 6); if (!(i in s)) { s[i] = 1; print i "\t" a } }'
+}
+
+# cache_file: this clone's cache of item facts for this sdd code and config:
+# .git/sdd/cache/facts.<hash of both>. Other cache files (older code or config) are removed when
+# a new one starts.
+cache_file() {
+	_ck=$({
+		cat "$SDD_HOME/VERSION" "$SDD_HOME/core/lib/common.sh" 2>/dev/null
+		printf '%s\n%s\n' "$CMD" "$CFG_TAB"
+	} | git hash-object --stdin) || return 1
+	_cf="$ST/cache/facts.$_ck"
+	if [ ! -f "$_cf" ]; then
+		mkdir -p "$ST/cache" || return 1
+		rm -f "$ST/cache"/facts.*
+		: >"$_cf" || return 1
+	fi
+	printf '%s\n' "$_cf"
 }
 
 # parse_item <file> <id>: the facts in the plan part of an item, guidance comments removed,
