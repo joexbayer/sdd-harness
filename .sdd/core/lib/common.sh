@@ -384,10 +384,12 @@ plan_frs() {
 # plan_findings: the problems in a plan that need no judgement (FR-19.1), from parse_item's lines
 # on stdin (or IR_FACTS), in plan order: "<id>\t<short name>\t<problem>". An FR no task names
 # (when there are tasks), an FR with no example, an open question, an ID written twice, a task
-# naming an FR the plan lacks, a task line task_rows cannot read. The short name is the start
-# of the text: an FR's after "SHALL", a question's up to its "?".
+# naming an FR the plan lacks, a task line task_rows cannot read; for roadmap entries (FR-24.2) an
+# unknown type, an after: that is not an earlier entry, a line entry_row cannot read, and a roadmap
+# with none. The short name is the start of the text: an FR's after "SHALL", a question's up to its
+# "?"; an entry has none.
 plan_findings() {
-	awk -F '\t' "$AWK_TASK"'
+	TY=${ITYPE:-} I=${ID:-} TYPES=$(types | paste -sd ' ' -) awk -F '\t' "$AWK_TASK$AWK_ENTRY"'
 	function short(s,   n, w, i, o) {
 		n = split(s, w, " "); o = ""
 		for (i = 1; i <= n && i <= 6; i++) o = o (i > 1 ? " " : "") w[i]
@@ -402,6 +404,11 @@ plan_findings() {
 		if ($1 == "fr") { fr[$2] = 1; noeg[n] = ($5 == ""); if ((i = index(s, "SHALL "))) s = substr(s, i + 6) }
 		if ($1 == "q" && (i = index(s, "?"))) s = substr(s, 1, i)
 		if ($1 == "q") open[n] = ($3 != "decided")
+		if ($1 == "r") {
+			split(entry_row($2, $4), r, "\t"); entries++; epos[$2] = n
+			bad[n] = r[5]; after[n] = r[4]
+			if (r[5] == "" && !index(" " ENVIRON["TYPES"] " ", " " r[2] " ")) bad[n] = "unknown type " r[2] " (types: " ENVIRON["TYPES"] ")"
+		}
 		if ($1 == "task") {
 			tasks++
 			if ($2 !~ /^T-[0-9]+\.[0-9]+$/) bad[n] = "its ID must be T-<item>.<n>"
@@ -411,20 +418,54 @@ plan_findings() {
 				m = split(r[7], x, " "); for (j = 1; j <= m; j++) named[x[j]] = 1
 			}
 		}
-		name[n] = short(s)
+		name[n] = ($1 == "r") ? "" : short(s)
 	}
 	END {
+		if (ENVIRON["TY"] == "roadmap" && !entries)
+			print "Items\t\tno entries: list them as - R-" ENVIRON["I"] ".1 <type>: <title>"
 		for (i = 1; i <= n; i++) {
 			if (times[id[i]] > 1) say(i, times[id[i]] == 2 ? "written twice" : "written " times[id[i]] " times")
 			if (noeg[i]) say(i, "no e.g. example under it")
 			if (kind[i] == "fr" && tasks && !(id[i] in named)) say(i, "no task names it")
 			if (open[i]) say(i, "not decided")
-			if (bad[i] != "") say(i, "cannot read it: " bad[i])
+			if (bad[i] != "") say(i, (kind[i] == "r" && bad[i] ~ /^unknown type/) ? bad[i] : "cannot read it: " bad[i])
+			m = split(after[i], x, " ")
+			for (j = 1; j <= m; j++)
+				if (!(x[j] in epos)) say(i, "after " x[j] ", which is not an entry")
+				else if (epos[x[j]] >= i) say(i, "after " x[j] ", which is not an earlier entry")
 			m = split(names[i], x, " ")
 			for (j = 1; j <= m; j++) if (!(x[j] in fr)) say(i, "names " x[j] ", which the plan does not have")
 		}
 	}'
 }
+
+# AWK_ENTRY: entry_row(id, text) in awk: a roadmap entry (parse_item's "r" fact, text
+# "<type>: <title> (after: R-<id>.<k>, …)") as "<id>\t<type>\t<title>\t<after, space-separated>\t<bad>",
+# <bad> empty or why the line cannot be read (FR-24.2).
+AWK_ENTRY='function entry_row(id, txt,   i, ty, ti, af, a, n, x, j, r, bad) {
+	ty = ""; ti = ""; af = ""; bad = ""
+	i = index(txt, ": ")
+	if (!i || (ty = substr(txt, 1, i - 1)) ~ /[ ]/ || ty == "") { ty = ""; bad = "write it as - " id " <type>: <title>" }
+	else {
+		ti = substr(txt, i + 2)
+		if ((i = index(ti, " (after:"))) {
+			if (substr(ti, length(ti)) != ")") bad = "(after: …) must end its line"
+			else {
+				a = substr(ti, i + 8, length(ti) - i - 8); ti = substr(ti, 1, i - 1)
+				n = split(a, x, ",")
+				for (j = 1; j <= n; j++) {
+					r = x[j]; gsub(/^[ ]+|[ ]+$/, "", r)
+					if (r !~ /^R-[0-9]+\.[0-9]+$/) { bad = "after: lists entry IDs, e.g. (after: R-1.1, R-1.2)"; break }
+					af = af (af == "" ? "" : " ") r
+				}
+			}
+		}
+		sub(/[ ]+$/, "", ti)
+		if (bad == "" && ti == "") bad = "it has no title"
+	}
+	return id "\t" ty "\t" ti "\t" af "\t" bad
+}
+'
 
 # findings_lines: plan_findings lines on stdin as people read them: "✗ <id> (<name>): <problem>".
 findings_lines() { awk -F '\t' '{ printf "✗ %s%s: %s\n", $1, ($2 == "" ? "" : " (" $2 ")"), $3 }'; }
@@ -1143,7 +1184,8 @@ cache_file() {
 }
 
 # parse_item <file> <id>: the facts in the plan part of an item, guidance comments removed,
-# as TSV "kind id state text example". kind is us|fr|task|d|q|dod; state is open|done for
+# as TSV "kind id state text example". kind is us|fr|task|d|q|dod|r (a roadmap entry, "- R-<id>.<n>
+# <type>: <title> (after: …)", read by entry_row); state is open|done for
 # tasks, open|decided for questions. A fact is a line starting with its ID (tasks:
 # "- [ ] T-<id>.<n>" or "- [x] …"); following lines continue it until a blank line, and
 # "e.g." lines are its example.
@@ -1167,6 +1209,7 @@ function start(kind, s,   n) {
 /^```/ { emit(); fence = !fence; next }
 fence { next }
 /^- \[[ xX]\] T-[0-9]+\.[0-9]+/ { emit(); start("task", substr($0, 7)); st = (substr($0, 4, 1) == " ") ? "open" : "done"; next }
+/^- R-[0-9]+\.[0-9]+([ ]|$)/ { emit(); start("r", substr($0, 3)); next }
 /^(US|FR|D|Q|DOD)-[0-9]+\.[0-9]+([ ]|$)/ {
 	emit(); p = substr($0, 1, index($0, "-") - 1)
 	start(p == "US" ? "us" : p == "FR" ? "fr" : p == "D" ? "d" : p == "Q" ? "q" : "dod", $0); next

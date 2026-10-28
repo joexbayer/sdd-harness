@@ -82,6 +82,10 @@
 [type "spike"]
 	gates = planned approved built
 	lands = item
+[type "roadmap"]
+	# A system as items in order (R-<id>.<n> entries); like a spike, only the item lands.
+	gates = planned analyzed approved built
+	lands = item
 
 # Output that means a whole check run proved nothing (extended regex, case-insensitive).
 # Only summary lines: per-package lines like cargo's doc-tests "running 0 tests" or go's
