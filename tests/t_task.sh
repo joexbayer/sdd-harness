@@ -89,6 +89,9 @@ out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'shipped 1 into main'
 
 # Review cases, on a second item (standard profile from above).
+# This plan is meant to reach the build with a task sdd cannot read (T-2.3), which the analyzed
+# gate (FR-19.2) blocks at approve in standard: let it only warn here.
+setcfg profile.standard.analyzed warn
 sdd new feature "Hard cases" >/dev/null 2>&1
 f=specs/changes/2-hard-cases/item.md
 fill "$f" plan
