@@ -85,7 +85,7 @@ DOD-24.2 In a scratch repo, a three-entry roadmap ships, `next` offers R-n.1, it
 - [x] T-24.2 Open an entry with new --from, FR-24.3 (files: .sdd/core/cmd/new.sh, .sdd/core/lib/common.sh, tests/t_roadmap.sh; test: sh tests/run.sh /bin/sh; size: M)
 - [x] T-24.3 Dependency state, ready entries in next and show, FR-24.4, FR-24.5 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh, .sdd/core/cmd/show.sh, .sdd/core/prompts/none.md, tests/t_roadmap.sh; test: sh tests/run.sh /bin/sh; size: L)
 - [x] T-24.4 Waits-for in next, status, ls and the depends ship gate, FR-24.6 (files: .sdd/core/cmd/next.sh, .sdd/core/cmd/status.sh, .sdd/core/cmd/ls.sh, .sdd/core/cmd/ship.sh, .sdd/core/config, tests/t_depends.sh; test: sh tests/run.sh /bin/sh; size: M)
-- [ ] T-24.5 Help, README and design, FR-24.1 (files: .sdd/core/cmd/help.sh, README.md, specs/design.md; size: S)
+- [x] T-24.5 Help, README and design, FR-24.1 (files: .sdd/core/cmd/help.sh, README.md, specs/design.md; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

@@ -74,6 +74,7 @@ Not every change takes the full path:
 | chore | dependencies, config, CI, docs | no |
 | hotfix | production is broken; write it up after | no |
 | amendment | a constitution article must change; every gate blocks | yes |
+| roadmap | a system in several items: plan their order once; only the plan lands | yes |
 
 Changes under about 20 lines with no behaviour change need no item: commit them as
 `chore: …`.
@@ -96,6 +97,7 @@ and the hooks. Windows works through WSL or Git Bash.
 | command | what it does |
 |---|---|
 | `sdd new <type> "title" [--worktree]` | start a change: a branch plus its item file |
+| `sdd new --from R-<id>.<n> [--worktree]` | open the item a shipped roadmap's entry describes |
 | `sdd next` | instructions for the current phase (agents call this) |
 | `sdd status` | the current item and its phase, or open items on local branches |
 | `sdd approve` | the human hands the plan to the agent |
@@ -170,6 +172,14 @@ The planner sizes each task (`size: S|M|L`); consecutive small ones share a buil
 (`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each. A
 test written first (`expect: fail`) ends its batch, so it is ticked while still red.
 A test written first says `expect: fail "<text>"` to count only when it fails for that reason.
+
+**Roadmaps.** A system is many items in an order. `sdd new roadmap "Shop"` plans them as
+entries under `## Items`, `- R-30.2 feature: Login page (after: R-30.1)`; `after:` names earlier
+entries only. Once the roadmap ships, `sdd next` (with no item) offers the entries that are ready,
+and `sdd new --from R-30.2` opens one with `roadmap: R-30.2` and `depends: R-30.1` in its
+frontmatter. Any item may list `depends: 31, R-30.1` by hand. Planning and building go on in
+parallel; `next`, `status` and `ls` say what an item waits for, and the `depends` gate makes
+`ship` warn (lite) or refuse (standard, strict) until those items have shipped.
 
 **Verified, then reviewed.** Before writing Built, the agent hands the item to a `verifier`
 role (ideally another model) that proves each FR by running it and reports only findings; the

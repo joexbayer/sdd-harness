@@ -110,6 +110,16 @@ refuses a dirty tree), and `fill`.
   survive a helper call in descriptive names (`pr_num`, not `_n`); item 13 was `_n` clobbered
   by `check_articles`.
 
+- bash 3.2 (macOS /bin/sh) fails to parse a `case … in x) …;; esac` inside `$( … )` when a
+  pattern's `)` closes early (`syntax error near unexpected token ;;`); dash is fine. Use
+  `[ … ] || …` inside command substitutions.
+- Roadmaps (item 24): entries are parse_item facts of kind `r` (AWK_PARSE), split by
+  `entry_row` (AWK_ENTRY); `shipped_roadmaps` reads them from the base branch (the working tree
+  when on the base, so `next` there runs no git with no roadmap); `AWK_DEPS` over `item_rows`
+  says whether a `depends:` ref has shipped and names it (`waits_for` sets WAITS). Everything
+  that reads all item rows runs only when an item has `depends:` or a roadmap has shipped:
+  keep it that way, `next`/`status` are on the git-count budget.
+
 ## Performance (item 18)
 A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git calls. So:
 - Config is read once per process (`cfg_load` in need_repo: `git config --list` per file into
@@ -133,7 +143,10 @@ A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git c
   ready) or the worktree are never cached. Branch, opened_by and active are read from git per
   ref. `rm -rf .git/sdd/cache` changes nothing but speed; tests/t_cache.sh poisons the cache to
   prove each input change misses. A new row field goes in `item_facts` (and the cache line
-  width, 16, in `AWK_CACHE`).
+  width, 18 since item 24, in `AWK_CACHE`), then `item_read` (a frontmatter key: one more line
+  in its printf and the `for _ln` skip list), `item_rows_finish`'s print and `row_json`. Row
+  fields 18 roadmap, 19 depends; ls appends PR fields after the row ($20..$25), so a new row
+  field shifts them in `row_json` and ls.sh.
 - `t_perf.sh` is sensitive to machine load (other sessions running suites: load average 14 put
   `next` at 0.27 s and `ls` at 1.3 s with unchanged code). Before blaming a change, time old vs
   new in one generated repo: copy `.sdd/core` and `.sdd/bin` from a `git worktree add … main` and

@@ -85,6 +85,7 @@ state (ID counter, check results, synced agents) lives in `$(git rev-parse
 | refactor | structure only | Goal · Invariants | described, check |
 | spike | learning | Question · Timebox · Findings · Decision | described; only the item merges, never the code |
 | amendment | a ground truth must change | Articles affected · Current text · Proposed text · Why now · Impact · Alternatives | every gate blocks in every profile; lands no code (Impact lists the items that follow) |
+| roadmap | a system in several items | Goal · Items (`R-` entries) · Done when | planned, analyzed, approved, built; only the item lands, like a spike |
 | feature | new behaviour | Why · What changes (US/FR + examples) · Not in scope · How · Questions · Done when | described, check (+ approve, tasks, trace in standard) |
 
 **Constitution.** Articles are one line, ID first (`grep '^C-' specs/constitution.md`), with
@@ -125,6 +126,7 @@ built on git state instead of edit counters.
 | trace: every FR has a test naming it | – | warn | block |
 | verifier ran: a `Verified by:` line under Built, not `none` (`verified`) | – | warn | block |
 | code unchanged since the human's `sdd review` in this clone (`reviewed`) | warn | warn | block |
+| every `depends:` ref has shipped (`depends`; not hotfix) | warn | block | block |
 | trust gate, env allowlist, role profiles | – | – | on |
 
 "Block once" follows narrow: the first stop is refused with the reason. The second is allowed,
@@ -154,6 +156,7 @@ IDs inside an item embed the item number. They never change, and gaps are fine
 | `Q-57.1` | open question, with a recommended answer |
 | `T-57.4` | task (standard+) |
 | `DOD-57.1` | observable definition of done |
+| `R-57.2` | roadmap entry: one item to open (roadmap items only) |
 | `L-12` | lesson (kb) |
 
 `git grep -wF FR-57.2` finds the requirement, its tests and its commits. Commits use
@@ -173,6 +176,8 @@ fixed keys; every other reader (the MCP server too) uses them instead of parsing
 | decision | `D-<id>.<n> … because …` | `git grep -n '^D-' specs/` |
 | question | `Q-<id>.<n> … → recommend: …`; answered with `→ decided: …` | `grep '^Q-' … \| grep -v 'decided:'` |
 | outcome | `DOD-<id>.<n> …` | |
+| roadmap entry | `- R-<id>.<n> <type>: <title>`, optionally ` (after: R-<id>.<k>, …)` naming earlier entries only (D-24.1, so no cycles); `analyze` flags an unknown type, a bad `after:`, a duplicate and a roadmap with none | `grep '^- R-30\.' specs/archive/30-*/item.md` |
+| item order | frontmatter `roadmap: R-<id>.<n>` (set by `new --from`) and `depends: 31, R-30.1` (by `new --from` from `after:`, or by hand); outside the plan hash. A ref is met once that item, or the item opened from that entry, has shipped. An entry is not opened, open (item n) or shipped (item n), derived from the items (item rows sdd sees: local, remote-tracking, archive) | `grep -l '^depends:' specs/changes/*/item.md` |
 | item state | frontmatter `status: open\|shipped\|dropped`; open items live on their branch, shipped ones in `specs/archive/` | `grep -l '^status: open' specs/*/*/item.md` |
 
 A fact counts only at the start of a line and outside HTML comments, which is why template
@@ -186,7 +191,9 @@ remote or base: where the item was read), `questions_open`, `approved_by`, `open
 of the item's open commit), `shipped` (date), `active` (shipped date, else the branch's last
 commit, today with uncommitted edits) and `reason` (why the item is in its phase). `show <id> --json` prints the same fields plus the
 arrays `stories`, `requirements` (with `example`), `tasks` (with `done`), `decisions`,
-`questions` (with `decided`) and `done_when`, each element with `id` and `text`. The current
+`questions` (with `decided`), `done_when` and `entries` (a roadmap's, with `type`, `title`,
+`after`, `state`: not opened, open or shipped, and `item`), each element with `id` and `text`.
+`ls --json` rows also carry `roadmap` and `depends` (the frontmatter, empty when none). The current
 item is read from the working file, so uncommitted plan edits show. New keys may be added;
 readers ignore keys they do not know.
 
@@ -398,7 +405,7 @@ automated behind gates, and every change leaves the code easy to change again.
 | 15 | tasks: `- [ ] T-n.m … (files; test; expect: fail)`, `sdd task done` runs a task's test and ticks it, `next` hands the builder one task, ship proves ticks by commits, the `tasks` gate (standard+) | plan big, build small: a small model does one checked step at a time |
 | 16 | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrow, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
 | 17 | task batches: `size: S\|M\|L` on tasks, `sdd task next` groups consecutive small ones (`[build] batch`), `next` and `sdd run builder` show the batch, the `sdd-build` skill loops one builder per batch until no task is open; unknown task attributes are refused | "now let's build" works the whole item without a subagent per tiny task |
-| next | multi-item plans: one roadmap item lays out the phases of a system and opens its items; `Depends on: item n` with blocked items shown in `next` and `ls` | a complex system is many items in an order |
+| 24 | multi-item plans: a `roadmap` type whose `R-` entries open items (`new --from`), `depends:` in an item's frontmatter, ready entries in `next`, entry states in `show`, what an item waits for in `next`/`status`/`ls`, and the `depends` ship gate | a complex system is many items in an order |
 | later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
 | later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | next | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model); a contract item lands only the contract; items name `Contract:` and approval pins its hash, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
