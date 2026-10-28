@@ -173,7 +173,10 @@ Follow-ups from the trial:
   it as a failure though sdd's own tick passed.
 - qwen named T-1.3 in a commit before ticking it (T-1.2 T-1.3 subject, T-1.3 still open).
 
-Check: `.sdd/bin/sdd check` passed (shellcheck and the suite under /bin/sh and dash).
+Check: `.sdd/bin/sdd check` passed (shellcheck and the suite under /bin/sh and dash), after the
+review changes with SDD_PERF_SLACK=1.5: the machine's load average was 12-17 from other
+sessions, and `hook stop` (about 14 processes) measured 0.20-0.26 s against 0.2 s on main and
+on this branch alike; at load 7 both measure 0.15 s. Follow-up: a cheaper hook stop.
 Security pass: a fresh subagent (Sonnet) given only the diff found nothing (it traced the expected
 text to `grep -F` arguments and prints only; the review record path uses the numeric ID).
 
