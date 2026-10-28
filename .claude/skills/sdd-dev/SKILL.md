@@ -76,7 +76,9 @@ refuses a dirty tree), and `fill`.
   stub `gh` on PATH over a bare origin (tests/t_forge.sh); the PR jq lives in `FORGE_JQ` and
   can be tried offline with `jq -r ".[] | $FORGE_JQ" sample.json`.
 - Tasks: `task_rows` field 8 is why sdd cannot read the line (empty when fine), field 9 the size
-  (S|M|L, M by default). A new task attribute must be added to `AWK_TASK`'s known keys (and its
+  (S|M|L, M by default), field 10 the `expect: fail "<text>"` text (field 6 is then plain
+  `fail`, so `!= fail` checks keep working). next.sh splits a row by prefix stripping, not
+  `tsv`: a new field goes last and next.sh must strip one more tab to reach it. A new task attribute must be added to `AWK_TASK`'s known keys (and its
   start-of-block list), or every task using it becomes unreadable (FR-17.5).
 - Dogfooding a grammar change: this repo's own plan is parsed by the code being changed. Until
   the new parsing is in the working tree, `sdd next`/`task done` read the new attribute wrongly
@@ -90,6 +92,12 @@ refuses a dirty tree), and `fill`.
 - A new gate: add it to `sdd.gates` in core/config as well as to each profile, because
   `gate_level` says off for any gate the type's list lacks. Types with their own `gates =`
   (hotfix, chore, spike) do not get it unless you add it there; amendment pins every gate to block.
+- Ship gates from item 22: `verified` (a `Verified by:` line under Built, not `none`; off in
+  lite) and `reviewed` (`sdd review` wrote `.git/sdd/checks/<id>.reviewed` with the patch id of
+  the code diff, `review_print`; warn in lite). A test that ships in strict needs both: write
+  the line into Built and run `sdd review` last. `setcfg` after the review is a code change
+  (`.sdd/config` is outside specs/), so the gate then says the code changed since the review.
+  Items with no code diff skip `reviewed`.
 - Plan checks (item 19): `plan_findings` reads parse_item lines on stdin, so `next` feeds it
   `IR_FACTS` (no second read) and `analyze`/`approve` feed it `parse_item`. A new mechanical
   check goes there, and its message in tests/t_analyze.sh's exact expected output.
