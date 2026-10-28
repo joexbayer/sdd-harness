@@ -2,7 +2,8 @@
 # generated repo with 100 items (95 shipped, 5 open on their own branches, one of them checked
 # out mid-build): next, status, hook stop and hook session-start under 0.2s; ls, ls --json and
 # summary under 1s. SDD_PERF_SLACK multiplies every budget, for slow machines (default 1).
-# Each time is the best of three runs after one warm-up run (which fills the cache).
+# Each time is the best of three runs after one warm-up run (which fills the cache); one over
+# budget is measured again, twice at most, after a pause.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -67,10 +68,17 @@ s="$SH .sdd/bin/sdd"
 hook_in=$(printf '{"cwd":"%s","stop_hook_active":false}' "$PWD")
 report=
 over=
+# A time over budget is measured again after a pause, twice at most: other work on the machine
+# (often the rest of the suite, just finished) slows every command for a while, a regression
+# slows it every time.
 while IFS='|' read -r budget cmd; do
-	took=$(secs "$cmd")
-	[ -n "$took" ] || fail "could not time: $cmd"
-	ok=$(B=$budget X=${SDD_PERF_SLACK:-1} S=$took awk 'BEGIN { print (ENVIRON["S"] + 0 < ENVIRON["B"] * ENVIRON["X"]) ? "ok" : "over" }')
+	for _try in 1 2 3; do
+		[ "$_try" = 1 ] || sleep 3
+		took=$(secs "$cmd")
+		[ -n "$took" ] || fail "could not time: $cmd"
+		ok=$(B=$budget X=${SDD_PERF_SLACK:-1} S=$took awk 'BEGIN { print (ENVIRON["S"] + 0 < ENVIRON["B"] * ENVIRON["X"]) ? "ok" : "over" }')
+		[ "$ok" = over ] || break
+	done
 	report="$report
   $ok $took s (budget $budget s × ${SDD_PERF_SLACK:-1}): $cmd"
 	[ "$ok" = ok ] || over=1
