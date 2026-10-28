@@ -59,6 +59,36 @@ DOD-23.2 hook stop in the t_perf repo measures under 0.12 s on this machine at l
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+Git processes per command (tests/t_gitcalls.sh, a logging `git` first on PATH): hook stop
+mid-build 9 → 2 (rev-parse, one diff), next 6 → 1, status 6 → 1. Time in the t_perf repo (100
+items, load average ~12, best of 5, dash): hook stop 0.16 → 0.07 s, next 0.12 → 0.05 s, status
+0.09 → 0.03 s (DOD-23.2).
+- One rev-parse: .sdd/bin/sdd:22 asks for root, common dir and git dir at once (RP);
+  find_repo (common.sh:40) reuses it while PWD is the same and sets GD. `dirname` became
+  parameter expansion (bin/sdd:12).
+- Config cache: cfg_load (common.sh:85) sources `<git dir>/sdd-config` while cfg_fresh finds it
+  strictly newer than every config file and CFG_KEY (the three paths, each marked present or
+  absent) matches; else it reads as before and rewrites the cache (temp file + mv, values
+  single-quote escaped). `$(user_config)` subshells became a variable.
+- current_branch (common.sh:436) reads `<git dir>/HEAD` while PWD = ROOT; detached is no branch;
+  `refs/heads/.invalid` (reftable) and other refs fall back to `git symbolic-ref`.
+- code_changed (common.sh:526): `git diff --name-only --merge-base <base>`, falling back to
+  merge-base + diff; the untracked listing runs only when no tracked file outside specs/ changed.
+- plan_hash (common.sh:327): `<git dir>/sdd-plan` holds "<file> <hash>" for one item, used while
+  strictly newer than the file; paths with spaces are not cached.
+Tests: the unchanged suite, plus tests/t_gitcalls.sh: the limits above, and that a config edit,
+a user config appearing and going, a plan edit, a branch switch and a detached HEAD are each seen
+by the very next command. Breaking either freshness test (cache always fresh) fails it.
+Reftable: checked by hand (`git init --ref-format=reftable`: HEAD reads `refs/heads/.invalid`,
+next finds the item on its branch and none on main), not in the suite (needs git 2.45+).
+Deviation: none from the plan. Not done: the review-phase fingerprint (temp index, 4 git calls)
+still runs when a check was recorded; hook stop in review costs ~6 git calls.
+Accepted risks (as planned): a file replaced by an older copy keeping its mtime; a config edit
+landing in the milliseconds between another sdd process reading the config and writing its cache.
+security pass: a fresh Sonnet verifier put single quotes, `$(…)`, backticks, backslashes and a
+multi-line `'; touch …; '` value in the config and in the XDG path; nothing ran, under sh and dash.
+Verified by: claude-sonnet-5-5: 3 of 4 invariants proven (the 4th is the accepted risk; reftable checked by hand); no findings
+Check: `.sdd/bin/sdd check` passed (shellcheck and the suite under /bin/sh and dash), no slack.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
