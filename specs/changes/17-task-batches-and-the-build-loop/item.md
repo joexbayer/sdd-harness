@@ -81,6 +81,78 @@ subagents (one per batch), ticks all three tasks and stops at review.
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-17.1 (task sizes): `AWK_TASK` reads `size:` (.sdd/core/lib/common.sh:515-537; no size is M,
+line 516; `size:` also starts the attribute block, line 519); `task_rows` gains field 9, size
+(comment at common.sh:504). The template example and text ask for a size
+(.sdd/core/templates/feature.md:43-46), and so does the plan prompt (.sdd/core/prompts/plan.md:26-29).
+Proven by tests/t_batch.sh:9-11 (template, prompt) and :22-26, :37-49 (size read, not part of the
+test; no size is M).
+FR-17.2 (`sdd task next`): `task_batch` groups task_rows lines (common.sh:545-554), `[build] batch
+= 3` (.sdd/core/config:108-111), `task next` prints `batch   T-a T-b` and each task with files,
+test, serves and size (.sdd/core/cmd/task.sh:32-48). Proven by tests/t_batch.sh:27-50 (S+S, then
+L alone, an S before an M alone, M alone, "no open tasks") and :51-65 (5 S tasks: 3, or 2 with
+`build.batch = 2`).
+FR-17.3 (the batch in next and sdd run): `ir_batch` computes the batch from the facts item_read
+already holds, without re-reading the file (common.sh:556-559); `next` shows "Current batch: …"
+and each task as before ("Current task: …" unchanged for a batch of one), with a commit example
+naming all of them (.sdd/core/cmd/next.sh:27-85); `sdd run` logs and prints the batch's IDs as
+its task (.sdd/core/cmd/run.sh:40-42), and its prompt is `next`'s output, so the role gets the
+batch. Proven by tests/t_batch.sh:67-87 (next output; a stub narrow builder's prompt and the run
+line name T-2.1 T-2.2 T-2.3); tests/t_task.sh and tests/t_run.sh still pass unchanged (one task).
+FR-17.4 (the build loop): .sdd/core/agents/skills/build.md is the loop (task next → one builder:
+`sdd-builder` subagent, else `sdd run builder <id>`, else itself → make sure each task is ticked,
+running `task done` for any left open → make sure a commit names the batch, committing if the
+tree is dirty → stop and report on the first failure → then next until check and Built);
+description triggers on "now let's build". .sdd/core/agents/skills/build.claude.md: spawn the
+`sdd-builder` subagent with the Agent tool, one call per batch. Proven by tests/t_build_loop.sh:8-23
+(skill text for Claude and Codex), :25-83 (the loop played by a script with a stub builder on an
+S, S, L item: two builder runs, a failing T-1.3 stops it with batch 1 ticked and committed and
+T-1.3 open; fixed, it resumes with T-1.3 only and ends with no open task). The real-agent run
+(DOD-17.2) is left to the main session.
+FR-17.5 (unknown attributes): any `; <word>: ` in the attribute block other than files, test,
+expect, size makes the task unreadable ("unknown attribute colour"), and so does a size other than
+S, M or L (common.sh:526-536); task_rows field 8 is now the reason (empty when fine) instead of
+0/1. `task done` refuses with "T-n.m: <reason>" (task.sh:55-56), `sdd task` and `task next` show
+"✗ <reason>", `next` shows it in the batch (next.sh:67), and ship's tasks gate lists unreadable
+tasks, ticked or not (.sdd/core/cmd/ship.sh:207-213). Proven by tests/t_batch.sh:88-116 (colour
+refused and its test never run, XL refused, a test containing `;` still works, the gate names
+both).
+Docs: `task next` in help (.sdd/core/cmd/help.sh:17-19) and README's verb table and a "Now let's
+build" paragraph; design.md: the task grammar row, a build-loop paragraph in §10 and a roadmap row.
+
+Check: `.sdd/bin/sdd check` passed (exit 0; ~2.5 min under load average ~14). Perf: the first
+full check failed t_perf.sh under /bin/sh (next 0.27 s, ls 1.29 s) with the machine at load
+average ~14 (other sessions); alone, it passed. A swap benchmark on the same generated 100-item
+repo, best of 7, interleaved, main vs this branch: next 0.16/0.12 vs 0.14/0.13 s, status
+0.13/0.11 vs 0.11/0.10, ls 0.59/0.57 vs 0.58/0.53, hook stop 0.20/0.18 vs 0.22/0.17: no
+regression. The second full check passed.
+
+Deviations:
+- The tasks gate (FR-17.5) joins "tasks not done: …" and "tasks sdd cannot read: …" into one
+  message, because a block stops at the first gate and an unreadable task is usually also open:
+  tests/t_task.sh:123 ('tasks not done: T-2.2, T-2.3', T-2.3 being unreadable) passes unchanged.
+- A size other than S, M or L is unreadable too (the FR names only S|M|L): refusing beats
+  guessing, as FR-17.5 does for attributes.
+- Only attribute blocks that start with a known key are checked: "(colour: red)" alone is still
+  read as part of the task's text, as before (the FR's case is an unknown key after a known one).
+- The skill falls back to the main agent building the batch itself when there is neither a
+  builder subagent nor a builder role (Codex without roles), so the skill still works there.
+- The item's own task lines carry `size:`; T-17.1's parser was written before its `task done`,
+  so the old reading (`; size: M` as part of the test) never ran.
+
+Follow-ups:
+- The SubagentStart hook logs only the first task of a batch as the run's task
+  (.sdd/core/agents/claude.sh, `TASK`); `sdd run` logs the whole batch. One line to align, not in
+  this plan's files.
+- An attribute block that starts with an unknown key, e.g. "(colour: red; test: x)", is read as
+  text and the task runs the full check. Failure mode: a typo'd first key silently drops the
+  test; likelihood low (the planner writes files: first), cost a second start pattern in AWK_TASK.
+
+Security pass: no findings. A fresh reviewer (a subagent given only the diff) looked: task tests
+still run only through `task done` after the approval check, the new reason field is checked as
+"not empty" everywhere it is read, the batch size reaches awk through ENVIRON, and task IDs in
+run logs match `T-n.m`. Noted, not exploitable: dash's `echo` turns backslashes in a task's text
+into control codes on screen; the text is the human's own plan.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
