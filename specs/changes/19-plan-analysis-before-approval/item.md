@@ -4,6 +4,7 @@ type: feature
 title: Plan analysis before approval
 status: open
 created: 2026-10-28
+approved: 3bc502f1407ea689132848cde8178a9d551cec89 2026-10-28 joexbayer
 ---
 # 19 Plan analysis before approval
 
