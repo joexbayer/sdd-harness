@@ -2,9 +2,10 @@
 id: 18
 type: refactor
 title: Performance: parallel check, cached item state
-status: open
+status: shipped
 created: 2026-10-27
 approved: 1c2f27c2f272f101e892f9b4060b87509f2c3789 2026-10-28 joexbayer
+shipped: 2026-10-28
 ---
 # 18 Performance: parallel check, cached item state
 
