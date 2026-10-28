@@ -63,6 +63,19 @@ DOD-20.1 `sdd check` passes, with a test naming FR-20.1, FR-20.2, FR-20.3 and FR
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 
+- FR-20.1, FR-20.2: two build rules in .sdd/core/prompts/build.md:23-29 (behaviour tests; two
+  failed fixes on one assumption → state it, stop). tests/t_discipline.sh checks `next` in build.
+- FR-20.3, FR-20.5: two plan rules in .sdd/core/prompts/plan.md:10-15 (probe before asking;
+  subtract before adding, redesign rather than bolt on). tests/t_discipline.sh checks `next` in plan.
+- FR-20.4: README.md:6-9, the opening names what sdd checks (approval, red-first tasks, check
+  per exact code, finish gate). No test: text.
+- Deviations: none. Built by the main session directly (text only, three small tasks).
+- Security pass: none needed beyond reading the diff myself: prompt and README text only, no
+  code, input or dependency (only I looked).
+- Follow-up: t_perf fails under heavy load (load average 12-16 from other sessions):
+  `hook stop` measures 0.20 s against a 0.2 s budget even when idle machines give 0.15-0.17 s.
+  Either make the stop hook cheaper or have t_perf retry once before failing; a later item.
+
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->
