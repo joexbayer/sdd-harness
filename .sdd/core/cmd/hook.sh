@@ -50,8 +50,9 @@ This repo uses $NAME. For instructions on the current phase run: $CMD next"
 	;;
 stop)
 	# The finish gate: an agent may not stop with code changes that are unplanned,
-	# unapproved, unverified or not written up. Planning and review talk never trips it.
-	if current_item && code_changed; then
+	# unapproved, unverified or not written up. Planning and review talk never trips it, nor
+	# does a role run that does not build (a verifier reports; its builder finishes the item).
+	if [ "${SDD_ROLE:-builder}" = builder ] && current_item && code_changed; then
 		item_phase
 		case $PHASE in
 		plan) msg="$NAME: item $ID has code changes but the plan is not ready ($WHY). Do not build before the human approves." ;;

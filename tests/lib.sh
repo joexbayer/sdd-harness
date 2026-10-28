@@ -6,7 +6,7 @@ trap 'rm -rf "$T"' EXIT
 export HOME="$T/home" XDG_CONFIG_HOME="$T/home/.config" GIT_CONFIG_GLOBAL="$T/gitconfig"
 export GIT_CONFIG_NOSYSTEM=1 SDD_SH="$SH"
 # A role run's builder runs this suite too; its SDD_RUN would make every approve and ship refuse.
-unset SDD_RUN
+unset SDD_RUN SDD_ROLE
 mkdir -p "$HOME"
 git config --global user.name test
 git config --global user.email test@example.com

@@ -153,6 +153,26 @@ T-1.1, and qwen thrashed (it even ran `git stash`, hiding its tick) until its 80
 next batch. Test: tests/t_expect.sh (a red first task runs alone; a red task ends a batch of S
 tasks). README, design §9 and core/config say so.
 
+Review change (DOD-22.2 trial): the headless Sonnet verifier was held by the finish gate (the
+Stop hook from `sync claude`) and told to finish the item it may not edit. `sdd run` now exports
+SDD_ROLE (run.sh:56) and `hook stop` holds only a builder (hook.sh:54). Test: tests/t_verified.sh
+(an unfinished build blocks the builder, not SDD_ROLE=verifier). role-verifier.md no longer
+invites the verifier to guess the builder's model (it wrongly said "same model as the builder").
+
+DOD-22.2 (scratch repo, qwen3-coder-30b via narrow builds, claude-sonnet-5-5 via `sdd run
+verifier` verifies): 4 tasks in 4 batches (T-1.1 | T-1.2 T-1.3 | T-1.3 | T-1.4), both red tasks
+ticked while red; 5 builder runs, 2.5M in / 25k out, 4m27s; verifier 378k in / 3k out, $0.17,
+28s. Its real line: "Verified by: claude-sonnet-5-5: 2 of 2 FRs proven; test_slug.sh too weak
+to prove FR-1.1, words pads its output on macOS" (both true: the slug test only checks the exit
+code; macOS wc pads). After `sdd review`, a commit to text.sh made ship warn: "code changed since
+your review (text.sh) (gate reviewed)".
+Follow-ups from the trial:
+- qwen ignored the finish steps (no security pass, no verifier, no Built) though its prompt had
+  them: the orchestrator (the sdd-build loop or the human) must run them for a cheap builder.
+- narrow exits 3 ("unverified": no project check it knows) after a red batch; `sdd run` reports
+  it as a failure though sdd's own tick passed.
+- qwen named T-1.3 in a commit before ticking it (T-1.2 T-1.3 subject, T-1.3 still open).
+
 Check: `.sdd/bin/sdd check` passed (shellcheck and the suite under /bin/sh and dash).
 Security pass: a fresh subagent (Sonnet) given only the diff found nothing (it traced the expected
 text to `grep -F` arguments and prints only; the review record path uses the numeric ID).
@@ -164,3 +184,4 @@ Verified by: claude-sonnet-5-5: 4 of 4 FRs proven; no findings
 and says under "## Built" what it changed for each. -->
 - A test written first must not share a batch with the code that makes it pass (found by the
   DOD-22.2 trial).
+- A verifier run must not be held by the finish gate (found by the DOD-22.2 trial).

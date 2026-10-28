@@ -15,4 +15,5 @@ and do not hand the item to another verifier. Instead:
    Verified by: <your model>: <n> of <m> FRs proven; <your findings in a few words, or "no findings">
 
 The project picks your model. A different model from the builder's catches what the builder
-missed: if you built this item yourself, say so in your report.
+missed: only if you wrote this item's code yourself, in this conversation, say so in your report.
+Otherwise do not guess the builder's model.

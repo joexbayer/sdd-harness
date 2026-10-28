@@ -85,4 +85,11 @@ echo jitter >jitter.txt && git add jitter.txt && git commit -qm "fix(3): jitter"
 built_with ''
 out=$(sdd ship 2>&1) || fail "lite ship failed: $out"
 assert_not_contains "$out" 'not verified'
+
+# FR-22.2: the finish gate holds the builder, not a verifier run (sdd run exports its role).
+planned_item fix "Cap"
+echo cap >cap.txt && git add cap.txt && git commit -qm "fix(4): cap"
+sdd hook stop </dev/null >/dev/null 2>&1
+assert_eq $? 2 "(an unfinished build blocks the builder)"
+SDD_ROLE=verifier sdd hook stop </dev/null >/dev/null 2>&1 || fail "the finish gate held a verifier run"
 echo ok
