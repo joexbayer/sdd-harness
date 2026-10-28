@@ -4,6 +4,7 @@ type: fix
 title: Roles cannot ship, builders get only their batch
 status: open
 created: 2026-10-28
+approved: bce8e80647ba8db0cc7140f7235fdfd707730ecd 2026-10-28 joexbayer
 ---
 # 21 Roles cannot ship, builders get only their batch
 
