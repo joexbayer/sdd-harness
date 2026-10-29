@@ -4,6 +4,7 @@ type: feature
 title: Tests that stay fast and prove something
 status: open
 created: 2026-10-29
+approved: 9c1349b88107463a9a95cd7b93e84a920d945148 2026-10-29 joexbayer
 ---
 # 35 Tests that stay fast and prove something
 
