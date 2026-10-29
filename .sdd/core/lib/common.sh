@@ -432,13 +432,15 @@ verified() {
 # review_print: what sdd review records of the item's code change (FR-22.4): a first line
 # "patch=<git patch-id of the diff from the merge base, specs/ left out>" (empty when no code
 # changed), then "<blob after>\t<path>" per changed file, to name what changed since. A rebase
-# that keeps the change keeps the patch id.
+# that keeps the change keeps the patch id. A contract item lands no code: what it changes is
+# specs/contracts/, so that is what it records (FR-28.4).
 review_print() {
 	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD) || return 1
-	_p=$(git diff --binary --no-color --no-ext-diff --no-renames "$_mb" HEAD -- . ":(exclude)$SPECS" |
+	if [ "${ITYPE:-}" = contract ]; then set -- "$CONTRACTS"; else set -- . ":(exclude)$SPECS"; fi
+	_p=$(git diff --binary --no-color --no-ext-diff --no-renames "$_mb" HEAD -- "$@" |
 		git patch-id --stable | cut -d ' ' -f 1)
 	echo "patch=$_p"
-	git -c core.quotePath=false diff --raw --no-abbrev --no-renames "$_mb" HEAD -- . ":(exclude)$SPECS" |
+	git -c core.quotePath=false diff --raw --no-abbrev --no-renames "$_mb" HEAD -- "$@" |
 		awk -F '\t' '{ split($1, m, " "); print m[4] "\t" $2 }'
 }
 

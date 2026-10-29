@@ -51,12 +51,15 @@ This repo uses $NAME. For instructions on the current phase run: $CMD next"
 stop)
 	# The finish gate: an agent may not stop with code changes that are unplanned,
 	# unapproved, unverified or not written up. Planning and review talk never trips it, nor
-	# does a role run that does not build (a verifier reports; its builder finishes the item).
+	# does a role run that does not build (a verifier reports; its builder finishes the item), nor
+	# a role run's builder once its tasks are done (FR-28.2).
 	if [ "${SDD_ROLE:-builder}" = builder ] && current_item && code_changed; then
 		item_phase
 		case $PHASE in
 		plan) msg="$NAME: item $ID has code changes but the plan is not ready ($WHY). Do not build before the human approves." ;;
-		build) msg="$NAME: item $ID is not finished: $WHY. Run $CMD next." ;;
+		# FR-28.2: a role run's builder does tasks only; once none is open, finishing (check,
+		# Built) is the orchestrating session's, so it may stop.
+		build) [ -n "${SDD_RUN:-}" ] && [ "$WHYCODE" != task ] || msg="$NAME: item $ID is not finished: $WHY. Run $CMD next." ;;
 		pr) check_passed_here "$ID" || msg="$NAME: item $ID is in a pull request and has changes no check has passed. Run $CMD check." ;;
 		esac
 		[ -n "$msg" ] && level=$(cfg "type.$ITYPE.finish" || cfg "profile.$(cfg sdd.profile lite).finish" off)

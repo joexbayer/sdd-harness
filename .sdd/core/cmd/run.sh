@@ -36,6 +36,10 @@ item_phase
 case $WHYCODE in
 approval | changed | contract | ready | pr | status) usage_die "item $ID is waiting for the human ($WHY): no role runs now" ;;
 esac
+# FR-28.1, D-28.1: a builder run does tasks only. Finishing needs judgment: it is the session's
+# that orchestrates the build, not a prompt a small model ignores.
+[ "$role" != builder ] || [ "$PHASE" != build ] || [ "$WHYCODE" = task ] ||
+	usage_die "item $ID has no open task: finishing (check, security pass, verifier, Built) is the orchestrating session's: $CMD next"
 phase=$PHASE
 # In build, the role works the current batch of tasks (task_batch), which next shows it.
 task=$TASK
@@ -68,7 +72,10 @@ use=$(agent_usage "$dir/out")
 
 run_log "$n" "$started" "$ID" "$role" "$agent" "$model" "$phase" "$task" "$(tsv 1 "$use")" "$(tsv 2 "$use")" \
 	"$(tsv 3 "$use")" "$secs" "$rc" "$(tsv 4 "$use")"
-[ "$rc" -eq 0 ] || { echo "✗ the agent exited $rc (its output: $dir)"; exit 1; }
+# FR-28.3, D-28.2: the adapter may say an exit code is not a failure (agent_exit_note prints why);
+# the log above keeps the real code.
+[ "$rc" -eq 0 ] || { command -v agent_exit_note >/dev/null 2>&1 && agent_exit_note "$rc"; } ||
+	{ echo "✗ the agent exited $rc (its output: $dir)"; exit 1; }
 # Tracking off: the agent's output was only needed for this summary (kept above when it failed).
 usage_on || rm -rf "$dir"
 echo "next    $CMD next   (or $CMD usage $ID)"
