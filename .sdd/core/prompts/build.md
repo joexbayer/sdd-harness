@@ -23,6 +23,10 @@ hands-off until the item is done; do not stop to ask questions.
 - A test calls the code the way its user does and checks what that user sees. If it would
   still pass if every function returned nothing, or fail after a change that keeps the
   behaviour, rewrite it.
+- Expected values come from the FR's example or your own working, never from the code under
+  test (do not paste its output into the assertion).
+- Write just enough code to pass the test, without abstractions, options or defensive code
+  nothing asked for.
 - After two fixes resting on the same assumption fail, do not try a third: write that
   assumption in one sentence under "## Built" (e.g. "assumed dates are UTC; the fixture is
   local time") and stop.

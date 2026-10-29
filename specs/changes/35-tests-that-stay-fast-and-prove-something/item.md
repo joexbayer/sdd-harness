@@ -81,7 +81,7 @@ L ones alone. Add `; expect: fail` for a test written first (it must fail), or
 `; expect: fail "<text>"` (it must fail with that text in its output); without `test:` the
 full check runs. `.sdd/bin/sdd task done T-35.1` ticks a task when its test passes. -->
 - [x] T-35.1 Check time and budget warning, FR-35.1, FR-35.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/check.sh, .sdd/core/config, tests/t_check_budget.sh; test: SRC=$PWD SH=dash dash tests/t_check_budget.sh; size: M)
-- [ ] T-35.2 Test rules in the plan, build and verifier prompts, FR-35.3, FR-35.4, FR-35.5 (files: .sdd/core/prompts/plan.md, .sdd/core/prompts/build.md, .sdd/core/prompts/role-verifier.md, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
+- [x] T-35.2 Test rules in the plan, build and verifier prompts, FR-35.3, FR-35.4, FR-35.5 (files: .sdd/core/prompts/plan.md, .sdd/core/prompts/build.md, .sdd/core/prompts/role-verifier.md, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
 - [ ] T-35.3 README, design, kb note, sdd-dev notes (files: README.md, specs/design.md, specs/kb/agent-testing.md, .claude/skills/sdd-dev/SKILL.md; size: S)
 
 ## Built
