@@ -4,6 +4,7 @@ type: feature
 title: Contracts
 status: open
 created: 2026-10-29
+approved: 970829dd457a71231dd8661f81558c9d1dc20112 2026-10-29 joexbayer
 ---
 # 26 Contracts
 
