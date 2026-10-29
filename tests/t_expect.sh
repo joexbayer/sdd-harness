@@ -96,4 +96,65 @@ sdd task 'done' T-2.1 >/dev/null 2>&1 || fail "T-2.1 failed"
 out=$(sdd task next)
 assert_contains "$out" 'batch   T-2.2 T-2.3 T-2.4'
 assert_not_contains "$out" 'T-2.5'
+
+# FR-31.2: a small builder writes a test and its code together, so the test passes. With other
+# uncommitted changes, task done runs it again in a throwaway checkout of HEAD with only the task's
+# files: failing there is red. The working tree is left as it was, the checkout removed.
+git add -A && git commit -qm "feat(2): batches" && git switch -q main
+sdd new feature "Red without code" >/dev/null 2>&1
+f=specs/changes/3-red-without-code/item.md
+fill "$f" plan
+awk '/^## What changes$/ { print; print "FR-3.1 WHEN x THE SYSTEM SHALL y."; print "  e.g. x → y"; print ""; next }
+/^## Tasks \(optional\)$/ { print
+	print "- [ ] T-3.1 Api test, FR-3.1 (files: tests3/t31.sh; test: sh tests3/t31.sh; expect: fail \"api: missing\")"
+	print "- [ ] T-3.2 Vacuous test (files: t32.sh; test: sh t32.sh; expect: fail)"
+	print "- [ ] T-3.3 Late test (files: t33.sh; test: sh t33.sh; expect: fail)"
+	print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(3): plan" && sdd approve >/dev/null 2>&1 || fail "approve 3 failed"
+mkdir -p "$T/tmp" tests3
+red() { (export TMPDIR="$T/tmp"; sdd task 'done' "$1" 2>&1); }
+clean_after() {
+	[ -z "$(ls "$T/tmp")" ] || fail "the throwaway checkout was left in TMPDIR $1: $(ls "$T/tmp")"
+	assert_eq "$(git worktree list | wc -l | tr -d ' ')" 1 "(worktrees left $1)"
+}
+
+# FR-31.3: passing without the uncommitted code too means the test does not test the change.
+echo 'exit 0' >t32.sh
+echo 'code' >other.txt
+out=$(red T-3.2)
+assert_eq $? 1 "(a test that passes without the code)"
+assert_contains "$out" '✗ T-3.2 expected its test to fail, but it passes even without the uncommitted code: the test does not test the change; fix the test'
+grep -q '^- \[ \] T-3.2 ' "$f" || fail "T-3.2 ticked"
+clean_after "(refused)"
+rm -f other.txt t32.sh
+
+# FR-31.2: failing without the code, but not for the plan's reason, is not red.
+printf 'sh api.sh 2>/dev/null && exit 0\necho boom\nexit 1\n' >tests3/t31.sh
+echo 'echo api ok' >api.sh
+echo changed >README.md
+before=$(git status --porcelain)
+out=$(red T-3.1)
+assert_eq $? 1 "(red without the code, wrong reason)"
+assert_contains "$out" '✗ T-3.1 failed without the uncommitted code, but not for the expected reason (api: missing)'
+clean_after "(wrong reason)"
+
+# FR-31.2: failing without the code for the plan's reason ticks it; the tree is untouched.
+printf 'sh api.sh 2>/dev/null && exit 0\necho "api: missing"\nexit 1\n' >tests3/t31.sh
+before=$(git status --porcelain | grep -v "$f")
+out=$(red T-3.1) || fail "red without the code failed: $out"
+assert_contains "$out" '✓ T-3.1 done (its test fails without the uncommitted code: api: missing)'
+grep -q '^- \[x\] T-3.1 ' "$f" || fail "T-3.1 not ticked"
+assert_eq "$(git status --porcelain | grep -v "$f")" "$before" "(the working tree changed)"
+assert_eq "$(cat api.sh)" 'echo api ok' "(api.sh)"
+assert_eq "$(cat README.md)" changed "(README.md)"
+clean_after "(ticked)"
+git add -A && git commit -qm "feat(3): T-3.1 api test"
+
+# FR-31.3: with the code already committed there is nothing to take away: refused, saying why.
+echo 'sh api.sh' >t33.sh
+out=$(red T-3.3)
+assert_eq $? 1 "(code already committed)"
+assert_contains "$out" '✗ T-3.3 expected its test to fail, but it passed: the code is already committed'
+grep -q '^- \[ \] T-3.3 ' "$f" || fail "T-3.3 ticked"
+clean_after "(committed)"
 echo ok
