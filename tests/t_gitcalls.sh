@@ -66,4 +66,14 @@ git switch -q --detach feature/1-paging
 assert_not_contains "$(sdd next 2>&1)" 'Item 1 (feature)'
 git switch -q feature/1-paging
 assert_contains "$(sdd next)" 'Item 1 (feature)'
+# The item list (cached under the branch tips, item 25) sees a new branch, a new commit on one,
+# and a deleted one at once.
+assert_not_contains "$(sdd ls)" 'Cached list'
+git switch -q main && sdd new chore "Cached list" >/dev/null 2>&1 || fail "new failed"
+assert_contains "$(sdd ls)" 'Cached list'
+g=$(ls specs/changes/*/item.md) && sed 's/^title: .*/title: Renamed list/' "$g" >"$T/g" && cp "$T/g" "$g"
+git commit -qam "docs: rename" && git switch -q main
+assert_contains "$(sdd ls)" 'Renamed list'
+git branch -qD chore/2-cached-list
+assert_not_contains "$(sdd ls)" 'Renamed list'
 echo ok

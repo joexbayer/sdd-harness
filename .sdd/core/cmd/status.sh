@@ -11,7 +11,8 @@ open_items() {
 		printf '%s\n' "$_oi"
 		return 0
 	fi
-	printf '%s\n' "$_oi" | ROWS=$(item_rows) awk -F '\t' -v OFS='\t' "$AWK_DEPS"'BEGIN { deps_load() } { $5 = deps_unmet($5); print }'
+	dep_rows
+	printf '%s\n' "$_oi" | ROWS=$DEP_ROWS awk -F '\t' -v OFS='\t' "$AWK_DEPS"'BEGIN { deps_load() } { $5 = deps_unmet($5); print }'
 }
 
 if current_item; then

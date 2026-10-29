@@ -985,21 +985,40 @@ function row_json() {
 # for the worktree (its file may have edits).
 item_sources() {
 	_base=$(cfg sdd.base main)
-	{
-		git ls-tree -r "$_base" -- "$SPECS/archive" 2>/dev/null | O=archive R=$_base P1='' P2='' awk -F '\t' "$AWK_TREE"
-		current_item && printf 'worktree\t%s\t%s\t\n' "$BRANCH" "$IFILE"
-		for _kind in heads remotes; do
-			git for-each-ref --format='%(refname:short)' "refs/$_kind" | while IFS= read -r _b; do
-				case $_b in */HEAD | HEAD) continue ;; esac
+	# Everything but the worktree row follows from the branch tips alone: cached in
+	# .git/sdd/cache/sources under one for-each-ref's output, so an unchanged repo costs one git call.
+	_refs=$(git for-each-ref --format='%(objectname) %(refname)' refs/heads refs/remotes)
+	_key=$(printf '%s\n%s\n%s\n' "$_base" "$SPECS" "$_refs" | cksum)
+	_scf="$ST/cache/sources"
+	_sv=
+	[ "$(head -n 1 "$_scf" 2>/dev/null)" != "$_key" ] || _sv=$(sed 1d "$_scf")
+	if [ -z "$_sv" ]; then
+		_sv=$(
+			git ls-tree -r "$_base" -- "$SPECS/archive" 2>/dev/null | O=archive R=$_base P1='' P2='' awk -F '\t' "$AWK_TREE"
+			# The worktree row goes here (see below): it beats the branches.
+			echo worktree
+			printf '%s\n' "$_refs" | while read -r _ _ref; do
+				# No case here: macOS /bin/sh (bash 3.2) cannot parse one inside $( ).
+				_b=${_ref#refs/heads/} _o=local
+				[ "$_b" != "$_ref" ] || _b=${_ref#refs/remotes/} _o=remote
+				[ "$_b" != "$_ref" ] && [ "${_b##*/}" != HEAD ] || continue
 				_bid=$(id_of "$_b") || continue
 				# An item's own branch carries it under changes/, or under archive/ once shipped into a PR.
 				git ls-tree -r "$_b" -- "$SPECS/changes/" "$SPECS/archive/" 2>/dev/null |
-					O=$([ $_kind = heads ] && echo local || echo remote) R=$_b \
-						P1="$SPECS/changes/$_bid-" P2="$SPECS/archive/$_bid-" awk -F '\t' "$AWK_TREE"
+					O=$_o R=$_b P1="$SPECS/changes/$_bid-" P2="$SPECS/archive/$_bid-" awk -F '\t' "$AWK_TREE"
 			done
-		done
-		git ls-tree -r "$_base" -- "$SPECS/changes" 2>/dev/null | O=base R=$_base P1='' P2='' awk -F '\t' "$AWK_TREE"
-	} | awk -F '\t' '{
+			git ls-tree -r "$_base" -- "$SPECS/changes" 2>/dev/null | O=base R=$_base P1='' P2='' awk -F '\t' "$AWK_TREE"
+		)
+		# Written whole, then moved: a reader never sees half a file. Unwritable: no cache.
+		if _stmp=$(mkdir -p "$ST/cache" && mktemp "$ST/cache/sources.XXXXXX"); then
+			printf '%s\n%s\n' "$_key" "$_sv" >"$_stmp" && mv -f "$_stmp" "$_scf" || rm -f "$_stmp"
+		fi
+	fi
+	_wrow=
+	! current_item || _wrow=$(printf 'worktree\t%s\t%s\t' "$BRANCH" "$IFILE")
+	printf '%s\n' "$_sv" | W=$_wrow awk -F '\t' '
+	$0 == "worktree" { if (ENVIRON["W"] == "") next; $0 = ENVIRON["W"] }
+	{
 		# The id from the folder name, as id_of has it: the digits before its first "-".
 		d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
 		if (i == "" || i ~ /[^0-9]/ || i == d || seen[i]++) next
@@ -1133,15 +1152,19 @@ item_rows_finish() {
 	_in=$(cat)
 	[ -n "$_in" ] || return 0
 	_tab=$(printf '\t')
-	# Per ref: who opened which item, and the day of its last commit (for rows not shipped).
-	_git=$(printf '%s\n' "$_in" | cut -f2 | sort -u | while IFS= read -r _r; do
-		open_authors "$_r" | R=$_r awk '{ print "a\t" ENVIRON["R"] "\t" $0 }'
-		printf '%s\n' "$_in" | R=$_r awk -F '\t' '$2 == ENVIRON["R"] && $14 == "" { f = 1 } END { exit !f }' &&
-			printf 'd\t%s\t%s\n' "$_r" "$(git log -1 --format=%cs "$_r" 2>/dev/null)"
-	done)
+	_git=
 	_today=
-	case $_in in worktree"$_tab"* | *"
+	# Per ref: who opened which item, and the day of its last commit (for rows not shipped).
+	# dep_rows needs neither, so it skips these git calls.
+	if [ -z "${_IR_LIGHT:-}" ]; then
+		_git=$(printf '%s\n' "$_in" | cut -f2 | sort -u | while IFS= read -r _r; do
+			open_authors "$_r" | R=$_r awk '{ print "a\t" ENVIRON["R"] "\t" $0 }'
+			printf '%s\n' "$_in" | R=$_r awk -F '\t' '$2 == ENVIRON["R"] && $14 == "" { f = 1 } END { exit !f }' &&
+				printf 'd\t%s\t%s\n' "$_r" "$(git log -1 --format=%cs "$_r" 2>/dev/null)"
+		done)
+		case $_in in worktree"$_tab"* | *"
 worktree$_tab"*) [ -z "$(git status --porcelain 2>/dev/null)" ] || _today=$(date +%F) ;; esac
+	fi
 	printf '%s\n' "$_in" | G=$_git TODAY=$_today awk -F '\t' -v OFS='\t' '
 		BEGIN {
 			n = split(ENVIRON["G"], l, "\n")
@@ -1370,13 +1393,22 @@ function deps_unmet(list,   n, x, i, o) {
 }
 '
 
+# dep_rows: item_rows without opened_by and active (empty), which dependency state never reads;
+# read once per process into DEP_ROWS, as waits_for and AWK_DEPS's callers need it.
+dep_rows() {
+	[ -n "${DEP_ROWS+x}" ] && return 0
+	DEP_ROWS=$(_IR_LIGHT=1 && item_rows)
+}
+unset DEP_ROWS
+
 # waits_for <depends list>: the refs of an item's depends: that have not shipped, in words
 # (deps_unmet, e.g. "31 (Auth API)"), into WAITS; empty when every one has (FR-24.6). Reads the
 # item rows only when the list is not empty, so items without depends: cost nothing.
 waits_for() {
 	WAITS=
 	[ -n "$1" ] || return 0
-	WAITS=$(ROWS=$(item_rows) D=$1 awk "$AWK_DEPS"'BEGIN { deps_load(); print deps_unmet(ENVIRON["D"]) }')
+	dep_rows
+	WAITS=$(ROWS=$DEP_ROWS D=$1 awk "$AWK_DEPS"'BEGIN { deps_load(); print deps_unmet(ENVIRON["D"]) }')
 }
 
 # --- constitution -----------------------------------------------------------------
