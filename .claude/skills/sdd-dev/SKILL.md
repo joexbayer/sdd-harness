@@ -239,6 +239,9 @@ so inspect the repo itself.
   over the project's (tier_file), so common names like `small` could be silently replaced.
 - narrow headless without `--yolo` denies every non-read-only shell command (`:exec` is `:ask`,
   and headless asks are refused: narrow lisp/security.lisp `permission-for`, runtime.go
-  `AskPermission`). Check without spending: `NARROW_CONFIG_DIR=<empty dir> narrow --eval
-  '(shell-command-safe-p "python3 -m pytest -q")'` → nil. Use an empty config dir so the
-  user's init.lisp (which reads the gateway key) is not loaded.
+  `AskPermission`). experiment/narrow/allow.lisp fixes it with `advice-add 'permission-for
+  :around` from an init file (user-origin changes to sealed policy are allowed and survive
+  `seal-verify`). Check without spending: put only allow.lisp in an empty dir as init.lisp, then
+  `NARROW_CONFIG_DIR=<dir> narrow --eval '(permission-for nil (command "bash") (hash :command
+  "python3 -m pytest -q"))'` → `:allow` (`curl x` → `:ask`). Never --eval a config with the
+  provider block: loading it makes narrow read the gateway key.

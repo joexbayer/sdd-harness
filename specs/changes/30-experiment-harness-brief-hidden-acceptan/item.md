@@ -84,6 +84,8 @@ What each file is (all new, under experiment/; sdd itself is unchanged):
   `VERDICT: APPROVE` or `VERDICT: REVISE: <why>`).
 - prompts/planner.md (added after `sdd next` for headless planning), prompts/role-finisher.md
   (installed as the run repo's .sdd/local/prompts/role-finisher.md).
+- narrow/provider.lisp (the gateway, as narrow-sdd.sh) and narrow/allow.lisp (the builder's
+  allowlist); run.sh joins them into the run's own NARROW_CONFIG_DIR for arm A.
 - run.sh: the driver (D-30.1..5); lib/xp.py: its JSON helpers (show --json state, claude
   usage/result/verdict/denials, results.json/.md); fake/fake_agent.py: fake claude and narrow.
 - README.md: how to run, read and compare. .claude/skills/sdd-dev/SKILL.md: experiment section.
@@ -92,12 +94,19 @@ How verified:
 - Reference passes the suite 45/45 (`python3 -m pytest -q -p no:cacheprovider
   experiment/acceptance --repo experiment/reference`); an empty repo gets 0/45 and a summary.
 - `shellcheck -s sh experiment/run.sh`: clean; parses under /bin/sh and dash.
-- --dry, all with fake agents: B ran to the end (roadmap + one feature entry shipped, 8 runs,
-  $4.00 fake, results written); XP_FAKE_COST=8 stopped at "spend cap: $24.00 > $20";
-  XP_FAKE_REVISE=1 stopped at "no approval after 3 plan rounds" (the REVISE reason reached the
-  next planner prompt); XP_FAKE_FAIL=finisher stopped at "2 failed finisher runs in a row"; A
-  without EXPERIMENT_NARROW_ARGS stopped at setup with the decision message, $0;
-  A with it set built through the fake narrow. Not exercised: the 3-builder-runs-per-task cap.
+- --dry, all with fake agents, after rebasing on main (item 31): B and A each ran to the end
+  (roadmap + one feature entry shipped; the builder's tick committed by the driver with sdd
+  run's "commit with:" message; results written); XP_FAKE_COST=8 (B) stopped at "spend cap:
+  $24.00 > $20"; XP_FAKE_REVISE=1 (A) stopped at "no approval after 3 plan rounds" (the REVISE
+  reason reached the next planner prompt); XP_FAKE_FAIL=builder (B) stopped at "2 failed
+  builder runs in a row". Not exercised: the 3-builder-runs-per-task cap.
+- narrow allowlist, on narrow-13b380e with only allow.lisp as init.lisp (no provider, so no key
+  is loaded): `permission-for` gives :allow for `python3 -m pytest -q`, `pytest -q tests`,
+  `git commit -qm x`, `git add -A && git commit -m x`, `.sdd/bin/sdd task done T-1.1`, and :ask
+  for `curl`, `rm -rf build`, `python3 -m pytest > out`, `echo $(cat /etc/passwd)`,
+  `sh -c '…'`, `bash .sdd/bin/sdd check`; `seal-verify` restores nothing (the advice stays).
+  Without the config, the same commands are :ask, which headless means refused.
+- The claude wrapper drops AI_API_KEY (checked with the same wrapper around env).
 - `.sdd/bin/sdd check` passes.
 
 Deviations and choices:
@@ -107,11 +116,14 @@ Deviations and choices:
 - Order verifier, then finisher: the finisher reads the verifier's report from
   `.git/experiment/verify-<id>.md` and writes its Verified by line, so one finisher run
   finishes. No verifier for items without tasks (roadmap, contract).
-- Item 31 (per the orchestrator): after a builder run the driver commits with the "commit
-  with:" message `sdd run` prints (not counted as an intervention); without one, it commits
-  leftovers as an intervention. After a finisher run it commits leftovers as `docs(<id>): Built`
-  (an intervention). The fake builder still ticks and commits itself (this tree predates 31):
-  after 31 lands, rerun `--dry`; if the double tick errors, drop those two lines of the fake.
+- Item 31: `sdd run builder` ticks the batch and commits nothing; the driver commits with the
+  "commit with:" message it prints (not counted as an intervention), or commits leftovers as an
+  intervention when there is none. After a finisher run it commits leftovers as
+  `docs(<id>): Built` (an intervention). The fake builder now neither ticks nor commits.
+- The human's calls after the first build: arm A uses the allowlist config instead of --yolo;
+  every claude tier (and so the driver's own planner/human runs) has `--setting-sources
+  project`; every claude run goes through `<run>/bin/claude-xp`, which unsets
+  AI_API_KEY (set as `[agent "claude"] bin`, so sdd run uses it too).
 - Run folder layout: `<dir>/repo` is the project, the driver's files sit beside it.
 - Tiers are named `xp-opus`, `xp-human`, `xp-verifier`, `xp-builder`, because a developer's own
   `[tier]` wins over the project's. Human: Read/Grep/Glob/Edit only. Verifier: no Edit/Write,
@@ -127,21 +139,22 @@ Deviations and choices:
 
 Narrow finding (D-30.2): narrow has no headless profile without --yolo. With the default
 permission-rules, `:exec` is `:ask`, and a headless ask is refused; only read-only commands
-pass (checked on narrow-13b380e: `shell-command-safe-p` is nil for `python3 -m pytest -q` and
-`git commit`). So arm A stops before spending until the human sets EXPERIMENT_NARROW_ARGS:
-(a) `--profile local --yolo`, or (b) their own narrow config allowing `:exec` via
-NARROW_CONFIG_DIR.
+pass. The human chose an allowlist: experiment/narrow/allow.lisp wraps `permission-for` (advice
+from an init file, which narrow allows for the user) to allow simple commands of python3,
+pytest, git and .sdd/bin/sdd, with narrow's own rules and floor otherwise in force. The key
+file is not hidden by the separate config dir: provider.lisp names it explicitly, as
+narrow-sdd.sh does, and narrow reads it itself.
 
 security pass: only I looked (no fresh reviewer). run.sh quotes every expansion; the tier args
 are split on purpose under `set -f`; `eval` only ever sees the fixed role names; agent text
 (verdict reasons, commit messages from sdd run, item text) reaches git and python only as
-quoted arguments, never as shell code. The driver never reads, logs or passes a key; the suite
-strips AI_API_KEY from the environment of the agent-written server and CLI. The
+quoted arguments, never as shell code. The driver never reads, logs or passes a key; claude runs and the
+agent-written server and CLI under the suite get no AI_API_KEY; only narrow sees it. The
 reference uses parameterised SQL (PATCH builds SET from fixed column names) and binds
 127.0.0.1. Accepted, as in the plan: claude's `Bash(python3:*)` lets a role run any code as
 you, so agents could read files outside the run repo (this checkout's hidden suite and
-reference, ~/.config/narrow/api.key) and claude roles inherit AI_API_KEY if it is set
-in your shell. Nothing points them there; the run repo is outside this checkout.
+reference, ~/.config/narrow/api.key); the same holds for narrow's python3 in arm A. Nothing
+points them there; the run repo is outside this checkout.
 
 Unlikely edge cases left alone (failure mode · likelihood · cost to fix):
 - interventions.tsv breaks if a stop reason has a tab or newline (only `sdd new` errors can) ·
@@ -151,13 +164,9 @@ Unlikely edge cases left alone (failure mode · likelihood · cost to fix):
 - A fixed username in test_register_and_login collides only if the suite shares a database
   across sessions, which it never does.
 
-Open questions for the human before the first real run:
-- Arm A: --yolo for the builder, or a narrow config allowing :exec? (above)
-- Claude role runs load your global ~/.claude/CLAUDE.md (skill-capture and buy-in rules) and
-  plugins in both arms. Equal across arms, but it adds tokens; run with them or isolate
-  (e.g. `--setting-sources project` in the tier args)?
-- Strip AI_API_KEY from claude role runs too (arm B needs no key)?
-- Model IDs are claude-opus-5-5 and claude-sonnet-5-5 (OPUS/SONNET at the top of run.sh).
+Open questions for the human before the first real run: none left from this build (arm A's
+confinement, claude isolation, the key and the model IDs were decided 2026-10-29). The first
+real arm A run is also the first real test of allow.lisp inside a headless narrow run.
 
 Verified by: none (builder self-checked; the orchestrator verifies)
 
