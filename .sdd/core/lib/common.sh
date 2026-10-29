@@ -678,9 +678,9 @@ max_seen_id() {
 
 # --- phase and checks -------------------------------------------------------------
 
-# check_record <id> <fingerprint> <result>
+# check_record <id> <fingerprint> <result> <seconds>
 check_record() {
-	printf 'fp=%s\nresult=%s\nat=%s\n' "$2" "$3" "$(date '+%Y-%m-%d %H:%M')" >"$ST/checks/$1"
+	printf 'fp=%s\nresult=%s\nat=%s\nsecs=%s\n' "$2" "$3" "$(date '+%Y-%m-%d %H:%M')" "$4" >"$ST/checks/$1"
 }
 
 # check_passed_here <id> [fingerprint]: did a check pass for exactly this code?
@@ -898,7 +898,8 @@ masked() { grep -E '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)';
 # pass, 1 fail, 3 when the output shows zero tests ran. Records the result for <id> (if
 # given) and sets CHECK_LOG, CHECK_NOTRUN to the first command the shell could not run, and
 # CHECK_DIRTIED to the files the run itself created or changed (the pass is for the code before),
-# and CHECK_ARTICLES to the constitution's problems (see check_articles).
+# CHECK_ARTICLES to the constitution's problems (see check_articles), and CHECK_SECS to how long
+# the commands took (FR-35.1).
 run_check() {
 	_cmds=$(cfg_all check.run) || die "no check configured: add 'run = <command>' under [check] in $DIRNAME/config"
 	_bad=$(printf '%s\n' "$_cmds" | masked)
@@ -908,6 +909,7 @@ run_check() {
 	: >"$CHECK_LOG"
 	_rc=0
 	CHECK_NOTRUN=
+	_t0=$(date +%s)
 	while IFS= read -r _c; do
 		[ -n "$_c" ] || continue
 		printf '$ %s\n' "$_c" >>"$CHECK_LOG"
@@ -918,6 +920,7 @@ run_check() {
 	done <<EOF
 $_cmds
 EOF
+	CHECK_SECS=$(($(date +%s) - _t0))
 	check_articles "$CHECK_LOG" || _rc=1
 	CHECK_DIRTIED=
 	_fp2=$(fingerprint)
@@ -929,7 +932,8 @@ EOF
 		fi
 	fi
 	if [ -n "${1:-}" ]; then
-		case $_rc in 0) check_record "$1" "$_fp" pass ;; 1) check_record "$1" "$_fp" fail ;; *) check_record "$1" "$_fp" empty ;; esac
+		case $_rc in 0) _res=pass ;; 1) _res=fail ;; *) _res=empty ;; esac
+		check_record "$1" "$_fp" "$_res" "$CHECK_SECS"
 	fi
 	return $_rc
 }
