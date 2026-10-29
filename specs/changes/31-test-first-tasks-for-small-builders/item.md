@@ -89,35 +89,54 @@ full check runs. `.sdd/bin/sdd task done T-31.1` ticks a task when its test pass
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 
-QUESTION for the human (build stopped at T-31.2 (sdd run builder ticks and commits its batch)):
-FR-31.1 says `sdd run` commits each tick, but constitution article C-4 (only new, approve and
-ship create commits) forbids it, and `sdd check` enforces it (tests/constitution/c4-commits.sh
-fails when any other cmd/ or lib/ file runs `git commit`). Changing C-4 needs an amendment item,
-which only the human starts. Options:
-- (a) An amendment first: C-4 gains "`run builder` commits the ticks of its own batch" and
-  c4-commits.sh allows run.sh; item 31 then `depends:` on it and T-31.2 builds as planned.
-- (b) Change FR-31.1 (re-approval): `sdd run` ticks but does not commit; the orchestrating
-  session commits each tick. Keeps C-4, but a small builder's ticks wait for the orchestrator.
-Recommend (a): the commit is the point of D-31.1 (the ship gate needs a commit per tick).
+The C-4 question (sdd run committing) was answered by the human: option (b), FR-31.1 and
+D-31.1 revised and re-approved; `sdd run` ticks and commits nothing.
 
-Done so far:
+- FR-31.1 (the tool ticks the batch): .sdd/core/cmd/run.sh:79-106. After an accepted builder
+  exit (rc 0 or agent_exit_note), it reads the batch's tasks still open, runs
+  `"$SDD_SH" .sdd/bin/sdd task done <T>` for each in plan order, prints each ✓ line without its
+  "commit with" part, stops at the first failure (its output printed, exit 1) and ends with
+  `ticked n of m · commit with: <kind>(<id>): <ticked ids> <titles, comma-joined>`. Other roles and
+  rejected exits tick nothing; run_log is unchanged. Tests: tests/t_run.sh:64-70 (stub never
+  ticks, run ticks, HEAD unchanged), :80 (planner: no ticks), :107 (after narrow's exit 3), :113
+  (exit 4: nothing ticked), :136-168 (fake builder writes test and code together: red task ticked
+  via FR-31.2, then a batch stops at T-3.3's failure, "ticked 1 of 3", T-3.4 untouched);
+  t_batch.sh:87, t_role_guard.sh:55.
 - FR-31.2 (red check without the uncommitted code): .sdd/core/cmd/task.sh:52-91
-  (`red_without_code`, called at :129 only when an `expect: fail` test passed, D-31.3). Other
+  (`red_without_code`, called at :131 only when an `expect: fail` test passed, D-31.3). Other
   changes = `git diff --name-only HEAD` plus untracked files, minus the task's files: (an entry
   also covers paths under it) and minus the item file. The throwaway checkout is
   `git worktree add --detach $TMPDIR/sdd-red.XXXXXX/wt HEAD`; the task's files are copied in
   with their paths, the test runs there with that dir as cwd, then the worktree is removed
   (`--force`) and the dir deleted; an EXIT trap does the same when a die stops it midway. Its log
-  is `.git/sdd/checks/<id>.<task>.red.log`. Proved by tests/t_expect.sh:100-160 (FR-31.2: ticked
-  with the plan's reason, refused for another reason, working tree and git status unchanged, no
-  worktree or temp dir left).
+  is `.git/sdd/checks/<id>.<task>.red.log`. Tests: tests/t_expect.sh:100-160 (ticked with the
+  plan's reason, refused for another reason, working tree and git status unchanged, no worktree
+  or temp dir left), t_run.sh:136-158.
 - FR-31.3: refusals at task.sh:66-70 (no other changes: "the code is already committed (or there
-  is none)") and :85-89 ("passes even without the uncommitted code … fix the test"); a red-check
-  exit 126/127 is refused like the normal run's. Tests: t_expect.sh:121-129, :153-160.
-- Deviation: the item file itself does not count as an "other change" (a Built edit is not
-  code), so editing it alone gets the "already committed" refusal, not a red check.
+  is none), so sdd cannot see the test fail; write the test before its code") and :85-89
+  ("passes even without the uncommitted code: the test does not test the change; fix the test").
+  Tests: t_expect.sh:121-129, :153-160.
+- Docs (T-31.3): README.md (roles; "now let's build"), specs/design.md (build loop, batches),
+  .claude/skills/sdd-dev/SKILL.md (item 31 notes for testing builder runs and the red check).
 
-Not handled (no code, per the no-speculative-complexity rule):
+Deviations:
+- The item file does not count as an "other change" (a tick or Built edit is not code), so
+  editing only it gets the "already committed" refusal, not a red check.
+- Exit 126/127 in the red run counts as red (not refused like in the normal run): the same
+  command ran in the tree, so the missing thing is the uncommitted code. Found by the t_run
+  fake builder: `sh api.sh` without api.sh exits 127. A plan's expect text still guards the reason.
+- The "<what>" in the run's commit line is the ticked tasks' titles joined with ", ".
+- Two tests outside the plan's files changed, because their builder runs now tick:
+  tests/t_batch.sh (asserts the run ticked T-2.1..3, then commits, as the orchestrator would) and
+  tests/t_role_guard.sh (the FR-21.2 `next` checks moved before the run; after it the ticks are
+  asserted and committed, only T-1.3 is ticked by hand). No assertion was weakened.
+- t_run.sh: item 1 got T-1.2 and T-1.3 so later builder runs still have an open task.
+
+Security pass (git diff main...HEAD): files: paths are quoted everywhere and passed after `--`
+to dirname, mkdir and cp; task ids in run.sh match `T-<n>.<n>` (parse grammar) before the
+unquoted loop; the throwaway dir comes from mktemp and is removed on success, refusal and die;
+the red test is the approved plan's command, as in the normal run. Not handled (no code, per the
+no-speculative-complexity rule; the human agreed to leave them noted):
 - A signal (Ctrl-C) during the red run leaves $TMPDIR/sdd-red.* and a stale worktree entry
   (dash runs no EXIT trap on a signal). Likelihood: low (a human interrupting a test). Cost of a
   fix: trapping INT/TERM/HUP too, 1 line. `git worktree prune` clears the entry.
