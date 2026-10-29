@@ -45,6 +45,11 @@ the item file equals the pre-run copy plus the ticks, the warning is printed, an
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-34.1: .sdd/core/cmd/run.sh copies the item file to a temp file before a builder run and puts it
+back after the agent exits (warning when it differed), before the ticks. tests/t_run.sh: the fake
+builder inserts text into the plan and appends its own "## Built"; the run warns, the file is
+restored, and T-3.1 still ticks (it failed before the fix: the changed plan made task done refuse).
+Verified: `sdd check` passes. Verified by: none (small fix; its regression test is the proof)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
