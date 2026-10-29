@@ -4,6 +4,7 @@ type: feature
 title: Fewer forge calls
 status: open
 created: 2026-10-29
+approved: 0bcfcd2c5f06fd7411c8eb068754c3fefa3d0d72 2026-10-29 joexbayer
 ---
 # 27 Fewer forge calls
 
