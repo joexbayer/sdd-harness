@@ -37,13 +37,26 @@ item() {
 	}'
 }
 
+# One commit per shipped item, as in a real repo. The 95 commits are written by one git
+# fast-import from the files' blobs (hash-object), not by 95 git add and git commit runs:
+# same history, a fraction of the processes.
 i=0
 while [ $i -lt 95 ]; do
 	i=$((i + 1))
 	mkdir -p "specs/archive/$i-item-$i"
 	item "$i" shipped >"specs/archive/$i-item-$i/item.md"
-	git add specs/archive && git commit -qm "docs($i): open feature \"Item $i\"" || fail "commit $i failed"
-done
+	echo "specs/archive/$i-item-$i/item.md"
+done >"$T/paths"
+git hash-object -w --stdin-paths <"$T/paths" | paste "$T/paths" - | awk -F '\t' '{
+	i = NR; m = "docs(" i "): open feature \"Item " i "\""
+	print "commit refs/heads/main"; print "committer test <test@example.com> now"
+	print "data " length(m); print m
+	if (i == 1) print "from refs/heads/main^0"
+	print "M 100644 " $2 " " $1; print ""
+}' | git fast-import --quiet --date-format=now || fail "fast-import failed"
+git reset -q || fail "reset failed"
+[ -z "$(git status --porcelain)" ] || fail "tree not clean after fast-import: $(git status --porcelain)"
+assert_eq "$(git rev-list --count HEAD)" 97
 for i in 96 97 98 99 100; do
 	git switch -q -c "feature/$i-item-$i" main
 	mkdir -p "specs/changes/$i-item-$i"
