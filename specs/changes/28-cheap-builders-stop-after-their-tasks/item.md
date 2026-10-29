@@ -59,6 +59,36 @@ Each fails before the fix.
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-28.1 (builder run refused with no open task): .sdd/core/cmd/run.sh:39-42 refuses with
+  exit 2 when the role is builder, the phase is build and WHYCODE is not `task`. Nothing is logged.
+  Test: tests/t_run.sh:104 (also: a verifier run on the same item still runs).
+- FR-28.2 (a role run's builder may stop once no task is open): .sdd/core/cmd/hook.sh:60-62.
+  With SDD_RUN set, the build-phase hold applies only while WHYCODE is `task`. Test:
+  tests/t_role_guard.sh:62 (blocks while a task is open) and :70 (allowed once all are ticked;
+  without SDD_RUN it still blocks).
+- FR-28.3 (narrow exit 3 is a warning): .sdd/core/agents/narrow.sh:24 `agent_exit_note`, and
+  .sdd/core/cmd/run.sh:75-78, which calls it only if the adapter defines it; run_log still
+  records the real rc. Test: tests/t_run.sh:89 (exit 3 is logged as 3, warns and exits 0; exit 4
+  still fails; claude's exit 3 still fails).
+- FR-28.4 (contract review records specs/contracts/): .sdd/core/lib/common.sh:434-446
+  `review_print` diffs `$CONTRACTS` for ITYPE contract. ship.sh's reviewed gate needs no change,
+  because a contract item's patch is no longer empty. Test: tests/t_contracts.sh:149 (a contract
+  edited after review shows "code changed since your review (specs/contracts/orders-api.yaml)").
+- Docs: README (roles), specs/design.md (build loop, reviewed record), sdd-dev skill.
+
+Deviations:
+- FR-28.1 is applied as written: an item with no tasks at all (e.g. a fix without tasks) has no
+  open task, so `sdd run builder` refuses it too. Before, a builder run there got the whole build.
+  If task-less items should still go to a builder run, the rule needs to become "the item has
+  tasks and none is open" (a one-line change).
+- FR-28.2 loosens only the build-phase hold. The plan-phase hold ("code before approval") and the
+  pr-phase hold still apply to a role run's builder. run.sh already refuses role runs in plan.
+- I left the sdd-build skill and the role-verifier prompt as they were: the skill already has the
+  orchestrator run `next` after the loop.
+
+Security pass (fresh Sonnet subagent, diff only): no findings.
+
+Verified by: none (builder self-checked; the orchestrator verifies)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
