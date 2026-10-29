@@ -2,9 +2,10 @@
 id: 28
 type: fix
 title: Cheap builders stop after their tasks
-status: open
+status: shipped
 created: 2026-10-29
 approved: 322264bfa8bfe429c271ff2b8ca0ea734821a74c 2026-10-29 joexbayer
+shipped: 2026-10-29
 ---
 # 28 Cheap builders stop after their tasks
 
