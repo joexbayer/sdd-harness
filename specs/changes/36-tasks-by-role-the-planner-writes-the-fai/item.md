@@ -93,6 +93,47 @@ full check runs. `.sdd/bin/sdd task done T-36.1` ticks a task when its test pass
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-36.1: `by:` is a known task attribute in AWK_TASK (.sdd/core/lib/common.sh:819), checked as a
+  lowercase word (common.sh:823, "by: must be a role name (a lowercase word)"), field 11 of
+  task_rows (common.sh:830). `task next` prints `(size: S; by: planner)` only when set
+  (.sdd/core/cmd/task.sh:39; without by: the line is byte-identical); `next` prints
+  `  by      planner (.sdd/bin/sdd run planner 7)` under the task (.sdd/core/cmd/next.sh:98).
+  Test: tests/t_task.sh (FR-36.1 block at the end); t_analyze's expected "known: …" list now
+  includes by.
+- FR-36.2: task_batch ends a batch where the role changes; no by: and `by: builder` are the same
+  role (common.sh:844). Test: tests/t_batch.sh (FR-36.2 block: planner / builder+builder / writer).
+- FR-36.3: run.sh reads the batch's role (first task's field 11, builder when empty) and refuses
+  another role with usage_die "T-x.y is the <role>'s: sdd run <role> <id>", exit 2, before a run
+  slot is taken, so nothing is logged (.sdd/core/cmd/run.sh:49-55). Test: tests/t_run.sh (FR-36.3,
+  both directions: builder on the planner's batch, planner on the builder's).
+- FR-36.4: the item-file restore and the ticking now apply to any batch run (run.sh:81, :107),
+  which after FR-36.3 means the run's role owns the batch; the warning names the role. Test:
+  tests/t_run.sh (FR-36.4: planner run scribbles in the item file → "⚠ the planner edited …:
+  restored", "✓ T-1.2 done", "ticked 1 of 1"). FR-28.1 and FR-33.1 tests unchanged and passing.
+- FR-36.5: .sdd/core/prompts/role-batch.md, appended after next's output for any batch run, before
+  a project's role-<role>.md (run.sh:61). Test: tests/t_run.sh (builder and planner prompts contain
+  "sdd ticks these tasks for you" / "never commit"; a run with no batch does not get it).
+- FR-36.6: plan rule in .sdd/core/prompts/plan.md:37. Test: tests/t_prompts_tests.sh.
+- Docs: README.md (Now let's build), specs/design.md (task grammar row, build loop paragraph),
+  .claude/skills/sdd-dev/SKILL.md (field 11; role-owned batches in run.sh).
+
+Deviations and notes:
+- `next` has no size to show it after, so it gets its own `by` line under the task, with the
+  command to run (the plan said "after size" for both).
+- Existing t_run.sh tests changed shape (not weakened): item 1 got a planner task T-1.2, and the
+  planner-on-claude tests that ran mid-build now run either on the planner's batch or once no task
+  is open, because FR-36.3 refuses a role run on another role's batch. Consequence: a verifier (or
+  any non-owning role) can no longer run while a task is open; it runs once none is (as the build
+  loop already does).
+- Unlikely edge, not handled: an unreadable `by:` (e.g. `Planner!`) still lands in field 11, so
+  `next`/run.sh name it in their message. Failure mode: a refusal message quoting the bad name
+  (never executed; the task itself cannot be ticked). Likelihood: only with a plan analyze already
+  flags. Cost to filter: one more condition; skipped.
+- Security pass: the role name only reaches echo/usage_die text and the existing `role.<name>.tier`
+  config lookup (run.sh already restricts the run's role to [a-z0-9-]); nothing is evaled or used
+  as a path except prompts/role-<role>.md, as before.
+
+Verified by: none (builder self-checked; the orchestrator verifies)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

@@ -92,7 +92,7 @@ grep -q '^- \[ \] T-1.2 ' "$ITEM" || fail "a failed planner run ticked T-1.2"
 # FR-36.4: the planner works its own batch: its edit of the item file is undone, its task ticked.
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.agent narrow
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.model opus-on-narrow
-out=$( (export NARROW_DO="echo scribble >>'$ITEM'"; sdd run planner 1) 2>&1) || fail "planner run failed: $out"
+out=$( (export NARROW_DO="echo scribble >>$ITEM"; sdd run planner 1) 2>&1) || fail "planner run failed: $out"
 assert_contains "$(cat "$T/stub/narrow.prompt")" 'sdd ticks these tasks for you'   # FR-36.5
 assert_contains "$(cat "$T/stub/narrow.prompt")" 'You are the planner for item 1.'
 assert_contains "$out" "⚠ the planner edited $ITEM: restored"
