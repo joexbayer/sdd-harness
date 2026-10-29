@@ -184,7 +184,7 @@ fixed keys; every other reader (the MCP server too) uses them instead of parsing
 |---|---|---|
 | story | `US-<id>.<n> As a …` | `grep -h '^US-' specs/changes/*/item.md` |
 | requirement | `FR-<id>.<n> WHEN … THE SYSTEM SHALL …`, continued on the next lines, then an `e.g.` line | `grep -c '^FR-41\.' specs/changes/41-*/item.md` |
-| task | `- [ ] T-<id>.<n> <what>, FR-… (files: …; test: <command>; expect: fail; size: S\|M\|L)`; `[x]` once `task done` saw its test pass (`[X]` counts too); attributes optional (no size is M), any other attribute makes the task unreadable; `expect: fail "<text>"` counts the red run only when its output contains that text (a fixed string) | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
+| task | `- [ ] T-<id>.<n> <what>, FR-… (files: …; test: <command>; expect: fail; size: S\|M\|L; by: <role>)`; `[x]` once `task done` saw its test pass (`[X]` counts too); attributes optional (no size is M, no by: is the builder), any other attribute makes the task unreadable; `expect: fail "<text>"` counts the red run only when its output contains that text (a fixed string) | `grep -c '^- \[[xX]\] T-' specs/changes/*/item.md` |
 | decision | `D-<id>.<n> … because …` | `git grep -n '^D-' specs/` |
 | question | `Q-<id>.<n> … → recommend: …`; answered with `→ decided: …` | `grep '^Q-' … \| grep -v 'decided:'` |
 | outcome | `DOD-<id>.<n> …` | |
@@ -309,6 +309,13 @@ uncommitted changes, `task done` runs it again in `git worktree add --detach` of
 $TMPDIR with only the task's `files:` copied in, removed afterwards, and counts it red when it
 fails there (for the plan's reason, if named): the human's tree is never stashed or reset
 (D-31.2, D-31.3). Passing there too, or no other changes (the code already committed), is refused.
+A task may say which role builds it (`by: planner`, item 36): small builders write hollow tests
+but make a big model's red tests pass, so the planner can write the test that defines done. A
+batch belongs to one role (task_batch ends it where `by:` changes); `sdd run <role>` on another
+role's batch is refused and names whose turn it is, and the batch's own role gets what the
+builder got before: the item file restored and the batch ticked (D-36.2). Every batch run gets
+prompts/role-batch.md (write only these tasks' code and tests; sdd ticks, the orchestrator
+commits; no `cd`) before the project's role-<role>.md (D-36.3).
 
 Verifying: once no task is open and the check passes, the finish steps hand the item to the
 `verifier` role (its `sdd-verifier` subagent, `sdd run verifier <id>`, or a fresh subagent on
