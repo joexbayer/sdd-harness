@@ -119,6 +119,19 @@ refuses a dirty tree), and `fill`.
   says whether a `depends:` ref has shipped and names it (`waits_for` sets WAITS). Everything
   that reads all item rows runs only when an item has `depends:` or a roadmap has shipped:
   keep it that way, `next`/`status` are on the git-count budget.
+- Contracts (item 26): `specs/contracts/<name>[.ext|/]` (`CONTRACTS`), named by an item's
+  `contracts:` frontmatter (`IR_CONTRACTS`; item_load also sets `ILCONTRACTS`). Only a `contract`
+  item changes them and it lands no code: both rules live in `constitution_guard` (check, ship).
+  The approval token is `<plan hash>,<name>=<object id>,…` for items with contracts, the bare hash
+  otherwise. Never compare `${IR_APPROVED%% *}` to `plan_hash` yourself: use `approval_ok` (from
+  the file) or `approval_current` (item_phase, from IR_*), both via `approval_pin`, which sets
+  APIN, PHASH and, from `contract_ids`, CROWS (`name\tid\tpath`), CPINS and CBAD (why it cannot
+  pin). `contract_tree` reads `git ls-tree <base> specs/contracts/` once per process into CTREE;
+  item_rows calls it in its loop before `$(item_facts)`, whose subshell would lose it. Open items
+  with contracts are never cached as fixed (their phase follows the base branch). Items without
+  contracts must stay at zero extra git calls (t_gitcalls). WHYCODE `contract` = a pinned contract
+  changed (or cannot be pinned yet); run.sh treats it as the human's time. Tests: tests/t_contracts.sh
+  (`uses` sets the frontmatter line, `ship_contract` ships a contract change from main).
 
 ## Performance (item 18)
 A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git calls. So:

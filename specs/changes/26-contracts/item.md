@@ -101,7 +101,7 @@ full check runs. `.sdd/bin/sdd task done T-26.1` ticks a task when its test pass
 - [x] T-26.1 Contract type and ship guard, FR-26.1, FR-26.2 (files: .sdd/core/templates/contract.md, .sdd/core/config, .sdd/core/lib/common.sh, .sdd/core/cmd/ship.sh, tests/t_contracts.sh; test: SRC=$PWD SH=dash dash tests/t_contracts.sh; size: M)
 - [x] T-26.2 Contract names and the approval pin, FR-26.3, FR-26.4, FR-26.5 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/approve.sh, tests/t_contracts.sh; test: SRC=$PWD SH=dash dash tests/t_contracts.sh; size: L)
 - [x] T-26.3 Contracts in next and review, FR-26.6, FR-26.7 (files: .sdd/core/cmd/next.sh, .sdd/core/cmd/review.sh, tests/t_contracts.sh; test: SRC=$PWD SH=dash dash tests/t_contracts.sh; size: S)
-- [ ] T-26.4 Help, README, design and sdd-dev notes (files: .sdd/core/cmd/help.sh, README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; size: S)
+- [x] T-26.4 Help, README, design and sdd-dev notes (files: .sdd/core/cmd/help.sh, README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
