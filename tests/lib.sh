@@ -8,9 +8,8 @@ export GIT_CONFIG_NOSYSTEM=1 SDD_SH="$SH"
 # A role run's builder runs this suite too; its SDD_RUN would make every approve and ship refuse.
 unset SDD_RUN SDD_ROLE
 mkdir -p "$HOME"
-git config --global user.name test
-git config --global user.email test@example.com
-git config --global init.defaultBranch main
+# What three `git config --global` calls would write, without three git processes per test file.
+printf '[user]\n\tname = test\n\temail = test@example.com\n[init]\n\tdefaultBranch = main\n' >"$GIT_CONFIG_GLOBAL"
 
 sdd() { "$SH" "$SRC/.sdd/bin/sdd" "$@"; }
 
@@ -22,8 +21,16 @@ assert_file() { [ -e "$1" ] || fail "missing $1"; }
 assert_no_file() { [ ! -e "$1" ] || fail "unexpected $1"; }
 
 # new_repo [name]: a repo with one commit on main, sdd installed, and a passing check.
+# tests/run.sh builds one such repo per shell and exports it as SDD_TEMPLATE: a copy of it is
+# much cheaper than git init, sdd init and two commits in every test. Its cached config
+# (.git/sdd-config) names the builder's HOME, so it goes; sdd rebuilds it on the next call.
 new_repo() {
 	R="$T/${1:-app}"
+	if [ -d "${SDD_TEMPLATE:-}" ] && [ ! -e "$R" ]; then
+		cp -R "$SDD_TEMPLATE" "$R" && cd "$R" || exit 1
+		rm -f .git/sdd-config
+		return
+	fi
 	mkdir -p "$R" && cd "$R" || exit 1
 	git init -q
 	echo hello >README.md
