@@ -87,7 +87,7 @@ L ones alone. Add `; expect: fail` for a test written first (it must fail), or
 full check runs. `.sdd/bin/sdd task done T-36.1` ticks a task when its test passes. -->
 - [x] T-36.1 by: attribute, its check and display, FR-36.1 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/cmd/next.sh, tests/t_task.sh; test: SRC=$PWD SH=dash dash tests/t_task.sh; size: M)
 - [x] T-36.2 Batches by role, FR-36.2 (files: .sdd/core/lib/common.sh, tests/t_batch.sh; test: SRC=$PWD SH=dash dash tests/t_batch.sh; size: S)
-- [ ] T-36.3 Runs by role: refuse, restore, tick; the role prompt, FR-36.3, FR-36.4, FR-36.5 (files: .sdd/core/cmd/run.sh, .sdd/core/prompts/role-batch.md, tests/t_run.sh; test: SRC=$PWD SH=dash dash tests/t_run.sh; size: M)
+- [x] T-36.3 Runs by role: refuse, restore, tick; the role prompt, FR-36.3, FR-36.4, FR-36.5 (files: .sdd/core/cmd/run.sh, .sdd/core/prompts/role-batch.md, tests/t_run.sh; test: SRC=$PWD SH=dash dash tests/t_run.sh; size: M)
 - [ ] T-36.4 Plan rule, README, design, sdd-dev notes, FR-36.6 (files: .sdd/core/prompts/plan.md, README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
 
 ## Built

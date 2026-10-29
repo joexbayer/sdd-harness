@@ -43,13 +43,25 @@ esac
 [ "$role" != builder ] || [ "$PHASE" != build ] || [ "$WHYCODE" = task ] ||
 	usage_die "item $ID has no open task: finishing (check, security pass, verifier, Built) is the orchestrating session's: $CMD next"
 phase=$PHASE
-# In build, the role works the current batch of tasks (task_batch), which next shows it.
+# In build, the role works the current batch of tasks (task_batch), which next shows it. A batch
+# belongs to one role (`by:`, the builder when none): another role's run is refused (FR-36.3).
 task=$TASK
-[ -z "$task" ] || task=$(ir_batch | cut -f1 | paste -sd ' ' -)
+if [ -n "$task" ]; then
+	batch=$(ir_batch)
+	task=$(printf '%s\n' "$batch" | cut -f1 | paste -sd ' ' -)
+	by=$(printf '%s\n' "$batch" | head -n 1 | cut -f11)
+	by=${by:-builder}
+	[ "$role" = "$by" ] || usage_die "${task%% *} is the $by's: $CMD run $by $ID"
+fi
 run_slot
 n=$RUN
 dir=$RUNDIR
 "${SDD_SH:-/bin/sh}" "$SDD_HOME/bin/$NAME" next >"$dir/prompt.md" 2>&1
+# FR-36.5, D-36.3: a batch run's job, before the project's own role prompt.
+if [ -n "$task" ] && _rp=$(sdd_path prompts/role-batch.md); then
+	printf '\n' >>"$dir/prompt.md"
+	render "$_rp" "$ID" "$(fm_get title "$IFILE")" "$ITYPE" >>"$dir/prompt.md"
+fi
 if _rp=$(sdd_path "prompts/role-$role.md"); then
 	printf '\n' >>"$dir/prompt.md"
 	render "$_rp" "$ID" "$(fm_get title "$IFILE")" "$ITYPE" >>"$dir/prompt.md"
@@ -63,10 +75,10 @@ started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 SDD_RUN=$n
 SDD_ROLE=$role
 export SDD_RUN SDD_ROLE
-# FR-34.1, D-34.1: the item file is not the builder's to write (sdd ticks its tasks below; Built
-# comes after the build), so a builder run gets it back as it was.
+# FR-34.1, D-34.1, FR-36.4: the item file is not the batch role's to write (sdd ticks its tasks
+# below; Built comes after the build), so a batch run gets it back as it was.
 before=
-if [ "$role" = builder ]; then
+if [ -n "$task" ]; then
 	before=$(mktemp "${TMPDIR:-/tmp}/$NAME-item.XXXXXX") && cp "$IFILE" "$before" || die "could not copy $IFILE"
 fi
 # args are split on spaces, as written in the tier (no quoting), and never glob-expanded.
@@ -76,7 +88,7 @@ rc=$?
 set +f
 if [ -n "$before" ]; then
 	cmp -s "$before" "$IFILE" ||
-		{ cp "$before" "$IFILE" && echo "⚠ the builder edited $IFILE: restored (sdd ticks its tasks; Built is written after the build)"; }
+		{ cp "$before" "$IFILE" && echo "⚠ the $role edited $IFILE: restored (sdd ticks its tasks; Built is written after the build)"; }
 	rm -f "$before"
 fi
 secs=$(($(date +%s) - start))
@@ -89,10 +101,10 @@ run_log "$n" "$started" "$ID" "$role" "$agent" "$model" "$phase" "$task" "$(tsv 
 # the log above keeps the real code.
 [ "$rc" -eq 0 ] || { command -v agent_exit_note >/dev/null 2>&1 && agent_exit_note "$rc"; } ||
 	{ echo "✗ the agent exited $rc (its output: $dir)"; exit 1; }
-# FR-31.1, D-31.1: in a builder run the batch's own tests decide, not the model: sdd ticks each
-# task the agent left open, in plan order, and stops at the first that fails. It commits nothing
-# (C-4): it prints the commit for the orchestrator to make.
-if [ "$role" = builder ] && [ -n "$task" ]; then
+# FR-31.1, D-31.1, FR-36.4: in a batch run the batch's own tests decide, not the model: sdd ticks
+# each task the agent left open, in plan order, and stops at the first that fails. It commits
+# nothing (C-4): it prints the commit for the orchestrator to make.
+if [ -n "$task" ]; then
 	rows=$(task_rows)
 	left=
 	for t in $task; do
