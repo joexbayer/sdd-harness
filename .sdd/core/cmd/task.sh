@@ -126,8 +126,9 @@ else
 		die "$tid: its test could not run (exit $rc: command not found or not executable)"
 	elif [ "$expect" = fail ]; then
 		without=
+		# Exit 126/127 there is red too: the same command ran in the tree, so what is missing is the
+		# uncommitted code (e.g. `sh api.sh`).
 		[ "$rc" -ne 0 ] || red_without_code
-		[ "$rc" -ne 126 ] && [ "$rc" -ne 127 ] || { tail -n 5 "$log"; die "$tid: its test could not run without the uncommitted code (exit $rc; log: $log)"; }
 		# A red test that ran no tests proves nothing either (the check's no-tests patterns).
 		nt=$(cfg_all check.no-tests | paste -sd '|' -)
 		[ -z "$nt" ] || ! grep -qiE "$nt" "$log" ||

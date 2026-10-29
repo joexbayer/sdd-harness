@@ -76,6 +76,34 @@ run_log "$n" "$started" "$ID" "$role" "$agent" "$model" "$phase" "$task" "$(tsv 
 # the log above keeps the real code.
 [ "$rc" -eq 0 ] || { command -v agent_exit_note >/dev/null 2>&1 && agent_exit_note "$rc"; } ||
 	{ echo "✗ the agent exited $rc (its output: $dir)"; exit 1; }
+# FR-31.1, D-31.1: in a builder run the batch's own tests decide, not the model: sdd ticks each
+# task the agent left open, in plan order, and stops at the first that fails. It commits nothing
+# (C-4): it prints the commit for the orchestrator to make.
+if [ "$role" = builder ] && [ -n "$task" ]; then
+	rows=$(task_rows)
+	left=
+	for t in $task; do
+		[ "$(printf '%s\n' "$rows" | T=$t awk -F '\t' '$1 == ENVIRON["T"] { print $2 }')" != open ] || left="$left $t"
+	done
+	case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
+	of=$(printf '%s\n' $left | grep -c .)
+	ticked=
+	what=
+	n_ok=0
+	for t in $left; do
+		if tick=$("${SDD_SH:-/bin/sh}" "$SDD_HOME/bin/$NAME" task 'done' "$t" 2>&1); then
+			printf '%s\n' "$tick" | sed -n '1s/ · commit with: .*//p'
+			n_ok=$((n_ok + 1))
+			ticked="$ticked $t"
+			what="${what:+$what, }$(printf '%s\n' "$rows" | T=$t awk -F '\t' '$1 == ENVIRON["T"] { print $3 }')"
+		else
+			printf '%s\n' "$tick"
+			echo "ticked $n_ok of $of${ticked:+ · commit with: $kind($ID):$ticked $what}"
+			exit 1
+		fi
+	done
+	[ -z "$left" ] || echo "ticked $n_ok of $of · commit with: $kind($ID):$ticked $what"
+fi
 # Tracking off: the agent's output was only needed for this summary (kept above when it failed).
 usage_on || rm -rf "$dir"
 echo "next    $CMD next   (or $CMD usage $ID)"
