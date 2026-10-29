@@ -75,6 +75,7 @@ Not every change takes the full path:
 | hotfix | production is broken; write it up after | no |
 | amendment | a constitution article must change; every gate blocks | yes |
 | roadmap | a system in several items: plan their order once; only the plan lands | yes |
+| contract | change an interface items build against (specs/contracts/); lands no code | yes |
 
 Changes under about 20 lines with no behaviour change need no item: commit them as
 `chore: …`.
@@ -180,6 +181,16 @@ and `sdd new --from R-30.2` opens one with `roadmap: R-30.2` and `depends: R-30.
 frontmatter. Any item may list `depends: 31, R-30.1` by hand. Planning and building go on in
 parallel; `next`, `status` and `ls` say what an item waits for, and the `depends` gate makes
 `ship` warn (lite) or refuse (standard, strict) until those items have shipped.
+
+**Contracts.** Frontend and backend items built in parallel agree on one interface first:
+`sdd new contract "Orders API"` plans a change to files under `specs/contracts/` (any format, a
+file or a folder; the project's check validates it), and only a contract item may change them
+(ship refuses anything else, and a contract item lands no code). An item builds against one by
+naming it in its frontmatter, `contracts: orders-api` (the file `specs/contracts/orders-api.yaml`
+on the base branch). `approve` pins each contract's git id with the plan, refusing one that is not
+on the base branch yet or that the branch has an old copy of. When a contract changes on the base
+branch, every item using it goes back to planning, naming it: merge the base, check the plan
+still fits, and approve again. In build, `next` lists the contracts as read-only input.
 
 **Verified, then reviewed.** Before writing Built, the agent hands the item to a `verifier`
 role (ideally another model) that proves each FR by running it and reports only findings; the

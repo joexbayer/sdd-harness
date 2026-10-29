@@ -66,6 +66,7 @@ specs/                        content; the only other folder sdd writes to
   archive/<id>-<slug>/        shipped or dropped items
   kb/                         research, decisions, concepts, lessons
   constitution.md             ground truths (C-n), each enforced; changed only by amendments
+  contracts/<name>[.<ext>|/]   interfaces items build against; changed only by contract items
   design.md                   (this repo only) living design
 AGENTS.md                     managed block: how to use sdd
 ```
@@ -86,6 +87,7 @@ state (ID counter, check results, synced agents) lives in `$(git rev-parse
 | spike | learning | Question · Timebox · Findings · Decision | described; only the item merges, never the code |
 | amendment | a ground truth must change | Articles affected · Current text · Proposed text · Why now · Impact · Alternatives | every gate blocks in every profile; lands no code (Impact lists the items that follow) |
 | roadmap | a system in several items | Goal · Items (`R-` entries) · Done when | planned, analyzed, approved, built; only the item lands, like a spike |
+| contract | an interface items build against changes | Why · Contract · Users · Compatibility · Security · Done when | planned, analyzed, approved, check, built, reviewed; lands no code; review shows the contract diff in full |
 | feature | new behaviour | Why · What changes (US/FR + examples) · Not in scope · How · Questions · Done when | described, check (+ approve, tasks, trace in standard) |
 
 **Constitution.** Articles are one line, ID first (`grep '^C-' specs/constitution.md`), with
@@ -94,6 +96,16 @@ indented `Why:` and `Enforced: review | check <command>` lines; at most 30 (`con
 and build instructions; `review` lists the review articles for the human to confirm. Once the
 constitution is on the base branch, a branch that changes it fails `check` and `ship` in every
 profile unless it is an `amendment`. Unenforced guidance belongs in `kb/`, not here.
+
+**Contracts** (item 26). `specs/contracts/<name>.<ext>` or `specs/contracts/<name>/` (any
+format; sdd never parses it, D-26.5). Only a `contract` item changes them, from the first one on,
+and a contract item changes nothing outside specs/ (`constitution_guard`, in `check` and `ship`).
+An item lists `contracts: orders-api, billing` in its frontmatter (names `[A-Za-z0-9_-]+`).
+`approve` refuses a contract missing on the base branch, or one whose copy on the branch differs,
+and pins `approved: <plan hash>,orders-api=<git object id>,… <date> <who>` (items without
+contracts keep the bare hash). The base branch's copy is the truth: one `git ls-tree <base>
+specs/contracts/` per command, only for items with contracts, and a changed id or list puts the
+item back in planning naming the contract (reason code `contract`); such rows are not cached.
 
 Types live in config, so a team can add `migration` or `security-fix`. Changes under about
 20 lines with no behaviour change need no item. A plain `chore:` commit is enough.
@@ -177,6 +189,7 @@ fixed keys; every other reader (the MCP server too) uses them instead of parsing
 | question | `Q-<id>.<n> … → recommend: …`; answered with `→ decided: …` | `grep '^Q-' … \| grep -v 'decided:'` |
 | outcome | `DOD-<id>.<n> …` | |
 | roadmap entry | `- R-<id>.<n> <type>: <title>`, optionally ` (after: R-<id>.<k>, …)` naming earlier entries only (D-24.1, so no cycles); `analyze` flags an unknown type, a bad `after:`, a duplicate and a roadmap with none | `grep '^- R-30\.' specs/archive/30-*/item.md` |
+| contracts | frontmatter `contracts: orders-api, billing`: entries of `specs/contracts/` on the base branch, extension removed; outside the plan hash but pinned in the approval | `grep -l '^contracts:.*orders-api' specs/changes/*/item.md` |
 | item order | frontmatter `roadmap: R-<id>.<n>` (set by `new --from`) and `depends: 31, R-30.1` (by `new --from` from `after:`, or by hand); outside the plan hash. A ref is met once that item, or the item opened from that entry, has shipped. An entry is not opened, open (item n) or shipped (item n), derived from the items (item rows sdd sees: local, remote-tracking, archive) | `grep -l '^depends:' specs/changes/*/item.md` |
 | item state | frontmatter `status: open\|shipped\|dropped`; open items live on their branch, shipped ones in `specs/archive/` | `grep -l '^status: open' specs/*/*/item.md` |
 
@@ -408,7 +421,7 @@ automated behind gates, and every change leaves the code easy to change again.
 | 24 | multi-item plans: a `roadmap` type whose `R-` entries open items (`new --from`), `depends:` in an item's frontmatter, ready entries in `next`, entry states in `show`, what an item waits for in `next`/`status`/`ls`, and the `depends` ship gate | a complex system is many items in an order |
 | later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
 | later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
-| next | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model); a contract item lands only the contract; items name `Contract:` and approval pins its hash, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
+| 26 | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model, any format); a `contract` item lands only the contract; items name `contracts:` and approval pins their ids, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
 | then | the experiment: a complex multi-phase app, Opus plans and a coder model builds tasks, a scripted human answers and approves, measured against an Opus-only baseline | proves plan big, build small with numbers |
 | then | `sdd-server` (stdio, then HTTP with mirrors) | team coordination across branches and repos |
 | then | fresh-context review for clean, easy-to-change code | ladder step 5 |

@@ -48,6 +48,7 @@ cells=$(printf '%s\n' "$rows" | TODAY=$(date +%F) SINCE=$since LAST=$last MINE=$
 		if ($4 == "plan") {
 			if ($17 == "fill") return "planning: " $16
 			if ($17 == "changed") s = "planning: the plan changed after approval; it needs re-approval"
+			else if ($17 == "contract") s = "planning: " $16
 			else if ($11 > 0) s = "planning: " plural($11, "open question") "; then approval"
 			else s = "planning: plan ready, waiting for approval"
 			return s

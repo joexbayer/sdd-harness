@@ -87,6 +87,10 @@
 [type "spike"]
 	gates = planned approved built depends
 	lands = item
+[type "contract"]
+	# Changes files under specs/contracts/, the interface items build against (item 26); lands
+	# no code, and the items using a changed contract go back to planning.
+	gates = planned analyzed approved check built reviewed
 [type "roadmap"]
 	# A system as items in order (R-<id>.<n> entries); like a spike, only the item lands.
 	gates = planned analyzed approved built

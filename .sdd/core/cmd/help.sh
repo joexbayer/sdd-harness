@@ -36,4 +36,6 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME hook <event> --agent <a>    called by agent hooks
 
 types: $(types | paste -sd ' ' -)
+contracts: an item names them in its frontmatter (contracts: orders-api); only a contract item
+           changes specs/contracts/, and a change sends the items using it back to planning
 EOF

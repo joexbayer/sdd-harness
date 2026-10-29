@@ -112,11 +112,17 @@ BATCH
 	fi
 	echo
 fi
+# FR-26.6: the contracts the item builds against are fixed input for the builder.
+if [ "$PHASE" = build ] && [ -n "$IR_CONTRACTS" ]; then
+	contract_ids "$IR_CONTRACTS"
+	echo "Contracts (read them; they change only through a contract item): $(joinlist "$(printf '%s\n' "$CROWS" | cut -f3)")"
+	echo
+fi
 prompt "$PHASE" "$ID" "$title" "$ITYPE"
 prompt "$PHASE.$ITYPE" "$ID" "$title" "$ITYPE"
 # A filled-in plan waiting for approval: what analyze finds, for the agent to fix first (FR-19.3).
 case $WHYCODE in
-approval | changed)
+approval | changed | contract)
 	found=$(printf '%s\n' "$IR_FACTS" | plan_findings | findings_lines)
 	if [ -n "$found" ]; then
 		echo

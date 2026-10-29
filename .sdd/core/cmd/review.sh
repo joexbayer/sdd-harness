@@ -99,6 +99,12 @@ if [ "$ITYPE" = amendment ]; then
 	echo "Constitution diff (against where this branch left $base)"
 	git diff "$mb" -- "$CONST" | sed 's/^/  /'
 fi
+# FR-26.7: a contract is what both sides build against: its diff in full.
+if [ "$ITYPE" = contract ]; then
+	echo
+	echo "Contract diff (against where this branch left $base; read it in full)"
+	git diff "$mb" -- "$CONTRACTS" | sed 's/^/  /'
+fi
 
 echo
 sec=$(section "Security" | sed '/^[[:space:]]*$/d; s/^/  /')
