@@ -126,4 +126,23 @@ sdd approve >/dev/null 2>&1 || fail "approve with a folder contract failed: $(sd
 tok=$(sed -n 's/^approved: \([^ ]*\) .*/\1/p' "$p")
 assert_eq "${tok#*,}" "orders-api=$(git rev-parse main:specs/contracts/orders-api.yaml),billing=$(git rev-parse main:specs/contracts/billing)"
 assert_contains "$(sdd next)" 'Phase: build'
+
+# FR-26.6: in build, next lists the contracts as fixed input (a folder with its /); not in plan.
+out=$(sdd next)
+assert_contains "$out" 'Contracts (read them; they change only through a contract item): specs/contracts/orders-api.yaml, specs/contracts/billing/'
+uses "$p" 'orders-api'
+assert_not_contains "$(sdd next)" 'Contracts (read them'
+
+# FR-26.7: review of a contract item shows the contract diff in full; other items' reviews do not.
+assert_not_contains "$(sdd review)" 'Contract diff'
+git switch -q main
+sdd new contract "Orders API v3" >/dev/null 2>&1 || fail "new contract v3 failed"
+v3=$(ls specs/changes/*-orders-api-v3/item.md)
+fill "$v3" plan && git commit -qam "docs: plan" && sdd approve >/dev/null 2>&1 || fail "approve v3 failed"
+printf 'openapi: 3.1.0\npaths: { /orders: {}, /orders/{id}: {} }\n' >specs/contracts/orders-api.yaml
+git commit -qam "contract v3"
+out=$(sdd review)
+assert_contains "$out" 'Contract diff (against where this branch left main; read it in full)'
+assert_contains "$out" '  -paths: { /orders: {} }'
+assert_contains "$out" '  +paths: { /orders: {}, /orders/{id}: {} }'
 echo ok
