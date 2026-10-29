@@ -107,7 +107,7 @@ and the hooks. Windows works through WSL or Git Bash.
 | `sdd ship` | gates, archive the item, fast-forward the base branch |
 | `sdd open <id> [--worktree]` | switch to an item's branch (a teammate's too), or open it in `../<repo>.<id>` |
 | `sdd tidy [--remote] [--dry-run]` | remove what shipped items left; `--remote` deletes their remote branches |
-| `sdd ls [--all] [--json]` | every item and its progress, across all branches |
+| `sdd ls [--all] [--json] [--pr]` | every item and its progress, across all branches; `--pr` adds each PR (one GitHub call) |
 | `sdd show <id> [--json]` | one item's stories, requirements, tasks, decisions, questions |
 | `sdd summary [--since <when>] [--last <n>] [--mine] [--md]` | recent work as a table |
 | `sdd task [next \| done <T-id>]` | the item's tasks; `next` is the batch to build now, `done` runs a task's test and ticks it |

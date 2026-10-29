@@ -161,7 +161,7 @@ A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git c
   prove each input change misses. A new row field goes in `item_facts` (and the cache line
   width, 18 since item 24, in `AWK_CACHE`), then `item_read` (a frontmatter key: one more line
   in its printf and the `for _ln` skip list), `item_rows_finish`'s print and `row_json`. Row
-  fields 18 roadmap, 19 depends; ls appends PR fields after the row ($20..$25), so a new row
+  fields 18 roadmap, 19 depends; `ls --pr` appends PR fields after the row ($20..$25; item 27: no gh call without --pr, review asks only in the pr phase), so a new row
   field shifts them in `row_json` and ls.sh.
 - `GIT_TRACE=1` misses git calls whose stderr is sent to `/dev/null` (most `ls-tree`s): count
   calls with t_gitcalls' logging `git` wrapper instead. To see every t_perf time, run it with

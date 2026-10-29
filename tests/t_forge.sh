@@ -72,8 +72,12 @@ echo 1 >"$T/gh/auth"
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(gh logged out)"
 assert_contains "$out" 'ship goes through GitHub (forge = github): gh is not logged in (run: gh auth login)'
-assert_contains "$(sdd ls)" 'pr      state unknown: gh is not logged in'
-assert_contains "$(sdd review)" 'pr      PR state unknown: gh is not logged in'
+assert_contains "$(sdd ls --pr)" 'pr      state unknown: gh is not logged in'
+# FR-27.1, FR-27.2: ls without --pr, and review before any PR, never run gh.
+n=$(wc -l <"$T/gh/log")
+sdd ls >/dev/null; sdd ls --json >/dev/null; sdd review >/dev/null
+assert_eq "$(wc -l <"$T/gh/log")" "$n" "(ls and review before a PR called gh)"
+assert_not_contains "$(sdd review)" 'pr      '
 echo 0 >"$T/gh/auth"
 # FR-10.6: gh not installed at all.
 nogh=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gh" ] || printf '%s:' "$d"; done)
@@ -92,8 +96,9 @@ assert_eq "$(git rev-parse main)" "$main_before" "(main moves only when the PR m
 out=$(sdd status)
 assert_contains "$out" 'phase   pr'
 assert_contains "$out" 'pr      PR #1 open: no review yet, CI passing   https://github.test/pr/1'
-assert_contains "$(sdd ls)" '· PR #1 open: no review yet, CI passing'
-assert_eq "$(sdd ls --json | jq -r 'select(.id == 1) | "\(.pr.number) \(.pr.state) \(.pr.ci)"')" '1 OPEN passing'
+assert_contains "$(sdd ls --pr)" '· PR #1 open: no review yet, CI passing'
+assert_not_contains "$(sdd ls)" 'PR #1'
+assert_eq "$(sdd ls --pr --json | jq -r 'select(.id == 1) | "\(.pr.number) \(.pr.state) \(.pr.ci)"')" '1 OPEN passing'
 assert_contains "$(sdd review)" 'pr      PR #1 open'
 assert_contains "$(sdd summary --md)" 'in a pull request, waiting to merge'
 
