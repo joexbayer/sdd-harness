@@ -10,9 +10,10 @@ new_repo
 # item <id> <status>: a feature item the size of a real one, with requirements, decisions, a
 # question, tasks and Built.
 item() {
-	I=$1 S=$2 D=$(date +%F) awk 'BEGIN {
+	I=$1 S=$2 D=$(date +%F) DEP=${dep:-} awk 'BEGIN {
 		i = ENVIRON["I"]; s = ENVIRON["S"]
 		print "---"; print "id: " i; print "type: feature"; print "title: Item " i; print "status: " s
+		if (ENVIRON["DEP"] != "") print "depends: " ENVIRON["DEP"]
 		print "created: " ENVIRON["D"]
 		if (s == "shipped") { print "approved: 0123456789abcdef " ENVIRON["D"] " test"; print "shipped: " ENVIRON["D"] }
 		print "---"; print "# " i " Item " i; print ""
@@ -46,6 +47,9 @@ done
 for i in 96 97 98 99 100; do
 	git switch -q -c "feature/$i-item-$i" main
 	mkdir -p "specs/changes/$i-item-$i"
+	# Item 100 waits for others (item 25): a shipped item, an open one and a roadmap entry.
+	dep=
+	[ $i != 100 ] || dep="5, 99, R-1.1"
 	item "$i" open >"specs/changes/$i-item-$i/item.md"
 	git add specs && git commit -qm "docs($i): open feature \"Item $i\"" || fail "commit $i failed"
 done

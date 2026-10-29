@@ -141,12 +141,18 @@ A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git c
   `.git/sdd/cache/facts.<hash of VERSION + common.sh + CMD + config>`, one line per
   `<blob>\t<origin>\t<path>`. Rows that consulted a check result (reason code check, built,
   ready) or the worktree are never cached. Branch, opened_by and active are read from git per
-  ref. `rm -rf .git/sdd/cache` changes nothing but speed; tests/t_cache.sh poisons the cache to
+  ref. Item 25: `item_sources` (one `ls-tree` per branch) is cached in `.git/sdd/cache/sources`,
+  keyed on `cksum` of base + SPECS + one `for-each-ref` of all tips; the worktree row is spliced
+  in live at the `worktree` marker line. Dependency state uses `dep_rows` (item_rows with
+  `_IR_LIGHT=1`: no opened_by/active git calls), read once per process into `DEP_ROWS`. `rm -rf .git/sdd/cache` changes nothing but speed; tests/t_cache.sh poisons the cache to
   prove each input change misses. A new row field goes in `item_facts` (and the cache line
   width, 18 since item 24, in `AWK_CACHE`), then `item_read` (a frontmatter key: one more line
   in its printf and the `for _ln` skip list), `item_rows_finish`'s print and `row_json`. Row
   fields 18 roadmap, 19 depends; ls appends PR fields after the row ($20..$25), so a new row
   field shifts them in `row_json` and ls.sh.
+- `GIT_TRACE=1` misses git calls whose stderr is sent to `/dev/null` (most `ls-tree`s): count
+  calls with t_gitcalls' logging `git` wrapper instead. To see every t_perf time, run it with
+  `SDD_PERF_SLACK=0.001` (all over budget, so the report prints; slow, it retries each).
 - `t_perf.sh` is sensitive to machine load (other sessions running suites: load average 14 put
   `next` at 0.27 s and `ls` at 1.3 s with unchanged code). Before blaming a change, time old vs
   new in one generated repo: copy `.sdd/core` and `.sdd/bin` from a `git worktree add … main` and
