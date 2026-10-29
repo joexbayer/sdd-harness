@@ -87,6 +87,52 @@ full check runs. `.sdd/bin/sdd task done T-35.1` ticks a task when its test pass
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-35.1: `run_check` times the `check.run` commands with `date +%s` into `CHECK_SECS`
+  (.sdd/core/lib/common.sh:912, :923) and records it as `secs=` (check_record, :683, :936).
+  `check` shows it on every outcome: "✓ check passed for item 7 (12 s)", "✗ check failed
+  (12 s; full log: …)", "✗ check proves nothing: … (12 s; log: …)" (.sdd/core/cmd/check.sh:16,
+  :27, :36). Test: tests/t_check_budget.sh (shown time equals the recorded `secs=`; a failing
+  check shows its time).
+- FR-35.2: `budget = 30` with its comment in .sdd/core/config `[check]`; the warning is printed
+  after the result, exit code unchanged (.sdd/core/cmd/check.sh:41-46), with the FR's wording
+  exactly. Test: tests/t_check_budget.sh (`sleep 2` with budget 1 → warning and still exit 0;
+  budget 0 → no warning).
+- FR-35.3: a "Tests:" bullet in .sdd/core/prompts/plan.md:38-42 ("The gate (check) stays
+  fast", deep task tests marked and left out of check.run, cost settings configurable and
+  minimal, the FR's example asserted literally, a query-counting test for list endpoints).
+- FR-35.4: .sdd/core/prompts/build.md:26-29 adds "never from the code under test" and "Write
+  just enough code to pass the test, without abstractions, options or defensive code nothing
+  asked for"; "returned nothing" was already there (:22-25) and stays.
+- FR-35.5: .sdd/core/prompts/role-verifier.md:9-12: "Per FR, ask: is there a test that would
+  fail if that FR were dropped?", and an FR with no such test is a finding.
+  Tests for FR-35.3..5: tests/t_prompts_tests.sh (plan `next`, build `next`, and the synced
+  `sdd-verifier` subagent).
+- Docs: README.md (`sdd check` row), specs/design.md §9 step 2, .claude/skills/sdd-dev/SKILL.md
+  (timing notes); specs/kb/agent-testing.md committed.
+
+Deviations and choices:
+- The time is also shown on fail and "proves nothing", not only on pass (FR-35.1 says "say how
+  long it took"; the e.g. shows the pass line).
+- The warning shows on any outcome, not only a pass: a slow failing gate is just as slow.
+- A `[check] budget` that is not a whole number warns and counts as 0 (off), rather than a
+  shell arithmetic error.
+- Only `sdd check` prints the time and warning; `task done` and `ship` also run `run_check`, so
+  their records get `secs=` too, but print nothing new (the FR names `sdd check`).
+
+Follow-ups:
+- This repo's own check takes ~220 s on this machine, so it now warns every run. I did not set
+  a budget in .sdd/config (the build rules keep the builder out of `.sdd/`): the human may set
+  `budget = 300` there, or 0.
+
+Edge cases left out (not coded): whole-second `date +%s` timing can be off by up to 1 s around
+a second boundary or if the clock jumps (NTP) during a run; failure mode: a check right at the
+budget warns or not, or a negative time shows once; likely rare, harmless (a warning only);
+cost of fixing: a sub-second timer, not in POSIX.
+
+Security pass: the diff reads one config number (validated as digits before arithmetic) and
+prints text; no new input, dependency, file or network use. No findings.
+
+Verified by: none (builder self-checked; the orchestrator verifies)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
