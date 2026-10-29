@@ -34,7 +34,9 @@ else
 fi
 vline=$(verified_by)
 echo "verify  ${vline:-Verified by: (missing)}"
-pr=$(pr_note "$BRANCH")
+# Only in a PR (FR-27.2): before the first ship sdd has opened none, so no forge call.
+pr=
+[ "$PHASE" != pr ] || pr=$(pr_note "$BRANCH")
 [ -z "$pr" ] || echo "pr      $pr"
 
 echo

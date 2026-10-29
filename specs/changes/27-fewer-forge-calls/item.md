@@ -61,7 +61,7 @@ Size each task `S`, `M` or `L` (none is M): consecutive S tasks go to one builde
 L ones alone. Add `; expect: fail` for a test written first (it must fail), or
 `; expect: fail "<text>"` (it must fail with that text in its output); without `test:` the
 full check runs. `.sdd/bin/sdd task done T-27.1` ticks a task when its test passes. -->
-- [ ] T-27.1 ls --pr and review only in the pr phase, FR-27.1, FR-27.2 (files: .sdd/core/cmd/ls.sh, .sdd/core/cmd/review.sh, .sdd/core/cmd/help.sh, README.md, tests/t_forge.sh; test: SRC=$PWD SH=dash dash tests/t_forge.sh; size: S)
+- [x] T-27.1 ls --pr and review only in the pr phase, FR-27.1, FR-27.2 (files: .sdd/core/cmd/ls.sh, .sdd/core/cmd/review.sh, .sdd/core/cmd/help.sh, README.md, tests/t_forge.sh; test: SRC=$PWD SH=dash dash tests/t_forge.sh; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

@@ -1,13 +1,16 @@
 # shellcheck shell=sh
-# ls [--all] [--json]: every item and how far along it is: shipped ones from the archive on
-# the base branch, open ones from local and remote branches. --all adds dropped items.
+# ls [--all] [--json] [--pr]: every item and how far along it is: shipped ones from the archive on
+# the base branch, open ones from local and remote branches. --all adds dropped items; --pr their
+# pull requests (the one forge call, opt-in: FR-27.1).
 all=
 json=
+withpr=
 for _a in "$@"; do
 	case $_a in
 	--all) all=1 ;;
 	--json) json=1 ;;
-	*) usage_die "usage: $NAME ls [--all] [--json]" ;;
+	--pr) withpr=1 ;;
+	*) usage_die "usage: $NAME ls [--all] [--json] [--pr]" ;;
 	esac
 done
 need_repo
@@ -18,11 +21,11 @@ every=$(item_rows)
 rows=$(printf '%s\n' "$every" | A=$all awk -F '\t' '($10 == "archive" || $3 == "open" || $17 == "pr") && (ENVIRON["A"] != "" || $3 != "dropped")' |
 	sort -t "$(printf '\t')" -k1,1n)
 
-# With a forge, each item branch's newest PR joins its row as fields 20-25 (number, state,
+# With --pr and a forge, each item branch's newest PR joins its row as fields 20-25 (number, state,
 # review, ci, url, words; see pr_table). One forge call for all items.
 prs=
 prwhy=
-if forge_load; then
+if [ -n "$withpr" ] && forge_load; then
 	prs=$(pr_table) || { prwhy=$prs && prs=; }
 fi
 if [ -n "$prs" ] && [ -n "$rows" ]; then

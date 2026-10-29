@@ -15,7 +15,7 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME analyze [<id>]              the plan's gaps: FRs no task names, open questions, …
   $NAME approve                     the human hands the plan over to the agent (pins the plan)
   $NAME check                       run the configured checks (0 pass, 1 fail, 3 no tests ran)
-  $NAME ls [--all] [--json]         every item and its progress (archive + all branches)
+  $NAME ls [--all] [--json] [--pr]  every item and its progress (archive + all branches); --pr: PRs
   $NAME show <id> [--json]          an item's stories, requirements, tasks, decisions, questions
                                    (a roadmap: its entries, not opened, open or shipped)
   $NAME task [next | done T-<id>.<n>]
