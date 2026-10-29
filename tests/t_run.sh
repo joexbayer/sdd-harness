@@ -149,8 +149,16 @@ awk '/^## What changes$/ { print; print "FR-3.1 WHEN x THE SYSTEM SHALL y."; pri
 setcfg role.builder.tier small
 git commit -qam "docs(3): plan" && sdd approve >/dev/null 2>&1 || fail "approve 3 failed"
 head=$(git rev-parse HEAD)
-out=$( (export NARROW_DO='echo "sh api.sh" >t31.sh; echo "exit 0" >api.sh'; sdd run builder 3) 2>&1) ||
+# FR-34.1: the fake builder also writes into the plan and adds its own Built (as qwen did).
+cat >"$T/scribble.sh" <<'SH'
+awk '{ print } /^## What changes$/ { print "Built by the builder, in the plan." }' "$1" >"$1.t" && mv "$1.t" "$1"
+printf '\n## Built\nAll done, trust me.\n' >>"$1"
+SH
+out=$( (export NARROW_DO="echo 'sh api.sh' >t31.sh; echo 'exit 0' >api.sh; sh '$T/scribble.sh' '$f'"; sdd run builder 3) 2>&1) ||
 	fail "builder run on item 3 failed: $out"
+assert_contains "$out" "⚠ the builder edited $f: restored"
+assert_not_contains "$(cat "$f")" 'Built by the builder'
+assert_not_contains "$(cat "$f")" 'trust me'
 assert_contains "$out" 'item 3 T-3.1 · started'
 assert_contains "$out" '✓ T-3.1 done (its test fails without the uncommitted code)'
 assert_contains "$out" 'ticked 1 of 1 · commit with: feat(3): T-3.1 Api test'

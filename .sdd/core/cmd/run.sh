@@ -63,11 +63,22 @@ started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 SDD_RUN=$n
 SDD_ROLE=$role
 export SDD_RUN SDD_ROLE
+# FR-34.1, D-34.1: the item file is not the builder's to write (sdd ticks its tasks below; Built
+# comes after the build), so a builder run gets it back as it was.
+before=
+if [ "$role" = builder ]; then
+	before=$(mktemp "${TMPDIR:-/tmp}/$NAME-item.XXXXXX") && cp "$IFILE" "$before" || die "could not copy $IFILE"
+fi
 # args are split on spaces, as written in the tier (no quoting), and never glob-expanded.
 set -f
 agent_run "$bin" "$model" "$dir/prompt.md" "$dir/out" "$args" 2>"$dir/stderr"
 rc=$?
 set +f
+if [ -n "$before" ]; then
+	cmp -s "$before" "$IFILE" ||
+		{ cp "$before" "$IFILE" && echo "⚠ the builder edited $IFILE: restored (sdd ticks its tasks; Built is written after the build)"; }
+	rm -f "$before"
+fi
 secs=$(($(date +%s) - start))
 use=$(agent_usage "$dir/out")
 [ "$rc" -ne 127 ] || use=$(printf '\t\t\t%s not found' "$bin")
