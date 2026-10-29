@@ -222,3 +222,26 @@ so inspect the repo itself.
 - `sdd check` under load from other sessions (load average >10): t_perf's `hook stop` (~14
   processes, ~0.15 s idle) goes over 0.2 s. Compare against main with `SDD_PERF_SLACK=0.3` (it
   prints every time); if both match, rerun with `SDD_PERF_SLACK=1.5` and say so under Built.
+
+## The experiment harness (experiment/, item 30)
+- `experiment/run.sh <A|B> [dir] [--dry]` drives one arm of roadmap 29 in a fresh repo; only the
+  human starts a real run (`! sh experiment/run.sh B`). Test the driver for free with `--dry`
+  (fake claude/narrow from `experiment/fake/`; `XP_FAKE_COST`, `XP_FAKE_REVISE`, `XP_FAKE_FAIL`
+  exercise the caps). `shellcheck -s sh experiment/run.sh` yourself: `sdd check` does not list it.
+- Prove the hidden suite against the reference build:
+  `python3 -m pytest -q -p no:cacheprovider experiment/acceptance --repo experiment/reference --summary <file>`.
+  Change the brief, reference and suite together; every test must pass on the reference.
+- `sdd run <role>` refuses every role while an item waits for approval (WHYCODE approval,
+  changed, contract), so planner/human rounds are run by the driver with `claude -p` and logged
+  into `.git/sdd/runs.tsv` in run_log's columns, so `sdd usage` still totals them.
+- A run repo needs `.sdd/` committed on main before `sdd new`, or the item branch has no sdd.
+- Tier names in a run repo are `xp-*`: a developer's own `[tier]` in ~/.config/sdd/config wins
+  over the project's (tier_file), so common names like `small` could be silently replaced.
+- narrow headless without `--yolo` denies every non-read-only shell command (`:exec` is `:ask`,
+  and headless asks are refused: narrow lisp/security.lisp `permission-for`, runtime.go
+  `AskPermission`). experiment/narrow/allow.lisp fixes it with `advice-add 'permission-for
+  :around` from an init file (user-origin changes to sealed policy are allowed and survive
+  `seal-verify`). Check without spending: put only allow.lisp in an empty dir as init.lisp, then
+  `NARROW_CONFIG_DIR=<dir> narrow --eval '(permission-for nil (command "bash") (hash :command
+  "python3 -m pytest -q"))'` → `:allow` (`curl x` → `:ask`). Never --eval a config with the
+  provider block: loading it makes narrow read the gateway key.
