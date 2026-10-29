@@ -8,6 +8,8 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME init                        install into this repo (config, AGENTS.md block)
   $NAME new <type> "title" [--worktree]
                                    start a change: branch + specs/changes/<id>-<slug>/item.md
+  $NAME new --from R-<id>.<n> [--worktree]
+                                   open the item a shipped roadmap's entry describes
   $NAME status                      current item and phase, or open items on local branches
   $NAME next                        instructions for the current phase (agents call this)
   $NAME analyze [<id>]              the plan's gaps: FRs no task names, open questions, …
@@ -15,6 +17,7 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME check                       run the configured checks (0 pass, 1 fail, 3 no tests ran)
   $NAME ls [--all] [--json]         every item and its progress (archive + all branches)
   $NAME show <id> [--json]          an item's stories, requirements, tasks, decisions, questions
+                                   (a roadmap: its entries, not opened, open or shipped)
   $NAME task [next | done T-<id>.<n>]
                                    the item's tasks; next: the batch to build now; done runs a
                                    task's test and ticks it

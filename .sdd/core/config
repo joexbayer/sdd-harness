@@ -6,7 +6,7 @@
 	mode = solo
 	base = main
 	branch = {type}/{id}-{slug}
-	gates = planned analyzed approved tasks check built verified reviewed
+	gates = planned analyzed approved tasks check built verified reviewed depends
 
 # Gate levels per profile: off, warn or block.
 #   planned    every required plan section (above "## Built") has content
@@ -22,6 +22,8 @@
 #              keeps the change keeps it reviewed; an item that changes no code needs none)
 #   tasks      the plan has tasks and every one is ticked (off for fix, refactor and amendment);
 #              a ticked task needs a commit naming it in every profile, whatever this level
+#   depends    every item and roadmap entry in the item's `depends:` has shipped (an item ID like
+#              31, or an entry like R-30.1: the item opened from it); planning and building go on
 #   finish     agent stop hook: no stopping with unplanned, unapproved, unverified or
 #              unwritten-up code changes (blocks once, then lets it stop with a warning)
 [profile "lite"]
@@ -33,6 +35,7 @@
 	tasks = warn
 	verified = off
 	reviewed = warn
+	depends = warn
 	finish = block
 [profile "standard"]
 	planned = block
@@ -43,6 +46,7 @@
 	tasks = block
 	verified = warn
 	reviewed = warn
+	depends = block
 	finish = block
 [profile "strict"]
 	planned = block
@@ -53,6 +57,7 @@
 	tasks = block
 	verified = block
 	reviewed = block
+	depends = block
 	finish = block
 
 # A type exists when templates/<type>.md exists. Settings here are optional:
@@ -64,7 +69,7 @@
 	gates = planned check built
 	planned = warn
 [type "chore"]
-	gates = planned check built
+	gates = planned check built depends
 [type "amendment"]
 	# Changes the constitution: every gate blocks, in every profile.
 	planned = block
@@ -80,7 +85,11 @@
 [type "refactor"]
 	tasks = off
 [type "spike"]
-	gates = planned approved built
+	gates = planned approved built depends
+	lands = item
+[type "roadmap"]
+	# A system as items in order (R-<id>.<n> entries); like a spike, only the item lands.
+	gates = planned analyzed approved built
 	lands = item
 
 # Output that means a whole check run proved nothing (extended regex, case-insensitive).

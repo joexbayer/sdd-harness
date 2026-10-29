@@ -208,6 +208,11 @@ if [ "$(gate_level reviewed "$ITYPE")" != off ]; then
 		gate reviewed "item $ID: code changed since your review${since:+ ($(joinlist "$since"))} (gate reviewed): run $CMD review"
 	fi
 fi
+# FR-24.6: an item ships after the items and roadmap entries it depends on (D-24.2: only ship waits).
+if [ "$(gate_level depends "$ITYPE")" != off ]; then
+	waits_for "$(fm_get depends "$IFILE")"
+	[ -z "$WAITS" ] || gate depends "item $ID: waits for $WAITS (gate depends)"
+fi
 # Tasks: sdd ticks a box when its test passes, git proves it: a ticked task needs a commit
 # naming it, in every profile, and, when that commit is yours, the note task done left in this
 # clone (a teammate's tick was proven on their machine). Features also need tasks, all ticked.
@@ -236,11 +241,12 @@ guard=$(constitution_guard) || fail "item $ID: $guard"
 
 pre=$(git rev-parse HEAD)
 
-# A spike's code never lands: only its archived item reaches the base branch.
+# A spike's code never lands: only its archived item reaches the base branch. A roadmap's neither
+# (it has none): its entries open from the base branch once it is there (FR-24.1).
 if [ "$(cfg "type.$ITYPE.lands" all)" = item ]; then
 	fm_set "$IFILE" status shipped
 	fm_set "$IFILE" shipped "$(date +%F)"
-	git commit -q -m "docs($ID): ship spike \"$title\"" -- "$IFILE" || fail "could not commit $IFILE"
+	git commit -q -m "docs($ID): ship $ITYPE \"$title\"" -- "$IFILE" || fail "could not commit $IFILE"
 	tmpidx=$(mktemp "${TMPDIR:-/tmp}/$NAME-index.XXXXXX") && rm -f "$tmpidx"
 	GIT_INDEX_FILE=$tmpidx git read-tree "$base" || fail "could not read $base"
 	git ls-tree -r HEAD -- "$IDIR" | while IFS="$(printf '\t')" read -r meta path; do
@@ -248,10 +254,17 @@ if [ "$(cfg "type.$ITYPE.lands" all)" = item ]; then
 	done
 	tree=$(GIT_INDEX_FILE=$tmpidx git write-tree)
 	rm -f "$tmpidx"
-	commit=$(git commit-tree "$tree" -p "$base" -m "docs($ID): spike findings \"$title\"") || fail "could not create the findings commit"
+	what=findings
+	[ "$ITYPE" = spike ] || what=plan
+	commit=$(git commit-tree "$tree" -p "$base" -m "docs($ID): $ITYPE $what \"$title\"") || fail "could not create the $what commit"
 	ff_base "$commit"
-	echo "✓ spike $ID: findings archived on $base (local); the code stays on $BRANCH"
-	echo "next    git push origin $base   ·   delete the code when done: git branch -D $BRANCH"
+	if [ "$ITYPE" = roadmap ]; then
+		echo "✓ roadmap $ID: plan archived on $base (local); its ready entries: $CMD next (on $base)"
+		echo "next    git push origin $base   ·   then open an entry: $CMD new --from R-$ID.<n>"
+	else
+		echo "✓ $ITYPE $ID: $what archived on $base (local); the code stays on $BRANCH"
+		echo "next    git push origin $base   ·   delete the code when done: git branch -D $BRANCH"
+	fi
 	exit 0
 fi
 

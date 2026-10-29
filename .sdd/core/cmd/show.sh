@@ -23,20 +23,32 @@ p=$(printf '%s' "$src" | cut -f3)
 row=$(item_row "$o" "$r" "$p") && item_load "$o" "$r" "$p" || die "could not read item $id from $r"
 facts=$(parse_item "$IFILE" "$ID")
 [ -z "$ITMP" ] || rm -f "$ITMP"
+# A roadmap's entries say where each stands (FR-24.5), from the items opened from them.
+rows=
+case $facts in r"$(printf '\t')"* | *"
+r$(printf '\t')"*) rows=$(item_rows) ;; esac
 
 if [ -n "$json" ]; then
 	# The item_row fields, then one array per fact kind, in a fixed order.
-	{ printf '%s\n' "$row"; [ -z "$facts" ] || printf '%s\n' "$facts"; } | awk -F '\t' "$AWK_JSON"'
+	{ printf '%s\n' "$row"; [ -z "$facts" ] || printf '%s\n' "$facts"; } | ROWS=$rows awk -F '\t' "$AWK_JSON$AWK_ENTRY$AWK_DEPS"'
+	BEGIN { deps_load() }
 	NR == 1 { head = row_json(); next }
 	{
 		e = "{\"id\":\"" esc($2) "\",\"text\":\"" esc($4) "\""
 		if ($1 == "fr" || $1 == "us") e = e ",\"example\":\"" esc($5) "\""
 		if ($1 == "task") e = e ",\"done\":" ($3 == "done" ? "true" : "false")
 		if ($1 == "q") e = e ",\"decided\":" ($3 == "decided" ? "true" : "false")
+		if ($1 == "r") {
+			split(entry_row($2, $4), x, "\t"); m = split(x[4], a, " "); af = ""
+			for (j = 1; j <= m; j++) af = af (j > 1 ? "," : "") "\"" a[j] "\""
+			it = entry_item($2)
+			e = e ",\"type\":\"" esc(x[2]) "\",\"title\":\"" esc(x[3]) "\",\"after\":[" af "]" \
+				",\"state\":\"" (it == "" ? "not opened" : est[$2]) "\",\"item\":" (it == "" ? "null" : it)
+		}
 		list[$1] = list[$1] (list[$1] == "" ? "" : ",") e "}"
 	}
 	END {
-		n = split("us:stories fr:requirements task:tasks d:decisions q:questions dod:done_when", kinds, " ")
+		n = split("us:stories fr:requirements task:tasks d:decisions q:questions dod:done_when r:entries", kinds, " ")
 		out = "{" head
 		for (i = 1; i <= n; i++) {
 			split(kinds[i], kv, ":")
@@ -47,8 +59,11 @@ if [ -n "$json" ]; then
 	exit 0
 fi
 printf '%s\n' "$row" | awk -F '\t' '{ printf "%s %s · %s · %s · %s%s\n", $1, $2, $8, $3, $4, ($9 == "" ? "" : " · " $9) }'
-[ -z "$facts" ] || printf '%s\n' "$facts" | awk -F '\t' '{
+[ -z "$facts" ] || printf '%s\n' "$facts" | ROWS=$rows awk -F '\t' "$AWK_DEPS"'
+BEGIN { deps_load() }
+{
 	mark = ($1 == "task") ? ($3 == "done" ? "[x] " : "[ ] ") : ($1 == "q" ? "[" $3 "] " : "")
+	if ($1 == "r") mark = "[" (entry_item($2) == "" ? "not opened" : est[$2] " (item " eid[$2] ")") "] "
 	printf "%-9s %s%s\n", $2, mark, $4
 	if ($5 != "") printf "%-9s e.g. %s\n", "", $5
 }'

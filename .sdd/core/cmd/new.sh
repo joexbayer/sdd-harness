@@ -1,10 +1,36 @@
 # shellcheck shell=sh
 # new <type> "title" [--worktree]: branch from base, scaffold the item, commit only it.
-[ $# -ge 2 ] || usage_die "usage: $NAME new <type> \"title\" [--worktree]   (types: $(types | paste -sd ' ' -))"
+# new --from R-<id>.<n> [--worktree]: the same for a shipped roadmap's entry (FR-24.3): its type and
+# title, with "roadmap:" and "depends:" (its after: list) in the frontmatter.
+[ $# -ge 2 ] || usage_die "usage: $NAME new <type> \"title\" [--worktree]   or: $NAME new --from R-<id>.<n> [--worktree]   (types: $(types | paste -sd ' ' -))"
 need_repo
 
-type=$1
-title=$2
+from=
+after=
+if [ "$1" = --from ]; then
+	from=$2
+	rid=${from#R-}
+	rn=${rid#*.}
+	rid=${rid%%.*}
+	case $from in R-*.*) ;; *) rid= ;; esac
+	case $rid:$rn in :* | *: | *[!0-9:]*) usage_die "--from takes a roadmap entry, e.g. --from R-30.2" ;; esac
+	entries=$(shipped_roadmaps "$rid") ||
+		die "no shipped roadmap $rid on $(cfg sdd.base main): only a shipped roadmap's entries open items (see: $CMD show $rid)"
+	entry=$(printf '%s\n' "$entries" | E=$from awk -F '\t' '$3 == ENVIRON["E"]')
+	[ -n "$entry" ] || die "no entry $from in roadmap $rid (entries: $(printf '%s\n' "$entries" | cut -f3 | paste -sd ' ' -))"
+	bad=$(tsv 7 "$entry")
+	[ -z "$bad" ] || die "entry $from cannot be read: $bad"
+	# Opened once, on any branch sdd sees (local, remote-tracking, the archive); a dropped one may be
+	# opened again.
+	opened=$(item_rows | E=$from awk -F '\t' '$18 == ENVIRON["E"] && $3 != "dropped" { print $1 " (" $8 ", " ($9 == "" ? $3 : $9) ")"; exit }')
+	[ -z "$opened" ] || die "entry $from was already opened as item $opened"
+	type=$(tsv 4 "$entry")
+	title=$(tsv 5 "$entry")
+	after=$(tsv 6 "$entry")
+else
+	type=$1
+	title=$2
+fi
 shift 2
 wt=0
 for a in "$@"; do
@@ -42,12 +68,17 @@ fi
 
 mkdir -p "$dir"
 render "$tpl" "$id" "$title" "$type" >"$dir/item.md"
+if [ -n "$from" ]; then
+	fm_set "$dir/item.md" roadmap "$from" || die "could not write $dir/item.md"
+	[ -z "$after" ] || fm_set "$dir/item.md" depends "$(printf '%s' "$after" | sed 's/ /, /g')" || die "could not write $dir/item.md"
+fi
 git add -- "$dir/item.md" || die "could not add $dir/item.md"
 git commit -q -m "docs($id): open $type \"$title\"" -- "$dir/item.md" || die "could not commit $dir/item.md"
 
 [ -z "$where" ] || sync_here
 
 echo "$id $type · $title"
+[ -z "$from" ] || echo "roadmap $from${after:+   (depends: $(printf '%s' "$after" | sed 's/ /, /g'))}"
 echo "branch  $branch${where:+   (worktree $where)}"
 echo "item    $dir/item.md"
 echo "next    fill in the item, then: $CMD next"

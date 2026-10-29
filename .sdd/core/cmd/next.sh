@@ -20,6 +20,19 @@ prompt() {
 
 if ! current_item; then
 	prompt none '' '' ''
+	# The entries of shipped roadmaps that can be opened now (FR-24.5): not opened on any branch sdd
+	# sees, every after: shipped. No roadmap on the base branch: nothing more is read.
+	if rms=$(shipped_roadmaps); then
+		ready=$(printf '%s\n' "$rms" | ROWS=$(item_rows) C=$CMD awk -F '\t' "$AWK_DEPS"'
+			BEGIN { deps_load() }
+			$7 != "" || entry_item($3) != "" { next }
+			{ n = split($6, a, " "); for (i = 1; i <= n; i++) if (!dep_met(a[i])) next
+				print "Ready in roadmap " $1 " (" $2 "): " $3 " " $4 ": " $5 " → " ENVIRON["C"] " new --from " $3 }')
+		if [ -n "$ready" ]; then
+			echo
+			printf '%s\n' "$ready"
+		fi
+	fi
 	exit 0
 fi
 
@@ -28,6 +41,9 @@ title=$IR_TITLE
 echo "Item $ID ($ITYPE): $title"
 echo "File: $IFILE"
 echo "Phase: $PHASE ($WHY)"
+# FR-24.6: what this item waits for; it blocks only ship (D-24.2).
+waits_for "$IR_DEPENDS"
+[ -z "$WAITS" ] || echo "Waits for: $WAITS (plan and build on; ship waits until they have shipped)"
 echo
 # One batch at a time (task_batch): its tasks first, each with the requirements it serves.
 if [ "$WHYCODE" = task ]; then
