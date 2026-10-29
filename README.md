@@ -102,7 +102,7 @@ and the hooks. Windows works through WSL or Git Bash.
 | `sdd next` | instructions for the current phase (agents call this) |
 | `sdd status` | the current item and its phase, or open items on local branches |
 | `sdd approve` | the human hands the plan to the agent |
-| `sdd check` | run your tests and linters (exit 0 pass, 1 fail, 3 no tests ran) |
+| `sdd check` | run your tests and linters (exit 0 pass, 1 fail, 3 no tests ran), with how long it took; warns past `[check] budget` seconds (default 30, 0 off) |
 | `sdd review` | walk through what was built (and remember the code you saw) |
 | `sdd ship` | gates, archive the item, fast-forward the base branch |
 | `sdd open <id> [--worktree]` | switch to an item's branch (a teammate's too), or open it in `../<repo>.<id>` |

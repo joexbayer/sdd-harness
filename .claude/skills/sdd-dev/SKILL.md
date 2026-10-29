@@ -58,6 +58,11 @@ refuses a dirty tree), and `fill`.
   the pre-run fingerprint and then look stale. `run_check` fingerprints again after the run
   and `check` lists what changed (`CHECK_DIRTIED`). Exit 126/127 sets `CHECK_NOTRUN`, which
   is a config problem, not a test failure.
+- `run_check` times the `check.run` commands (`date +%s`, whole seconds) into `CHECK_SECS`,
+  recorded as `secs=` in `.git/sdd/checks/<id>`; `cmd/check.sh` prints it and warns past
+  `[check] budget` (item 35). This repo's own check takes ~2 min, so it warns every time
+  unless `.sdd/config` sets a bigger budget. Tests on timing assert the recorded number, not a
+  fixed one: a loaded machine can tick a second over.
 - Worktree paths: `git worktree list` prints real paths, so on macOS a test's `$T` (/var/…)
   shows up as /private/var/…. Compare with `$(cd "$T/app.1" && pwd -P)` or assert on a
   suffix. Use `main_root`, `worktree_of` and `worktree_path` (lib/common.sh), not `$ROOT`,

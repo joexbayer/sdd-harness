@@ -106,6 +106,9 @@
 	no-tests = (^|[^0-9])0 passing
 	no-tests = No tests found
 	no-tests = Tests:[[:space:]]+0 total
+	# Seconds a check may take before `check` warns (never fails); 0 turns the warning off. The
+	# gate runs after every task: slow tests belong to their task's own test, not check.run.
+	budget = 30
 
 # The constitution (specs/constitution.md) is capped, because budgets are lint errors.
 [constitution]

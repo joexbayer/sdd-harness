@@ -35,6 +35,11 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   each one `size: S|M|L` (S: a few lines, M: a sitting, L: a big one): consecutive S tasks
   share a builder, M and L run alone. The builder may be a small model that sees only its
   batch, so say what it needs to know.
+- Tests: The gate (check) stays fast, because it runs after every task. A task's own test may
+  be deep (end-to-end, real cost settings): mark it (a tag, a marker, a separate command) so
+  check.run leaves it out. Make cost settings (hash rounds, timeouts) configurable and minimal
+  in tests. Each task's test asserts its FR's example literally. A list endpoint gets a test
+  that counts its queries.
 - Make the plan precise enough that you could build it later without asking anything:
   the approach, the files involved, and how each requirement will be proven by a test.
 - Before asking for approval, check the plan for gaps: scope edges (what is in, what is
