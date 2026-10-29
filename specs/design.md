@@ -230,7 +230,13 @@ The type and profile decide how far down a change goes.
 
 1. **Format, lint and types.** Part of the configured check.
 2. **`sdd check`.** Zero tests ran counts as a failure (exit 3). A command masked with
-   `|| true` is refused.
+   `|| true` is refused. It says how long it took (recorded as `secs=` with the result) and
+   warns, never fails, past `[check] budget` seconds (default 30, 0 off): the gate runs after
+   every task, so slow tests (end-to-end, real hash cost) belong to their task's own test,
+   marked and left out of `check.run` by the project's runner (D-35.1, kb/agent-testing.md).
+   The plan, build and verifier prompts carry the test rules: assert the FR's example
+   literally, no expected values taken from the code under test, a test that would fail if its
+   FR were dropped (item 35).
 3. **Failing test first.** `task red` must fail before `task done` may pass. The test file's
    hash is pinned in between. Models do edit tests to pass (EvilGenie, ImpossibleBench).
 4. **Trace.** Every FR is named by at least one test.
