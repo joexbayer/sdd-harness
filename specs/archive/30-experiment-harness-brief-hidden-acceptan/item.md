@@ -2,10 +2,11 @@
 id: 30
 type: chore
 title: Experiment harness: brief, hidden acceptance suite, driver script, tiers
-status: open
+status: shipped
 created: 2026-10-29
 roadmap: R-29.1
 approved: e8ffc317f267cff3ad781432d60b3d7ba7ec2763 2026-10-29 joexbayer
+shipped: 2026-10-29
 ---
 # 30 Experiment harness: brief, hidden acceptance suite, driver script, tiers
 
