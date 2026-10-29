@@ -1,7 +1,7 @@
 # shellcheck shell=sh
 # approve: the human's hand-off from planning to the agent's hands-off build. Pins a hash
-# of the plan (everything above "## Built") and commits it; editing the plan afterwards
-# clears the approval.
+# of the plan (everything above "## Built"), with the ids of the contracts it names (FR-26.4), and
+# commits it; editing the plan, or a contract changing on the base branch, clears the approval.
 [ $# -eq 0 ] || usage_die "usage: $NAME approve"
 human_only approve
 need_repo
@@ -15,6 +15,24 @@ if approval_ok; then
 	echo "item $ID: the plan is already approved and unchanged"
 	exit 0
 fi
+# FR-26.4: the contracts it names are pinned as they are on the base branch, which this branch's
+# copies must match: the plan is approved against what both sides agreed.
+approval_pin "$(fm_get contracts "$IFILE")" || die "item $ID: $CBAD"
+if [ -n "$CROWS" ]; then
+	base=$(cfg sdd.base main)
+	differs=$(git ls-tree HEAD -- "$CONTRACTS/" 2>/dev/null | ROWS=$CROWS awk -F '\t' '
+		{ split($1, m, " "); here[$2] = m[3] }
+		END {
+			n = split(ENVIRON["ROWS"], r, "\n")
+			for (i = 1; i <= n; i++) {
+				if (split(r[i], f, "\t") < 3) continue
+				p = f[3]; sub(/\/$/, "", p)
+				if (here[p] != f[2]) o = o (o == "" ? "" : ", ") f[3]
+			}
+			print o
+		}')
+	[ -z "$differs" ] || die "item $ID: $differs differs from $base: merge $base first ($CMD approve pins what $base has)"
+fi
 # The analyzed gate (FR-19.2): the problems analyze finds warn or block, at this type's level.
 level=$(gate_level analyzed "$ITYPE")
 if [ "$level" != off ]; then
@@ -27,7 +45,7 @@ if [ "$level" != off ]; then
 fi
 
 who=$(git config user.name || echo unknown)
-fm_set "$IFILE" approved "$(plan_hash "$IFILE") $(date +%F) $who"
+fm_set "$IFILE" approved "$APIN $(date +%F) $who"
 git add -- "$IFILE" || die "could not add $IFILE"
 git commit -q -m "docs($ID): approve plan" -- "$IFILE" || die "could not commit $IFILE"
 

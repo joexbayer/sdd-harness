@@ -341,11 +341,77 @@ plan_hash() {
 	printf '%s\n' "$_ph"
 }
 
-# approval_ok: approved, and the plan has not changed since.
+# approval_ok: approved, and the plan (with the contracts it names) has not changed since.
 approval_ok() {
 	_ap=$(fm_get approved "$IFILE")
-	[ -n "$_ap" ] && [ "${_ap%% *}" = "$(plan_hash "$IFILE")" ]
+	[ -n "$_ap" ] && approval_pin "$(fm_get contracts "$IFILE")" && [ "${_ap%% *}" = "$APIN" ]
 }
+
+# approval_pin <contracts: list>: what approve pins (D-26.3) into APIN: the plan hash (also in
+# PHASH), then ",<name>=<object id>" per contract (contract_ids). Items without contracts pin the
+# plan hash alone, as before item 26. Fails, CBAD saying why, when a contract cannot be pinned.
+approval_pin() {
+	PHASH=$(plan_hash "$IFILE") || return 1
+	contract_ids "$1"
+	APIN=$PHASH$CPINS
+	[ -z "$CBAD" ]
+}
+
+# approval_current: the approved gate as item_phase judges it (from IR_*): not blocking, or the
+# approval pins what approval_pin says now.
+approval_current() {
+	CBAD=
+	[ "$(gate_level approved "$ITYPE")" = block ] || return 0
+	approval_pin "$IR_CONTRACTS" && [ -n "$IR_APPROVED" ] && [ "${IR_APPROVED%% *}" = "$APIN" ]
+}
+
+# contract_ids <contracts: list>: each name in an item's "contracts:" (FR-26.3) resolved to the
+# entry of specs/contracts/ on the base branch with that name, extension removed (a file or a
+# folder; D-26.4: the base branch's copy is the truth). Sets CROWS ("<name>\t<object id>\t<path>"
+# per name, a folder's path ending in /), CPINS (",<name>=<id>" per name, in list order; id "none"
+# when it cannot be resolved) and CBAD (the first problem, or empty). A name must be
+# [A-Za-z0-9_-]+: it becomes a path. One git call per process (CTREE), and none for an empty list.
+contract_ids() {
+	CROWS='' CPINS='' CBAD=''
+	[ -n "$1" ] || return 0
+	contract_tree
+	_cx=$(printf '%s\n' "$CTREE" | L=$1 B=$(cfg sdd.base main) C=$CMD awk -F '\t' '
+		NF >= 2 {
+			split($1, m, " "); p = $2; n = p; sub(/.*\//, "", n)
+			if (m[2] == "blob") sub(/\.[^.]*$/, "", n); else p = p "/"
+			if (n in id) dup[n] = 1
+			id[n] = m[3]; path[n] = p
+		}
+		END {
+			k = split(ENVIRON["L"], x, /[, ]+/); pins = ""; bad = ""; rows = ""
+			for (i = 1; i <= k; i++) {
+				c = x[i]; if (c == "") continue
+				if (c !~ /^[A-Za-z0-9_-]+$/) { e = "contract name \"" c "\" refused: a name is letters, digits, _ and - (the file name in specs/contracts/ without its extension)"; c = "?" }
+				else if (!(c in id)) e = "no contract " c " on " ENVIRON["B"] ": ship its contract item first (" ENVIRON["C"] " new contract \"…\")"
+				else if (c in dup) e = "contract " c " names more than one entry of specs/contracts/ on " ENVIRON["B"] ": rename one"
+				else e = ""
+				if (e != "" && bad == "") bad = e
+				pins = pins "," c "=" (e == "" ? id[c] : "none")
+				if (e == "") rows = rows c "\t" id[c] "\t" path[c] "\n"
+			}
+			printf "%s\n%s\n%s", bad, pins, rows
+		}')
+	CBAD=${_cx%%"
+"*}
+	_cx=${_cx#*"
+"}
+	CPINS=${_cx%%"
+"*}
+	CROWS=${_cx#*"
+"}
+	[ "$CROWS" != "$_cx" ] || CROWS=
+}
+# contract_tree: the base branch's specs/contracts/ entries (`git ls-tree`), read once per
+# process into CTREE.
+contract_tree() {
+	[ -n "${CTREE+x}" ] || CTREE=$(git ls-tree "$(cfg sdd.base main)" -- "$CONTRACTS/" 2>/dev/null)
+}
+unset CTREE
 
 # verified_by: the last "Verified by:" line in "## Built" (FR-22.3), a list bullet and guidance
 # removed; empty when there is none. Built runs up to "## Review", as in missing_sections.
@@ -662,14 +728,32 @@ item_phase() {
 		PHASE=plan
 		WHY="to fill: $MISSING"
 		WHYCODE=fill
-	elif [ "$(gate_level approved "$ITYPE")" = block ] && ! { [ -n "$IR_APPROVED" ] && [ "${IR_APPROVED%% *}" = "$(plan_hash "$IFILE")" ]; }; then
+	elif ! approval_current; then
 		PHASE=plan
-		if [ -n "$IR_APPROVED" ]; then
+		_tok=${IR_APPROVED%% *}
+		if [ -z "$IR_APPROVED" ] && [ -n "$CBAD" ]; then
+			WHY="$CBAD; then the human approves: $CMD approve"
+			WHYCODE=contract
+		elif [ -z "$IR_APPROVED" ]; then
+			WHY="waiting for the human to approve the plan: $CMD approve"
+			WHYCODE=approval
+		elif [ "${_tok%%,*}" != "$PHASH" ]; then
 			WHY="the plan changed after approval; the human re-approves with: $CMD approve"
 			WHYCODE=changed
 		else
-			WHY="waiting for the human to approve the plan: $CMD approve"
-			WHYCODE=approval
+			# FR-26.5: the plan is as approved, so a pinned contract changed, or the list did.
+			_cc=$(O=${_tok#"${_tok%%,*}"} N=$CPINS awk 'BEGIN {
+				a = split(ENVIRON["O"], o, ","); b = split(ENVIRON["N"], n, ",")
+				for (i = 2; i <= a; i++) { split(o[i], p, "="); was[p[1]] = p[2]; ol = ol " " p[1] }
+				for (i = 2; i <= b; i++) { split(n[i], p, "="); nl = nl " " p[1]; if (was[p[1]] != p[2]) ch = ch (ch == "" ? "" : ", ") p[1] }
+				print (ol != nl ? "" : ch) }')
+			if [ -z "$_cc" ]; then
+				WHY="the contracts: list changed after approval; the human re-approves with: $CMD approve"
+				WHYCODE=changed
+			else
+				WHY="contract $_cc changed on $(cfg sdd.base main) after approval; check the plan still fits, merge $(cfg sdd.base main), then the human re-approves: $CMD approve"
+				WHYCODE=contract
+			fi
 		fi
 	else
 		# Open tasks come first: the builder works them in order (task done ticks them).
@@ -1062,7 +1146,17 @@ item_load() {
 	case $1:$3 in archive:*) ;; *:"$SPECS/archive/"*) IPR=1 ;; esac
 	# The id comes from the folder name, like everywhere else; the frontmatter repeats it.
 	ID=$(id_of "${3%/item.md}")
-	ITYPE=$(fm_get type "$IFILE")
+	# type and contracts (as fm_get reads them) in one awk: item_rows reads the contracts' ids
+	# (contract_tree) before the item's facts, whose subshell would lose them.
+	_fm=$(awk 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit }
+		{ i = index($0, ":"); k = substr($0, 1, i - 1)
+			if (i && (k == "type" || k == "contracts") && !(k in f)) { v = substr($0, i + 1); sub(/^[ \t]+/, "", v); f[k] = v } }
+		END { printf "%s\n%s", f["type"], f["contracts"] }' "$IFILE")
+	ITYPE=${_fm%%"
+"*}
+	ILCONTRACTS=${_fm#*"
+"}
+	[ "$ILCONTRACTS" != "$_fm" ] || ILCONTRACTS=
 }
 
 # item_facts <origin>: for a loaded item (item_load), what its file, origin and path and the
@@ -1084,6 +1178,8 @@ item_facts() {
 	# The check's result (check, built, ready) and the working tree depend on more than the file.
 	_fixed=1
 	case $1:$WHYCODE in worktree:* | *:check | *:built | *:ready) _fixed=0 ;; esac
+	# D-26.4: an open item's contracts are judged on the base branch, which the file does not decide.
+	[ -z "$IR_CONTRACTS" ] || [ "$IR_STATUS" != open ] || _fixed=0
 	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$_fixed" "$ID" "$ITYPE" "$IR_STATUS" \
 		"$PHASE" "${IR_COUNTS%"$(printf '\t')"*}" "$IR_TITLE" "${IR_COUNTS##*"$(printf '\t')"}" \
 		"$_ap" "$IR_SHIPPED" "$WHY" "$WHYCODE" "$IR_ROADMAP" "$IR_DEPENDS"
@@ -1117,6 +1213,7 @@ item_rows() {
 	_new=$(printf '%s\n' "$_src" | C=$_cf awk -F '\t' "$AWK_CACHE"'!(($4 SUBSEP $1 SUBSEP $3) in c) || $1 == "worktree"' |
 		while IFS="$(printf '\t')" read -r _o _r _p _bl; do
 			item_load "$_o" "$_r" "$_p" || continue
+			[ -z "$ILCONTRACTS" ] || contract_tree
 			_facts=$(item_facts "$_o")
 			[ -z "$ITMP" ] || rm -f "$ITMP"
 			_fixed=${_facts%%"$(printf '\t')"*}
@@ -1248,7 +1345,8 @@ END { emit() }'
 # IR_STATUS, IR_TITLE, IR_APPROVED and IR_SHIPPED (fm_get), IR_MISS_PLAN and IR_MISS_BUILT
 # (missing_sections of each part, joined as joinlist does), IR_TASK (the first open task_rows
 # line), IR_TASKS (how many task_rows lines), IR_COUNTS ("<frs>\t<tasks done>\t<tasks>\t<open
-# questions>"), IR_ROADMAP and IR_DEPENDS (fm_get roadmap, depends: FR-24.3, FR-24.4) and
+# questions>"), IR_ROADMAP and IR_DEPENDS (fm_get roadmap, depends: FR-24.3, FR-24.4),
+# IR_CONTRACTS (fm_get contracts: FR-26.3) and
 # IR_FACTS (parse_item's lines).
 item_read() {
 	_s=$(I=$ID awk "$AWK_TASK"'
@@ -1302,8 +1400,8 @@ item_read() {
 	'"$AWK_PARSE"'
 	END {
 		mflush(); gsub(/,/, ", ", mp); gsub(/,/, ", ", mb)
-		printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\t%d\t%d\t%d\n%s\n%s\n%s", closed ? 1 : "", fm["type"], fm["status"],
-			fm["title"], fm["approved"], fm["shipped"], mp, mb, task, ntask, nfr, nd, nt, nq, fm["roadmap"], fm["depends"], facts
+		printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\t%d\t%d\t%d\n%s\n%s\n%s\n%s", closed ? 1 : "", fm["type"], fm["status"],
+			fm["title"], fm["approved"], fm["shipped"], mp, mb, task, ntask, nfr, nd, nt, nq, fm["roadmap"], fm["depends"], fm["contracts"], facts
 	}' "$IFILE")
 	{
 		IFS= read -r IR_CLOSED
@@ -1319,12 +1417,13 @@ item_read() {
 		IFS= read -r IR_COUNTS
 		IFS= read -r IR_ROADMAP
 		IFS= read -r IR_DEPENDS
+		IFS= read -r IR_CONTRACTS
 	} <<EOF
 $_s
 EOF
 	_s="$_s
 "
-	for _ln in 1 2 3 4 5 6 7 8 9 10 11 12 13; do _s=${_s#*"
+	for _ln in 1 2 3 4 5 6 7 8 9 10 11 12 13 14; do _s=${_s#*"
 "}; done
 	IR_FACTS=${_s%"
 "}

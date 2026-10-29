@@ -52,4 +52,78 @@ assert_eq $? 1 "(ship of a feature adding a contract)"
 assert_contains "$out" 'item 2: contracts change only through'
 assert_eq "$(git rev-parse HEAD)" "$before"
 git switch -q main
+
+# uses <item file> <list>: set its "contracts:" line (frontmatter) and commit it.
+uses() {
+	awk -v l="$2" '/^contracts:/ { next } { print } /^created: / && !d { if (l != "") print "contracts: " l; d = 1 }' "$1" >"$T/u" &&
+		cp "$T/u" "$1" && git commit -qam "docs: contracts $2"
+}
+# ship_contract "<title>" <shell>: open a contract item from main, run <shell> in it, ship it.
+ship_contract() {
+	git switch -q main
+	sdd new contract "$1" >/dev/null 2>&1 || fail "new contract $1 failed"
+	sc=$(for x in specs/changes/*/item.md; do grep -q "^title: $1\$" "$x" && echo "$x"; done)
+	fill "$sc" plan && git commit -qam "docs: plan" && sdd approve >/dev/null 2>&1 || fail "approve $1 failed"
+	mkdir -p specs/contracts && eval "$2" && fill "$sc" built && git add -A && git commit -qm "contract: $1"
+	sdd ship >/dev/null 2>&1 || fail "ship $1 failed: $(sdd ship 2>&1)"
+	git switch -q main
+}
+
+# A feature built against the contract.
+sdd new feature "Orders page" >/dev/null 2>&1
+p=specs/changes/3-orders-page/item.md
+fill "$p" plan && git commit -qam "docs(3): plan"
+
+# FR-26.3: a name that is not [A-Za-z0-9_-]+ is refused (it would become a path), by approve and next.
+uses "$p" '../etc'
+out=$(sdd approve 2>&1)
+assert_eq $? 1 "(approve with a bad contract name)"
+assert_contains "$out" 'contract name "../etc" refused'
+assert_contains "$(sdd next)" 'Phase: plan (contract name "../etc" refused'
+grep -q '^approved:' "$p" && fail "a bad name must not be approved"
+
+# FR-26.4: a contract that is not on main is refused, naming it.
+uses "$p" 'orders-api, payments'
+out=$(sdd approve 2>&1)
+assert_eq $? 1 "(approve with a contract not on main)"
+assert_contains "$out" 'no contract payments on main: ship its contract item first'
+
+# FR-26.3, FR-26.4: orders-api is specs/contracts/orders-api.yaml on main; approve pins its id.
+uses "$p" 'orders-api'
+out=$(sdd approve 2>&1) || fail "approve 3 failed: $out"
+tok=$(sed -n 's/^approved: \([^ ]*\) .*/\1/p' "$p")
+assert_eq "${tok#*,}" "orders-api=$(git rev-parse main:specs/contracts/orders-api.yaml)"
+assert_contains "$(sdd next)" 'Phase: build'
+
+# FR-26.5: the contract changes on main: the item goes back to planning, naming it, in next and ls.
+git switch -q main
+assert_contains "$(sdd ls --json | grep '"id":3,')" '"phase":"build"'
+ship_contract "Orders API v2" "printf 'openapi: 3.1.0\npaths: { /orders: {} }\n' >specs/contracts/orders-api.yaml"
+# D-26.4: the row was not cached as fixed: the list sees the change at once.
+assert_contains "$(sdd ls --json | grep '"id":3,')" '"reason":"contract orders-api changed on main after approval'
+assert_contains "$(sdd ls --json | grep '"id":3,')" '"reason_code":"contract"'
+git switch -q feature/3-orders-page
+assert_contains "$(sdd next)" 'Phase: plan (contract orders-api changed on main after approval; check the plan still fits, merge main, then the human re-approves: .sdd/bin/sdd approve)'
+assert_contains "$(sdd status)" 'contract orders-api changed'
+
+# FR-26.4: re-approving before merging main is refused: this branch's copy is the old one.
+out=$(sdd approve 2>&1)
+assert_eq $? 1 "(approve with an old contract copy)"
+assert_contains "$out" 'specs/contracts/orders-api.yaml differs from main: merge main first'
+git merge -q --no-edit main >/dev/null 2>&1 || fail "merge main failed"
+sdd approve >/dev/null 2>&1 || fail "re-approve after merge failed: $(sdd approve 2>&1)"
+assert_contains "$(sdd next)" 'Phase: build'
+
+# FR-26.5: changing the contracts: list after approval voids it too.
+ship_contract "Billing" "mkdir -p specs/contracts/billing && echo 'type: object' >specs/contracts/billing/invoice.yaml"
+git switch -q feature/3-orders-page
+git merge -q --no-edit main >/dev/null 2>&1 || fail "merge main failed"
+assert_contains "$(sdd next)" 'Phase: build'
+uses "$p" 'orders-api, billing'
+assert_contains "$(sdd next)" 'Phase: plan (the contracts: list changed after approval'
+# FR-26.3: a folder is a contract too, pinned by its tree id.
+sdd approve >/dev/null 2>&1 || fail "approve with a folder contract failed: $(sdd approve 2>&1)"
+tok=$(sed -n 's/^approved: \([^ ]*\) .*/\1/p' "$p")
+assert_eq "${tok#*,}" "orders-api=$(git rev-parse main:specs/contracts/orders-api.yaml),billing=$(git rev-parse main:specs/contracts/billing)"
+assert_contains "$(sdd next)" 'Phase: build'
 echo ok

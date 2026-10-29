@@ -34,7 +34,7 @@ command -v agent_run >/dev/null 2>&1 || die "$agent cannot run headless from $NA
 item_phase
 # A role works the agent's phases only: approving, reviewing and shipping are the human's.
 case $WHYCODE in
-approval | changed | ready | pr | status) usage_die "item $ID is waiting for the human ($WHY): no role runs now" ;;
+approval | changed | contract | ready | pr | status) usage_die "item $ID is waiting for the human ($WHY): no role runs now" ;;
 esac
 phase=$PHASE
 # In build, the role works the current batch of tasks (task_batch), which next shows it.
