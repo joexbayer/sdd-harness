@@ -22,10 +22,10 @@ models do not follow a protocol from prompt text; the tool must run it (as TDD a
       e.g. <input> → <output>
 Start each entry at the beginning of its line, ID first. IDs never change; leave gaps. -->
 FR-31.1 WHEN `sdd run builder <id>` ends with the agent's exit accepted THE SYSTEM SHALL run
-`task done` for each still-open task of that run's batch, in plan order, and commit each one it
-ticks (all changes, message `<kind>(<id>): <task> <what>`), stopping at the first that fails and
-printing its output; the run's result says how many it ticked.
-  e.g. batch T-7.1 T-7.2, agent never ticks → "✓ T-7.1 done … committed", "✓ T-7.2 done … committed", "ticked 2 of 2"
+`task done` for each still-open task of that run's batch, in plan order, stopping at the first
+that fails and printing its output; it commits nothing (C-4): the run's result says how many it
+ticked and the commit the orchestrator makes.
+  e.g. batch T-7.1 T-7.2, agent never ticks → "✓ T-7.1 done …", "✓ T-7.2 done …", "ticked 2 of 2 · commit with: feat(7): T-7.1 T-7.2 <what>"
   e.g. T-7.2's test fails → "✗ T-7.2: its test failed …", "ticked 1 of 2", exit 1
 FR-31.2 WHEN `task done` runs on an `expect: fail` task whose test passes AND the working tree has
 uncommitted changes outside that task's `files:` THE SYSTEM SHALL run the test once more in a
@@ -47,8 +47,9 @@ Interactive builders: they tick themselves as today (FR-31.1 is `sdd run` only).
 and the decisions they would question, each at the start of its line:
     D-31.1 <decision>, because <reason>. -->
 D-31.1 The tool ticks, not the model: in a role run the batch's own tests decide; a model
-forgetting `task done` costs nothing (FR-31.1). Ticks commit at once, so the ship gate's "a ticked
-task needs a commit naming it" holds; `git add -A` relies on the project's .gitignore.
+forgetting `task done` costs nothing (FR-31.1). The orchestrator (the session or script running
+the build) commits, as C-4 keeps commits to new, approve and ship (the human's call, 2026-10-29);
+an uncommitted tick is caught by ship's "a ticked task needs a commit naming it".
 D-31.2 The red check runs in `git worktree add --detach <tmp> HEAD` plus the task's files, removed
 afterwards (also on failure): the human's tree is never stashed or reset. A test needing
 untracked setup (a venv) can fail there for the wrong reason; the plan's expected-reason text
@@ -62,8 +63,7 @@ dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Othe
 what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
     e.g. uploads are untrusted → FR-31.4 rejects non-images and files over 5 MB -->
 Task tests are shell commands from the approved plan, run as today; the throwaway checkout is
-under $TMPDIR and removed. Auto-commit could commit a secret the agent wrote → the project's check
-(gitleaks in init) still runs before ship; accept: same as a builder committing it today.
+under $TMPDIR and removed. sdd commits nothing new (C-4).
 
 ## Questions (optional)
 <!-- Q-31.1 <question> → recommend: <answer>. Resolve before building. -->
