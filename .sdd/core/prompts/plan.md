@@ -41,7 +41,9 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   out), errors and edge cases, data and state, speed, several developers at once, and
   security. Ask the human about each gap you find, one at a time, and write the answer in.
   Then run `{{cmd}} analyze` and fix every problem it lists.
-- Keep it to about a screen. If it does not fit, the change is too big: suggest a split.
+- One item is one spec: plan a feature whole, every requirement and task, in this item. Long
+  is fine when every task is small. Split into a roadmap only for features that ship
+  separately.
 
 When the plan is complete, summarise it for the human and ask them to approve it. Only the
 human approves: they run `{{cmd}} approve`, or ask you to, and then confirm it.
