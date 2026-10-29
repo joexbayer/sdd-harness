@@ -2,9 +2,10 @@
 id: 24
 type: feature
 title: Multi-item plans
-status: open
+status: shipped
 created: 2026-10-28
 approved: 1c965f9ca7270c705ff22890b487c927dab21278 2026-10-28 joexbayer
+shipped: 2026-10-29
 ---
 # 24 Multi-item plans
 
