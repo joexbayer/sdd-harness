@@ -116,4 +116,27 @@ fill "$f" built && git add -A && git commit -qm "feat(3): T-3.3 semicolons"
 out=$(sdd ship 2>&1)
 assert_contains "$out" "tasks not done: T-3.1, T-3.2; tasks sdd cannot read: T-3.1 (unknown attribute colour"
 assert_contains "$out" "T-3.2 (size must be S, M or L, not XL)"
+
+# FR-36.2: a batch belongs to one role: it ends where `by:` changes (no by: is the builder).
+git switch -q main
+sdd new feature "Roles" >/dev/null 2>&1
+f=specs/changes/4-roles/item.md
+fill "$f" plan
+awk '/^## What changes$/ { print; print "FR-4.1 WHEN x THE SYSTEM SHALL y."; next }
+/^## Tasks \(optional\)$/ { print
+	print "- [ ] T-4.1 Test, FR-4.1 (test: true; size: S; by: planner)"
+	print "- [ ] T-4.2 Code (test: true; size: S)"
+	print "- [ ] T-4.3 More (test: true; size: S; by: builder)"
+	print "- [ ] T-4.4 Docs (test: true; size: S; by: writer)"
+	print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(4): plan" && sdd approve >/dev/null 2>&1 || fail "approve 4 failed"
+assert_contains "$(sdd task next)" 'batch   T-4.1
+'
+assert_contains "$(sdd next)" 'Current task: T-4.1 Test'
+sdd task 'done' T-4.1 >/dev/null 2>&1 || fail "T-4.1 failed"
+assert_contains "$(sdd task next)" 'batch   T-4.2 T-4.3
+'
+sdd task 'done' T-4.2 >/dev/null 2>&1 && sdd task 'done' T-4.3 >/dev/null 2>&1 || fail "T-4.2, T-4.3 failed"
+assert_contains "$(sdd task next)" 'batch   T-4.4
+'
 exit 0
