@@ -4,6 +4,7 @@ type: chore
 title: Experiment: one spec, then build
 status: open
 created: 2026-10-29
+approved: 6ddc882bbe1442d46963d51783846bf285bad0f0 2026-10-29 joexbayer
 ---
 # 32 Experiment: one spec, then build
 
