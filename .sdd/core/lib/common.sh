@@ -1416,6 +1416,8 @@ waits_for() {
 # command that runs inside `check` or by the human at every review, and it changes only
 # through an `amendment` item.
 CONST="$SPECS/constitution.md"
+# Contracts (item 26): the interfaces items build against, one file or folder each.
+CONTRACTS="$SPECS/contracts"
 
 # articles: per article "C-<n>\t<review|check>\t<command or ->\t<rule>", or "!\t<C-n>\t<problem>"
 # for one that is malformed. An article is "C-<n> <rule>" at the start of a line, followed by
@@ -1472,14 +1474,21 @@ EOF2
 }
 
 # constitution_guard: on an item branch the constitution (once it is on the base branch)
-# changes only through an amendment, and an amendment changes nothing outside specs/.
-# Prints the reason and fails otherwise.
+# changes only through an amendment, and an amendment changes nothing outside specs/. Likewise
+# contracts (specs/contracts/, FR-26.2): only a contract item changes them, from the first one
+# on, and a contract item changes nothing outside specs/. Prints the reason and fails otherwise.
 constitution_guard() {
 	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD 2>/dev/null) ||
 		{ echo "base branch '$(cfg sdd.base main)' not found, so the constitution cannot be checked (set base under [sdd] in $DIRNAME/config)"; return 1; }
 	if [ "$ITYPE" = amendment ]; then
 		! code_changed || { echo "an amendment lands no code: move code changes to their own items and list them under Impact"; return 1; }
 		return 0
+	fi
+	if [ "$ITYPE" = contract ]; then
+		! code_changed || { echo "a contract item lands no code: move code changes to the items under Users"; return 1; }
+	elif ! git diff --quiet "$_mb" -- "$CONTRACTS" || [ -n "$(git ls-files --others --exclude-standard -- "$CONTRACTS")" ]; then
+		echo "contracts change only through: $CMD new contract \"…\" ($CONTRACTS/ changed here)"
+		return 1
 	fi
 	git cat-file -e "$_mb:$CONST" 2>/dev/null || return 0
 	git diff --quiet "$_mb" -- "$CONST" || { echo "the constitution changes only through: $CMD new amendment \"…\""; return 1; }
