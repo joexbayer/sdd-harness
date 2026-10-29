@@ -92,7 +92,17 @@ refuses a dirty tree), and `fill`.
   tasks only. `run.sh` refuses `run builder` when WHYCODE is not `task`, and hook stop lets a
   builder with `SDD_RUN` stop once no task is open (interactive builders are still held). An
   adapter's optional `agent_exit_note <rc>` turns an exit code into a warning (narrow: 3);
-  run_log keeps the real rc.
+  run_log keeps the real rc. Item 31: after an accepted builder exit, run.sh runs `task done`
+  (as a subprocess) for each batch task still open and prints `ticked n of m · commit with: …`;
+  it never commits (C-4, enforced by tests/constitution/c4-commits.sh, which fails on any
+  `git commit` outside new/approve/ship). Tests with a builder run therefore tick: give the
+  item enough tasks for later runs (t_run.sh), and use the narrow stub's `NARROW_DO` for a fake
+  builder that writes files.
+- Red check (item 31, `red_without_code` in cmd/task.sh): an `expect: fail` test that passes,
+  with uncommitted changes outside its `files:` (and the item file), is rerun in a detached
+  worktree of HEAD under $TMPDIR with only those files copied; an EXIT trap removes it on a die.
+  Exit 126/127 there counts as red (the same command ran in the tree, so the missing thing is the
+  uncommitted code, e.g. `sh api.sh`). Its log is `.git/sdd/checks/<id>.<task>.red.log`.
 - A new gate: add it to `sdd.gates` in core/config as well as to each profile, because
   `gate_level` says off for any gate the type's list lacks. Types with their own `gates =`
   (hotfix, chore, spike) do not get it unless you add it there; amendment pins every gate to block.

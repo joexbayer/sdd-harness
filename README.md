@@ -166,7 +166,10 @@ model = qwen3-coder-30b` in `~/.config/sdd/config`). Ask your agent to "run the 
 item 16": a role on a Claude model runs as a subagent (`sync claude` writes them), any other
 through `sdd run builder 16`. A builder run does tasks only: with no task open it is refused,
 and its stop hook lets it stop once its batch is ticked; the session orchestrating the build
-does the finishing (check, security pass, verifier, Built). With `[usage] track = true` every run is logged with its tokens, and
+does the finishing (check, security pass, verifier, Built). When the builder exits, `sdd run`
+runs `task done` itself for every task of the batch still open, in order, stopping at the first
+that fails, so a model that forgets to tick costs nothing. It commits nothing: it prints
+`ticked n of m · commit with: <message>` for the orchestrator. With `[usage] track = true` every run is logged with its tokens, and
 `sdd usage` sums them (off by default).
 
 **Now let's build.** Say it once the plan is approved: the `sdd-build` skill loops over the
@@ -175,6 +178,10 @@ The planner sizes each task (`size: S|M|L`); consecutive small ones share a buil
 (`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each. A
 test written first (`expect: fail`) ends its batch, so it is ticked while still red.
 A test written first says `expect: fail "<text>"` to count only when it fails for that reason.
+A small model often writes the test and its code at once, so the test already passes. When there
+are other uncommitted changes, `task done` then runs the test again in a throwaway checkout of
+HEAD with only the task's `files:` copied in, and counts it red when it fails there; your tree is
+not touched. If it passes there too, or the code is already committed, it is refused.
 
 **Roadmaps.** A system is many items in an order. `sdd new roadmap "Shop"` plans them as
 entries under `## Items`, `- R-30.2 feature: Login page (after: R-30.1)`; `after:` names earlier

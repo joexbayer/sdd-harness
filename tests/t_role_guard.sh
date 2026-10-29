@@ -33,6 +33,15 @@ awk '/^## What changes$/ { print; print "FR-1.1 WHEN x THE SYSTEM SHALL y."; nex
 	print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
 
+# FR-21.2: a batch builder gets its tasks and the build rules, not the finish steps.
+out=$(sdd next)
+assert_contains "$out" 'Current batch: T-1.1 T-1.2'
+assert_contains "$out" 'Build exactly what the plan says'
+assert_not_contains "$out" 'security pass'
+assert_not_contains "$out" 'You are done when'
+# FR-21.3: the build rules say approve, ship and tidy --remote are the human's.
+assert_contains "$out" 'Never run `.sdd/bin/sdd approve`, `.sdd/bin/sdd ship` or `.sdd/bin/sdd tidy --remote`: they are the human'"'"'s.'
+
 # FR-21.1: the run number is in the agent's environment, and the three verbs refuse with exit 2.
 head=$(git rev-parse HEAD)
 out=$( (export PATH="$T/bin:$PATH" STUB="$T/stub"; sdd run builder 1) 2>&1) || fail "run failed: $out"
@@ -43,6 +52,9 @@ assert_contains "$(cat "$T/stub/ship.out")" "sdd: ship is the human's: a role ru
 assert_contains "$(cat "$T/stub/tidy.out")" "sdd: tidy --remote is the human's: a role run (run 1) cannot tidy --remote"
 assert_eq "$(git rev-parse HEAD)" "$head" "(no commit)"
 assert_eq "$(git symbolic-ref --short HEAD)" feature/1-guard "(still on the item branch)"
+# FR-31.1: sdd ticked the batch the careless builder left open; it commits nothing (C-4).
+assert_contains "$out" 'ticked 2 of 2 · commit with: feat(1): T-1.1 T-1.2'
+git commit -qam "feat(1): T-1.1 T-1.2"
 # With usage tracking off a run has no number ("-"); the refusal says just "a role run".
 out=$( (export SDD_RUN=-; sdd ship) 2>&1)
 assert_eq $? 2 "(ship, untracked run)"
@@ -50,14 +62,6 @@ assert_contains "$out" "sdd: ship is the human's: a role run cannot ship"
 # Everything else still works under a role run; tidy without --remote too.
 (export SDD_RUN=7; sdd tidy --dry-run >/dev/null 2>&1) || fail "tidy without --remote refused under SDD_RUN"
 
-# FR-21.2: a batch builder gets its tasks and the build rules, not the finish steps.
-out=$(sdd next)
-assert_contains "$out" 'Current batch: T-1.1 T-1.2'
-assert_contains "$out" 'Build exactly what the plan says'
-assert_not_contains "$out" 'security pass'
-assert_not_contains "$out" 'You are done when'
-# FR-21.3: the build rules say approve, ship and tidy --remote are the human's.
-assert_contains "$out" 'Never run `.sdd/bin/sdd approve`, `.sdd/bin/sdd ship` or `.sdd/bin/sdd tidy --remote`: they are the human'"'"'s.'
 
 # FR-28.2: while a task is open, the finish gate holds a role run's builder, as it holds anyone.
 echo work >work.txt && git add work.txt && git commit -qm "feat(1): work"
@@ -65,7 +69,7 @@ echo work >work.txt && git add work.txt && git commit -qm "feat(1): work"
 assert_eq $? 2 "(role-run builder, task open)"
 
 # FR-21.2: once no task is open, the finish steps are back (as today), with the same rule.
-for t in T-1.1 T-1.2 T-1.3; do sdd task 'done' "$t" >/dev/null 2>&1 || fail "task done $t failed"; done
+sdd task 'done' T-1.3 >/dev/null 2>&1 || fail "task done T-1.3 failed"
 git commit -qam "feat(1): work"
 # FR-28.2: its tasks ticked, a role run's builder may stop (Built is the orchestrator's); an
 # interactive builder (no SDD_RUN) is still held.

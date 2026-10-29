@@ -83,7 +83,7 @@ L ones alone. Add `; expect: fail` for a test written first (it must fail), or
 full check runs. `.sdd/bin/sdd task done T-31.1` ticks a task when its test passes. -->
 - [x] T-31.1 Red check without the uncommitted code, FR-31.2, FR-31.3 (files: .sdd/core/cmd/task.sh, tests/t_expect.sh; test: SRC=$PWD SH=dash dash tests/t_expect.sh; size: M)
 - [x] T-31.2 sdd run builder ticks and commits its batch, FR-31.1 (files: .sdd/core/cmd/run.sh, tests/t_run.sh; test: SRC=$PWD SH=dash dash tests/t_run.sh; size: M)
-- [ ] T-31.3 README, design, sdd-dev notes (files: README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; size: S)
+- [x] T-31.3 README, design, sdd-dev notes (files: README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

@@ -84,6 +84,9 @@ setcfg role.builder.tier small && setcfg tier.small.agent narrow && setcfg tier.
 out=$(export PATH="$T/bin:$PATH" STUB="$T/stub"; sdd run builder 2 2>&1) || fail "run failed: $out"
 assert_contains "$out" 'item 2 T-2.1 T-2.2 T-2.3 · started'
 assert_contains "$(cat "$T/stub/narrow.prompt")" 'Current batch: T-2.1 T-2.2 T-2.3'
+# FR-31.1: the stub ticked nothing; the run ticked the batch and left the commit to us.
+assert_contains "$out" 'ticked 3 of 3 · commit with: feat(2): T-2.1 T-2.2 T-2.3'
+git commit -qam "feat(2): T-2.1 T-2.2 T-2.3"
 
 # FR-17.5: an attribute sdd does not know makes the task unreadable, instead of being read into
 # the attribute before it; so does a size other than S, M or L. task done and the tasks gate refuse.

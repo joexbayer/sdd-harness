@@ -290,10 +290,19 @@ loop. A role run's builder does tasks only (D-28.1): `sdd run builder` refuses a
 open task, and the finish gate lets a builder under `SDD_RUN` stop once none is open, so the
 finishing (check, security pass, verifier, Built) is the orchestrating session's. An adapter
 may say an exit code is no failure (`agent_exit_note`): narrow's exit 3, "could not verify its
-own work", is logged as 3 and warned about, since sdd's task tests and check decide (D-28.2). A batch is the first open task, joined by the open `size: S` tasks right after it while it
+own work", is logged as 3 and warned about, since sdd's task tests and check decide (D-28.2).
+After an accepted builder exit, `sdd run` runs `task done` for each batch task still open, in
+plan order, stopping at the first failure: the tool ticks, not the model (D-31.1). It commits
+nothing (C-4) and prints `ticked n of m · commit with: <kind>(<id>): <task ids> <what>` for the
+orchestrator. A batch is the first open task, joined by the open `size: S` tasks right after it while it
 is S too, up to `[build] batch` (3): the planner sizes tasks and the human approves them, sdd
 only groups, so a batch is the same every run (D-17.1). A batch ends after an `expect: fail`
 task, so the code that makes a test-first task pass is never in the same batch as that test.
+A small model still writes both at once, so the test passes. Then, only if other files have
+uncommitted changes, `task done` runs it again in `git worktree add --detach` of HEAD under
+$TMPDIR with only the task's `files:` copied in, removed afterwards, and counts it red when it
+fails there (for the plan's reason, if named): the human's tree is never stashed or reset
+(D-31.2, D-31.3). Passing there too, or no other changes (the code already committed), is refused.
 
 Verifying: once no task is open and the check passes, the finish steps hand the item to the
 `verifier` role (its `sdd-verifier` subagent, `sdd run verifier <id>`, or a fresh subagent on
