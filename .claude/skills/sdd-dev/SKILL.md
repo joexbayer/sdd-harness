@@ -11,12 +11,27 @@ sh tests/run.sh               # macOS /bin/sh (bash 3.2 in POSIX mode)
 sh tests/run.sh dash          # Linux-style /bin/sh; run both, failures differ
 sh tests/run.sh /bin/sh dash  # both at once (what the check runs)
 SH=/bin/sh SRC=$PWD sh tests/t_x.sh   # one file
-.sdd/bin/sdd check            # shellcheck -S warning + both suites (~2 min); this repo dogfoods sdd
+.sdd/bin/sdd check            # shellcheck -S warning + both suites (~2 min loaded); this repo dogfoods sdd
 ```
-run.sh starts every test file under every shell at once and prints results afterwards, per
-shell in file order. `t_perf*.sh` (timing budgets on a generated 100-item repo) runs alone
+run.sh runs one job per test file per shell, as many at once as there are CPUs (a mkdir-claim
+queue, shells interleaved; `SDD_TEST_JOBS=n` overrides), and prints results afterwards, per
+shell in file order. Starting all ~70 at once (before item 38) took 9 min against ~2 min capped:
+the cost is process starts (system time is 2x user time on macOS), and they contend.
+Before the jobs, run.sh builds one `new_repo` per shell and exports it as `SDD_TEMPLATE`;
+`new_repo` copies it (`cp -R`, dropping the `.git/sdd-config` cache) instead of git init, sdd
+init and two commits. A test run alone (no `SDD_TEMPLATE`) builds its repo as before. So a
+change to what `new_repo` sets up needs no template rebuild: each run.sh builds it fresh. `t_perf*.sh` (timing budgets on a generated 100-item repo) runs alone
 after the rest; `SDD_PERF_SLACK=2` doubles its budgets on a slow machine, and
 `SDD_PERF_SLACK=0.01` makes it fail on purpose so it prints every measured time.
+Profile the suite (item 38): time each file alone with
+`SRC=$PWD SH=dash dash tests/t_x.sh` and note `uptime` (the dev Mac is often loaded by other
+sessions; numbers swing 2x). Per-line cost of one file: pipe `dash -x` through a timestamping
+filter, e.g. `SRC=$PWD SH=dash dash -x tests/t_x.sh 2>&1 >/dev/null | perl -MTime::HiRes=time
+-ne 'BEGIN{$|=1} $t=time; printf "%.3f %s", $t-$p, $l if defined $p; ($p,$l)=($t,$_)' | sort -rn
+| head` (each line's time is until the next trace line). Most cost is sdd and git process starts;
+a test-side `sdd` call goes through the source copy, which execs the repo's vendored copy (two
+shell starts, two common.sh parses). Avoid fixtures built with one git commit per loop pass:
+t_perf writes its 95 commits with one `git fast-import`.
 Each `tests/t_*.sh` sources `tests/lib.sh`. That gives you a temporary dir `$T`, an isolated
 `HOME` and git identity, `sdd` (the source copy; inside a repo it delegates to that repo's
 vendored copy via `SDD_SH`), `new_repo`, `setcfg` (changes the config *and commits it*: ship
@@ -60,8 +75,8 @@ refuses a dirty tree), and `fill`.
   is a config problem, not a test failure.
 - `run_check` times the `check.run` commands (`date +%s`, whole seconds) into `CHECK_SECS`,
   recorded as `secs=` in `.git/sdd/checks/<id>`; `cmd/check.sh` prints it and warns past
-  `[check] budget` (item 35). This repo's own check takes ~2 min, so it warns every time
-  unless `.sdd/config` sets a bigger budget. Tests on timing assert the recorded number, not a
+  `[check] budget` (item 35). This repo's own check takes ~2 min, so `.sdd/config` sets
+  `[check] budget = 150` (item 38). Tests on timing assert the recorded number, not a
   fixed one: a loaded machine can tick a second over.
 - Worktree paths: `git worktree list` prints real paths, so on macOS a test's `$T` (/var/…)
   shows up as /private/var/…. Compare with `$(cd "$T/app.1" && pwd -P)` or assert on a
