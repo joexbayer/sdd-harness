@@ -89,6 +89,44 @@ full check runs. `.sdd/bin/sdd task done T-31.1` ticks a task when its test pass
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 
+QUESTION for the human (build stopped at T-31.2 (sdd run builder ticks and commits its batch)):
+FR-31.1 says `sdd run` commits each tick, but constitution article C-4 (only new, approve and
+ship create commits) forbids it, and `sdd check` enforces it (tests/constitution/c4-commits.sh
+fails when any other cmd/ or lib/ file runs `git commit`). Changing C-4 needs an amendment item,
+which only the human starts. Options:
+- (a) An amendment first: C-4 gains "`run builder` commits the ticks of its own batch" and
+  c4-commits.sh allows run.sh; item 31 then `depends:` on it and T-31.2 builds as planned.
+- (b) Change FR-31.1 (re-approval): `sdd run` ticks but does not commit; the orchestrating
+  session commits each tick. Keeps C-4, but a small builder's ticks wait for the orchestrator.
+Recommend (a): the commit is the point of D-31.1 (the ship gate needs a commit per tick).
+
+Done so far:
+- FR-31.2 (red check without the uncommitted code): .sdd/core/cmd/task.sh:52-91
+  (`red_without_code`, called at :129 only when an `expect: fail` test passed, D-31.3). Other
+  changes = `git diff --name-only HEAD` plus untracked files, minus the task's files: (an entry
+  also covers paths under it) and minus the item file. The throwaway checkout is
+  `git worktree add --detach $TMPDIR/sdd-red.XXXXXX/wt HEAD`; the task's files are copied in
+  with their paths, the test runs there with that dir as cwd, then the worktree is removed
+  (`--force`) and the dir deleted; an EXIT trap does the same when a die stops it midway. Its log
+  is `.git/sdd/checks/<id>.<task>.red.log`. Proved by tests/t_expect.sh:100-160 (FR-31.2: ticked
+  with the plan's reason, refused for another reason, working tree and git status unchanged, no
+  worktree or temp dir left).
+- FR-31.3: refusals at task.sh:66-70 (no other changes: "the code is already committed (or there
+  is none)") and :85-89 ("passes even without the uncommitted code … fix the test"); a red-check
+  exit 126/127 is refused like the normal run's. Tests: t_expect.sh:121-129, :153-160.
+- Deviation: the item file itself does not count as an "other change" (a Built edit is not
+  code), so editing it alone gets the "already committed" refusal, not a red check.
+
+Not handled (no code, per the no-speculative-complexity rule):
+- A signal (Ctrl-C) during the red run leaves $TMPDIR/sdd-red.* and a stale worktree entry
+  (dash runs no EXIT trap on a signal). Likelihood: low (a human interrupting a test). Cost of a
+  fix: trapping INT/TERM/HUP too, 1 line. `git worktree prune` clears the entry.
+- A files: entry with `..` (e.g. `../x`) is copied outside the throwaway checkout, still under
+  $TMPDIR, and is not deleted with it. Likelihood: very low (files: comes from the approved plan).
+  Cost: refusing `..` entries, ~2 lines.
+
+Verified by: none (builder self-checked; the orchestrator verifies)
+
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->
