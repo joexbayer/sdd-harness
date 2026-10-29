@@ -2,9 +2,10 @@
 id: 37
 type: chore
 title: Experiment: arm C and the planner's batches
-status: open
+status: shipped
 created: 2026-10-29
 approved: b8972f2a8ee45630b14189870ae8b380e6c9b044 2026-10-29 joexbayer
+shipped: 2026-10-29
 ---
 # 37 Experiment: arm C and the planner's batches
 
