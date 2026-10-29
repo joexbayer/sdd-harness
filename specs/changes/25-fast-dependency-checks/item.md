@@ -34,6 +34,23 @@ two additions in D-25.3.
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+D-25.1: `dep_rows` in .sdd/core/lib/common.sh (item_rows with `_IR_LIGHT=1`, which skips
+item_rows_finish's per-ref `git log` calls; once per process into `DEP_ROWS`), used by
+`waits_for`, status.sh `open_items` and next.sh's ready entries.
+D-25.2: `item_sources` in common.sh caches everything but the worktree row in
+`.git/sdd/cache/sources`, keyed on `cksum` of base, SPECS and one `for-each-ref`; written to a
+temp file and moved. The branch loop uses `[ ]` tests, not `case`, because macOS /bin/sh
+(bash 3.2) cannot parse a `case` inside `$( )`.
+D-25.3: tests/t_perf.sh item 100 has `depends: 5, 99, R-1.1`; tests/t_gitcalls.sh checks `ls`
+after a new branch, a commit on it and its deletion.
+
+Times on the 100-item perf repo, dash, load average 9 (best of 3):
+next 0.44 → 0.15 s, status 0.65 → 0.10 s, session-start 0.38 → 0.10 s, ls 0.43 → 0.34 s,
+summary 0.45 → 0.32 s; hook stop unchanged (0.07 → 0.06 s).
+
+Verified: `sdd check` (shellcheck, all tests under /bin/sh and dash) passes, timing test with
+no slack. t_roadmap, t_depends, t_query, t_open and t_cache pass unchanged.
+Verified by: none (lite profile; refactor with existing tests as the proof)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
