@@ -34,7 +34,7 @@ assert_eq "$out" "✗ FR-1.2 (export as CSV): no e.g. example under it
 ✗ D-1.1 (Plain CSV, because spreadsheets read it): written twice
 ✗ Q-1.1 (Which date format?): not decided
 ✗ T-1.2 (Reject bad orders): names FR-1.9, which the plan does not have
-✗ T-1.3 (Docs): cannot read it: unknown attribute tests (known: files, test, expect, size)"
+✗ T-1.3 (Docs): cannot read it: unknown attribute tests (known: files, test, expect, size, by)"
 # FR-19.1: an item by its id, from another branch.
 git checkout -q main
 out2=$(sdd analyze 1 2>&1)

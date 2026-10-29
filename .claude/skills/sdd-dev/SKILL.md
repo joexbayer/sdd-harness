@@ -82,7 +82,7 @@ refuses a dirty tree), and `fill`.
   can be tried offline with `jq -r ".[] | $FORGE_JQ" sample.json`.
 - Tasks: `task_rows` field 8 is why sdd cannot read the line (empty when fine), field 9 the size
   (S|M|L, M by default), field 10 the `expect: fail "<text>"` text (field 6 is then plain
-  `fail`, so `!= fail` checks keep working). next.sh splits a row by prefix stripping, not
+  `fail`, so `!= fail` checks keep working), field 11 `by:` (item 36; empty = the builder). next.sh splits a row by prefix stripping, not
   `tsv`: a new field goes last and next.sh must strip one more tab to reach it. A new task attribute must be added to `AWK_TASK`'s known keys (and its
   start-of-block list), or every task using it becomes unreadable (FR-17.5).
 - Dogfooding a grammar change: this repo's own plan is parsed by the code being changed. Until
@@ -99,7 +99,11 @@ refuses a dirty tree), and `fill`.
   adapter's optional `agent_exit_note <rc>` turns an exit code into a warning (narrow: 3);
   run_log keeps the real rc. Item 31: after an accepted builder exit, run.sh runs `task done`
   (as a subprocess) for each batch task still open and prints `ticked n of m · commit with: …`;
-  it never commits (C-4, enforced by tests/constitution/c4-commits.sh, which fails on any
+  since item 36 that (and the item-file restore, item 34) is for whatever role owns the batch
+  (`by:`), and run.sh refuses another role's run on it (usage_die, exit 2) before `run_slot`, so
+  nothing is logged. A role run mid-build is therefore refused unless it owns the batch; a
+  verifier runs once no task is open. Batch runs get prompts/role-batch.md appended.
+  run.sh never commits (C-4, enforced by tests/constitution/c4-commits.sh, which fails on any
   `git commit` outside new/approve/ship). Tests with a builder run therefore tick: give the
   item enough tasks for later runs (t_run.sh), and use the narrow stub's `NARROW_DO` for a fake
   builder that writes files.

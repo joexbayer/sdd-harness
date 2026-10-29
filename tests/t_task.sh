@@ -127,4 +127,28 @@ assert_contains "$out" 'tasks not done: T-2.2, T-2.3'
 # FR-15.4: any other plan edit still voids the approval.
 sed 's/^- \[ \] T-2.2 Hides failures/- [ ] T-2.2 Hides nothing/' "$f" >"$T/f" && cp "$T/f" "$f"
 assert_contains "$(sdd status)" 'changed after approval'
+# FR-36.1: `by: <role>` names the role that builds a task; task next and next show it after size,
+# a task without it reads as before, and a role that is not a lowercase word is refused.
+git commit -qam "docs(2): hides nothing" && git switch -q main
+sdd new feature "Login" >/dev/null 2>&1
+f=specs/changes/3-login/item.md
+fill "$f" plan
+awk '/^## What changes$/ { print; print "FR-3.1 WHEN a user logs in THE SYSTEM SHALL greet them."; print "  e.g. login ann → hi ann"; next }
+/^## Tasks \(optional\)$/ { print
+	print "- [ ] T-3.1 Login test, FR-3.1 (files: tests/test_login.py; test: pytest -q tests/test_login.py; expect: fail; size: S; by: planner)"
+	print "- [ ] T-3.2 Login, FR-3.1 (test: true; size: S)"
+	print "- [ ] T-3.3 Shout (test: true; size: S; by: Planner!)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(3): plan" && sdd approve >/dev/null 2>&1 || fail "approve 3 failed"
+out=$(sdd task next)
+assert_contains "$out" '[ ] T-3.1 Login test (size: S; by: planner)'
+assert_contains "$out" 'test: pytest -q tests/test_login.py (expect: fail)'
+assert_contains "$(sdd next)" '  by      planner'
+out=$(sdd task 'done' T-3.3 2>&1)
+assert_eq $? 1 "(by: not a role)"
+assert_contains "$out" 'T-3.3: by: must be a role name (a lowercase word)'
+# Without by: the line is as before.
+sed 's/^- \[ \] T-3.1 /- [x] T-3.1 /' "$f" >"$T/f" && cp "$T/f" "$f"
+out=$(sdd task next)
+assert_contains "$out" '[ ] T-3.2 Login (size: S)
+'
 exit 0

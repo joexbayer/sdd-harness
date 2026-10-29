@@ -1,6 +1,6 @@
 # FR-35.3 the plan rules carry the test rules; FR-35.4 the build rules forbid hollow tests,
 # expected values taken from the code, and unasked-for code; FR-35.5 the verifier asks, per FR,
-# whether some test would fail if it were dropped.
+# whether some test would fail if it were dropped. FR-36.6 a test-first task can be by: planner.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -18,6 +18,10 @@ assert_contains "$out" 'Make cost settings (hash rounds, timeouts) configurable 
 assert_contains "$out" "Each task's test asserts its FR's example literally"
 assert_contains "$out" 'A list endpoint gets a test
   that counts its queries'
+# FR-36.6: a test-first task can be the planner's.
+assert_contains "$out" 'A test-first task can be `by: planner`'
+assert_contains "$out" "the planner writes the test that defines done from the FR's example, and the builder
+  makes it pass"
 
 # FR-35.4: build rules.
 git checkout -q main

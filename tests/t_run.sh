@@ -29,8 +29,8 @@ PATH="$T/bin:$PATH" STUB="$T/stub"
 export PATH STUB
 
 planned_item feature "Paging"
-awk '$0 == "## Built" { print "- [ ] T-1.1 Page the query (test: true)"; print "- [ ] T-1.2 Sort it (test: true)"
-	print "- [ ] T-1.3 Count it (test: true)"; print "" } { print }' "$ITEM" >"$T/i" && cp "$T/i" "$ITEM"
+awk '$0 == "## Built" { print "- [ ] T-1.1 Page the query (test: true)"; print "- [ ] T-1.2 Sort test (test: true; by: planner)"
+	print "- [ ] T-1.3 Sort it (test: true)"; print "- [ ] T-1.4 Count it (test: true)"; print "" } { print }' "$ITEM" >"$T/i" && cp "$T/i" "$ITEM"
 git commit -qam "docs(1): tasks" && sdd approve >/dev/null 2>&1
 
 # FR-16.1: missing settings name the exact lines to add.
@@ -55,6 +55,9 @@ setcfg tier.small.args '--permission-mode acceptEdits'
 out=$(sdd run builder 1 2>&1) || fail "run failed: $out"
 assert_contains "$(cat "$T/stub/narrow.args")" '-m qwen3-coder-30b --json --profile local -p'
 assert_contains "$(cat "$T/stub/narrow.prompt")" 'Current task: T-1.1 Page the query'
+# FR-36.5: a batch run's prompt says its job.
+assert_contains "$(cat "$T/stub/narrow.prompt")" 'sdd ticks these tasks for you'
+assert_contains "$(cat "$T/stub/narrow.prompt")" 'never commit'
 assert_not_contains "$(cat "$T/stub/narrow.args")" 'yolo'
 assert_not_contains "$(cat "$T/stub/narrow.args")" 'acceptEdits'
 assert_contains "$out" 'run 1 · builder · narrow qwen3-coder-30b · item 1 T-1.1 · 41k in / 3k out · '
@@ -70,20 +73,37 @@ grep -q '^- \[x\] T-1.1 ' "$ITEM" || fail "T-1.1 not ticked by the run"
 assert_eq "$(git log -1 --format=%s)" "test: config" "(sdd run committed)"
 git commit -qam "feat(1): T-1.1 Page the query"
 
+# FR-36.3: T-1.2 is the planner's: a builder run is refused, names whose turn it is, logs nothing.
+runs=$(wc -l <"$log")
+out=$(sdd run builder 1 2>&1)
+assert_eq $? 2 "(builder on the planner's batch)"
+assert_contains "$out" 'T-1.2 is the planner'"'"'s: .sdd/bin/sdd run planner 1'
+assert_eq "$(wc -l <"$log")" "$runs" "(no run logged)"
+
 # A planner on claude: the prompt on stdin, cost as claude reports it, the role's own prompt added.
 setcfg role.planner.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
 mkdir -p .sdd/local/prompts && echo "You are the planner for item {{id}}." >.sdd/local/prompts/role-planner.md
-out=$(sdd run planner 1 2>&1) || fail "planner run failed: $out"
-assert_contains "$(cat "$T/stub/claude.args")" '-p --output-format json --model opus'
-assert_contains "$(cat "$T/stub/claude.prompt")" 'You are the planner for item 1.'
-assert_contains "$out" '2k in / 300 out · $0.25'
-assert_not_contains "$out" 'ticked'   # FR-31.1: only a builder run ticks
-
-# FR-16.8: a failing agent is logged with its exit code; sdd says so and exits 1.
+# FR-16.8: a failing agent is logged with its exit code; sdd says so and exits 1 (and ticks nothing).
 out=$(CLAUDE_RC=3 sdd run planner 1 2>&1)
 assert_eq $? 1 "(agent failed)"
 assert_contains "$out" 'the agent exited 3'
-assert_eq "$(tail -n 1 "$log" | cut -f1,13)" "$(printf '3\t3')"
+assert_eq "$(tail -n 1 "$log" | cut -f1,13)" "$(printf '2\t3')"
+grep -q '^- \[ \] T-1.2 ' "$ITEM" || fail "a failed planner run ticked T-1.2"
+# FR-36.4: the planner works its own batch: its edit of the item file is undone, its task ticked.
+git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.agent narrow
+git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.model opus-on-narrow
+out=$( (export NARROW_DO="echo scribble >>$ITEM"; sdd run planner 1) 2>&1) || fail "planner run failed: $out"
+assert_contains "$(cat "$T/stub/narrow.prompt")" 'sdd ticks these tasks for you'   # FR-36.5
+assert_contains "$(cat "$T/stub/narrow.prompt")" 'You are the planner for item 1.'
+assert_contains "$out" "⚠ the planner edited $ITEM: restored"
+assert_not_contains "$(cat "$ITEM")" 'scribble'
+assert_contains "$out" '✓ T-1.2 done (its test passed)'
+assert_contains "$out" 'ticked 1 of 1 · commit with: feat(1): T-1.2 Sort test'
+git config -f "$XDG_CONFIG_HOME/sdd/config" --remove-section tier.big
+out=$(sdd run planner 1 2>&1)
+assert_eq $? 2 "(planner on the builder's batch)"
+assert_contains "$out" 'T-1.3 is the builder'"'"'s: .sdd/bin/sdd run builder 1'
+git commit -qam "test(1): T-1.2 Sort test"
 
 # A model name that would not be safe in a file or YAML is refused.
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.model "$(printf 'qwen\npermissionMode: x')"
@@ -104,21 +124,29 @@ out=$( (export NARROW_RC=3; sdd run builder 1) 2>&1) || fail "a narrow exit 3 fa
 assert_contains "$out" "⚠ narrow could not verify its own work (exit 3); sdd's task tests and check decide"
 assert_not_contains "$out" 'the agent exited'
 assert_eq "$(tail -n 1 "$log" | cut -f4,13)" "$(printf 'builder\t3')"
-assert_contains "$out" 'ticked 1 of 1 · commit with: feat(1): T-1.2 Sort it'   # FR-31.1, after exit 3
-git commit -qam "feat(1): T-1.2 Sort it"
+assert_contains "$out" 'ticked 1 of 1 · commit with: feat(1): T-1.3 Sort it'   # FR-31.1, after exit 3
+git commit -qam "feat(1): T-1.3 Sort it"
 out=$( (export NARROW_RC=4; sdd run builder 1) 2>&1)
 assert_eq $? 1 "(narrow exit 4)"
 assert_contains "$out" 'the agent exited 4'
 assert_not_contains "$out" 'could not verify'
-grep -q '^- \[ \] T-1.3 ' "$ITEM" || fail "a failed run ticked T-1.3"   # FR-31.1: exit not accepted
-# An adapter without agent_exit_note: exit 3 fails as before (D-28.2).
+grep -q '^- \[ \] T-1.4 ' "$ITEM" || fail "a failed run ticked T-1.4"   # FR-31.1: exit not accepted
+
+# FR-28.1: with no open task, a builder run is refused: finishing is the orchestrating session's.
+sdd task 'done' T-1.4 >/dev/null 2>&1 || fail "task done T-1.4 failed"
+git commit -qam "feat(1): T-1.4 count it"
+# An adapter without agent_exit_note: exit 3 fails as before (D-28.2). With no batch open, any role
+# but the builder runs (D-36.2), and none ticks.
 out=$(CLAUDE_RC=3 sdd run planner 1 2>&1)
 assert_eq $? 1 "(claude exit 3)"
 assert_not_contains "$out" 'could not verify'
-
-# FR-28.1: with no open task, a builder run is refused: finishing is the orchestrating session's.
-sdd task 'done' T-1.3 >/dev/null 2>&1 || fail "task done T-1.3 failed"
-git commit -qam "feat(1): T-1.3 count it"
+out=$(sdd run planner 1 2>&1) || fail "planner run with no batch failed: $out"
+assert_contains "$(cat "$T/stub/claude.args")" '-p --output-format json --model opus'
+assert_contains "$(cat "$T/stub/claude.prompt")" 'You are the planner for item 1.'
+assert_contains "$out" '2k in / 300 out · $0.25'
+assert_not_contains "$out" 'ticked'
+assert_not_contains "$out" 'restored'
+assert_not_contains "$(cat "$T/stub/claude.prompt")" 'sdd ticks these tasks'   # FR-36.5: batch runs only
 runs=$(wc -l <"$log")
 out=$(sdd run builder 1 2>&1)
 assert_eq $? 2 "(builder with no open task)"

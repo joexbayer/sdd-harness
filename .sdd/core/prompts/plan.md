@@ -34,7 +34,9 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   missing function's name), so a typo does not count as red. Size
   each one `size: S|M|L` (S: a few lines, M: a sitting, L: a big one): consecutive S tasks
   share a builder, M and L run alone. The builder may be a small model that sees only its
-  batch, so say what it needs to know.
+  batch, so say what it needs to know. A test-first task can be `by: planner` (after its
+  size): the planner writes the test that defines done from the FR's example, and the builder
+  makes it pass.
 - Tests: The gate (check) stays fast, because it runs after every task. A task's own test may
   be deep (end-to-end, real cost settings): mark it (a tag, a marker, a separate command) so
   check.run leaves it out. Make cost settings (hash rounds, timeouts) configurable and minimal

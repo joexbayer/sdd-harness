@@ -72,7 +72,8 @@ if [ "$WHYCODE" = task ]; then
 		bad=${t%%"$tab"*}
 		t=${t#*"$tab"}
 		t=${t#*"$tab"}
-		reason=$t
+		reason=${t%%"$tab"*}
+		by=${t#*"$tab"}
 		case $batch in
 		*"$nl"*)
 			[ -n "$ids" ] || echo "Current batch: $(printf '%s\n' "$batch" | cut -f1 | paste -sd ' ' -) (small tasks, worked together, in order)"
@@ -93,6 +94,8 @@ if [ "$WHYCODE" = task ]; then
 		elif [ "$expect" = fail ]; then
 			echo "  expect  fail: write the test first: it must fail (the next task makes it pass)"
 		fi
+		# FR-36.1: the role that builds it, when not the builder.
+		[ -z "$by" ] || echo "  by      $by ($CMD run $by $ID)"
 		[ -z "$bad" ] || echo "  ✗       $bad: the human fixes the plan and approves it again"
 		for fr in $frs; do
 			printf '%s\n' "$IR_FACTS" | F=$fr awk -F '\t' '$1 == "fr" && $2 == ENVIRON["F"] {

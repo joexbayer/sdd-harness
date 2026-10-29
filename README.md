@@ -177,6 +177,10 @@ tasks, giving each batch to one builder and committing it, and stops at the firs
 The planner sizes each task (`size: S|M|L`); consecutive small ones share a builder
 (`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each. A
 test written first (`expect: fail`) ends its batch, so it is ticked while still red.
+A task can name the role that builds it, `by: planner`: the planner writes the failing test that
+defines done, the builder makes it pass. A batch belongs to one role, and `sdd run builder 7` on
+the planner's batch is refused with the command to run instead (`sdd run planner 7`). Any batch
+run gets a short prompt saying sdd ticks and the orchestrator commits, and its item file back.
 A test written first says `expect: fail "<text>"` to count only when it fails for that reason.
 A small model often writes the test and its code at once, so the test already passes. When there
 are other uncommitted changes, `task done` then runs the test again in a throwaway checkout of
