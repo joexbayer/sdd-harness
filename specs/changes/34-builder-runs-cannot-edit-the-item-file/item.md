@@ -4,6 +4,7 @@ type: fix
 title: Builder runs cannot edit the item file
 status: open
 created: 2026-10-29
+approved: d1aa2f8599e7edaf208c0d09dce97f01e9adcb68 2026-10-29 joexbayer
 ---
 # 34 Builder runs cannot edit the item file
 
