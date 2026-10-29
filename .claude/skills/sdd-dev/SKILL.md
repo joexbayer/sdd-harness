@@ -227,7 +227,9 @@ so inspect the repo itself.
 - `experiment/run.sh <A|B> [dir] [--dry]` drives one arm of roadmap 29 in a fresh repo; only the
   human starts a real run (`! sh experiment/run.sh B`). Test the driver for free with `--dry`
   (fake claude/narrow from `experiment/fake/`; `XP_FAKE_COST`, `XP_FAKE_REVISE`, `XP_FAKE_FAIL`
-  exercise the caps). `shellcheck -s sh experiment/run.sh` yourself: `sdd check` does not list it.
+  exercise the caps, `XP_FAKE_LIMIT=<role>` a subscription usage-limit wait). Since item 32 an
+  arm is one feature item planned whole (no roadmap); the usage-limit wording and reset parsing
+  live in `experiment/lib/xp.py` (`LIMIT`, `limit_seconds`). `shellcheck -s sh experiment/run.sh` yourself: `sdd check` does not list it.
 - Prove the hidden suite against the reference build:
   `python3 -m pytest -q -p no:cacheprovider experiment/acceptance --repo experiment/reference --summary <file>`.
   Change the brief, reference and suite together; every test must pass on the reference.
