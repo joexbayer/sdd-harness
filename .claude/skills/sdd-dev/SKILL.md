@@ -236,7 +236,9 @@ so inspect the repo itself.
 - `experiment/run.sh <A|B> [dir] [--dry]` drives one arm of roadmap 29 in a fresh repo; only the
   human starts a real run (`! sh experiment/run.sh B`). Test the driver for free with `--dry`
   (fake claude/narrow from `experiment/fake/`; `XP_FAKE_COST`, `XP_FAKE_REVISE`, `XP_FAKE_FAIL`
-  exercise the caps, `XP_FAKE_LIMIT=<role>` a subscription usage-limit wait). Since item 32 an
+  exercise the caps, `XP_FAKE_LIMIT=<role>` a subscription usage-limit wait). Arm C (item 37) differs from A only in
+  the planner's by: rule (`experiment/prompts/by-planner.md` vs `by-none.md`); the driver reads a
+  batch's owner from `sdd task next` (`; by: <role>)` on the first `[ ]` line) and runs that role. Since item 32 an
   arm is one feature item planned whole (no roadmap); the usage-limit wording and reset parsing
   live in `experiment/lib/xp.py` (`LIMIT`, `limit_seconds`). `shellcheck -s sh experiment/run.sh` yourself: `sdd check` does not list it.
 - Prove the hidden suite against the reference build:
