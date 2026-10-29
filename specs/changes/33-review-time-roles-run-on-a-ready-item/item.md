@@ -4,6 +4,7 @@ type: fix
 title: Review-time roles run on a ready item
 status: open
 created: 2026-10-29
+approved: b2e28b5160bde02cf27d8b0dc01b14a161a9034f 2026-10-29 joexbayer
 ---
 # 33 Review-time roles run on a ready item
 
