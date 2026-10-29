@@ -36,7 +36,7 @@ if [ "$1" = next ] && [ $# -eq 1 ]; then
 	[ -n "$batch" ] || { echo "no open tasks: the check and \"## Built\" are next (see: $CMD next)"; exit 0; }
 	echo "batch   $(printf '%s\n' "$batch" | cut -f1 | paste -sd ' ' -)"
 	printf '%s\n' "$batch" | while IFS= read -r r; do
-		printf '[ ] %s %s (size: %s)\n' "$(tsv 1 "$r")" "$(tsv 3 "$r")" "$(tsv 9 "$r")"
+		printf '[ ] %s %s (size: %s%s)\n' "$(tsv 1 "$r")" "$(tsv 3 "$r")" "$(tsv 9 "$r")" "$(tsv 11 "$r" | sed 's/..*/; by: &/')"
 		[ -z "$(tsv 4 "$r")" ] || printf '      files: %s\n' "$(tsv 4 "$r")"
 		ex=
 		[ "$(tsv 6 "$r")" != fail ] || ex=" (expect: fail$(tsv 10 "$r" | sed 's/..*/ "&"/'))"
