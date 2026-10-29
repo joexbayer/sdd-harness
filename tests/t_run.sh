@@ -125,7 +125,7 @@ assert_eq $? 2 "(builder with no open task)"
 assert_contains "$out" 'item 1 has no open task: finishing (check, security pass, verifier, Built) is the orchestrating session'"'"'s: .sdd/bin/sdd next'
 assert_eq "$(wc -l <"$log")" "$runs" "(no run logged)"
 # Other roles run as before (a verifier, here on the same tier).
-setcfg role.verifier.tier small
+setcfg role.verifier.tier small && setcfg role.builder.tier small
 out=$(sdd run verifier 1 2>&1) || fail "verifier run failed: $out"
 assert_contains "$out" 'run '
 
@@ -165,4 +165,15 @@ assert_contains "$out" '✗ T-3.3: its test failed'
 assert_contains "$out" 'ticked 1 of 3 · commit with: feat(3): T-3.2 Api'
 assert_not_contains "$out" 'T-3.4 done'
 grep -q '^- \[ \] T-3.4 ' "$f" || fail "T-3.4 ticked after T-3.3 failed"
+
+# FR-33.1: a ready item (Built written, check passed) lets review-time roles run, not the builder.
+git add -A && git commit -qm "feat(3): T-3.2 Api" && git switch -q main && planned_item fix "Ready one"
+rid=${ITEM#specs/changes/}; rid=${rid%%-*}
+setcfg role.verifier.tier small && setcfg role.builder.tier small
+fill "$ITEM" built && git commit -qam "docs($rid): built" && { sdd check >"$T/c.out" 2>&1 || fail "check failed: $(cat "$T/c.out")"; }
+assert_contains "$(sdd next)" "Phase: review"
+out=$(sdd run verifier "$rid" 2>&1) || fail "the verifier was refused on a ready item: $out"
+out=$(sdd run builder "$rid" 2>&1)
+assert_eq $? 2 "(builder on a ready item)"
+assert_contains "$out" 'is waiting for the human'
 exit 0

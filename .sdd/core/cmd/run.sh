@@ -32,9 +32,11 @@ command -v agent_run >/dev/null 2>&1 || die "$agent cannot run headless from $NA
 
 # What the role is to do: the item's next step, plus the role's own prompt if the project has one.
 item_phase
-# A role works the agent's phases only: approving, reviewing and shipping are the human's.
+# A role works the agent's phases only: approving, reviewing and shipping are the human's. A ready
+# item still takes review-time roles (a verifier), not the builder: its work is done (FR-33.1).
 case $WHYCODE in
-approval | changed | contract | ready | pr | status) usage_die "item $ID is waiting for the human ($WHY): no role runs now" ;;
+approval | changed | contract | pr | status) usage_die "item $ID is waiting for the human ($WHY): no role runs now" ;;
+ready) [ "$role" != builder ] || usage_die "item $ID is waiting for the human ($WHY): no role runs now" ;;
 esac
 # FR-28.1, D-28.1: a builder run does tasks only. Finishing needs judgment: it is the session's
 # that orchestrates the build, not a prompt a small model ignores.
