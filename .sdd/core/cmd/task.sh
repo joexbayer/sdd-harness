@@ -49,6 +49,47 @@ fi
 [ "$1" = 'done' ] && [ $# -eq 2 ] || usage_die "$usage"
 tid=$2
 
+# red_without_code: FR-31.2, D-31.2, D-31.3. A test written together with its code passes. When
+# there are uncommitted changes besides the task's files, run the test once more in a throwaway
+# checkout of HEAD with only those files copied in: failing there is red. Sets rc, log and
+# without; refuses (FR-31.3) when that cannot prove it. The working tree is never touched.
+red_without_code() {
+	# files: entries, one per line, without surrounding blanks or trailing slashes.
+	red_files=$(tsv 4 "$row" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; s:/*$::' | grep -v '^$')
+	red_other=$({
+		git -c core.quotePath=false diff --name-only HEAD --
+		git -c core.quotePath=false ls-files --others --exclude-standard
+	} | F=$red_files I=$IFILE awk '
+		BEGIN { n = split(ENVIRON["F"], f, "\n") }
+		$0 == ENVIRON["I"] { next }
+		{ for (i = 1; i <= n; i++) if ($0 == f[i] || index($0, f[i] "/") == 1) next; print }')
+	if [ -z "$red_other" ]; then
+		tail -n 20 "$log"
+		echo "✗ $tid expected its test to fail, but it passed: the code is already committed (or there is none), so $NAME cannot see the test fail; write the test before its code (log: $log)"
+		exit 1
+	fi
+	red_dir=$(mktemp -d "${TMPDIR:-/tmp}/$NAME-red.XXXXXX") || die "could not make a temporary folder"
+	# Removed on every way out from here, a die included.
+	trap 'git worktree remove --force "$red_dir/wt" >/dev/null 2>&1; rm -rf "$red_dir"' EXIT
+	git worktree add -q --detach "$red_dir/wt" HEAD >/dev/null 2>&1 || die "$tid: could not check out HEAD in $red_dir to run its test without the uncommitted code"
+	printf '%s\n' "$red_files" | while IFS= read -r p; do
+		d=$(dirname -- "$p")
+		mkdir -p -- "$red_dir/wt/$d" && cp -R -- "$p" "$red_dir/wt/$d/" || exit 1
+	done || die "$tid: could not copy its files into $red_dir"
+	log="$ST/checks/$ID.$tid.red.log"
+	(cd "$red_dir/wt" && sh -c "$test" </dev/null >"$log" 2>&1)
+	rc=$?
+	git worktree remove --force "$red_dir/wt" >/dev/null 2>&1
+	rm -rf "$red_dir"
+	trap - EXIT
+	if [ "$rc" -eq 0 ]; then
+		tail -n 20 "$log"
+		echo "✗ $tid expected its test to fail, but it passes even without the uncommitted code: the test does not test the change; fix the test (log: $log)"
+		exit 1
+	fi
+	without=" without the uncommitted code"
+}
+
 row=$(task_rows | T=$tid awk -F '\t' '$1 == ENVIRON["T"]')
 [ -n "$row" ] || die "no task $tid in item $ID (see: $CMD task)"
 [ "$(tsv 2 "$row")" = open ] || die "$tid is already ticked"
@@ -84,7 +125,10 @@ else
 		tail -n 5 "$log"
 		die "$tid: its test could not run (exit $rc: command not found or not executable)"
 	elif [ "$expect" = fail ]; then
-		[ "$rc" -ne 0 ] || { tail -n 20 "$log"; echo "✗ $tid expected its test to fail, but it passed: write the test first (log: $log)"; exit 1; }
+		without=
+		# Exit 126/127 there is red too: the same command ran in the tree, so what is missing is the
+		# uncommitted code (e.g. `sh api.sh`).
+		[ "$rc" -ne 0 ] || red_without_code
 		# A red test that ran no tests proves nothing either (the check's no-tests patterns).
 		nt=$(cfg_all check.no-tests | paste -sd '|' -)
 		[ -z "$nt" ] || ! grep -qiE "$nt" "$log" ||
@@ -93,11 +137,11 @@ else
 		# an argument to grep -F, never part of a shell string).
 		if [ -n "$reason" ] && ! grep -qF -- "$reason" "$log"; then
 			tail -n 20 "$log"
-			echo "✗ $tid failed, but not for the expected reason ($reason); log: $log"
+			echo "✗ $tid failed$without, but not for the expected reason ($reason); log: $log"
 			exit 1
 		fi
-		how="its test fails, as expected"
-		[ -z "$reason" ] || how="its test fails, as expected: $reason"
+		how="its test fails${without:-, as expected}"
+		[ -z "$reason" ] || how="$how: $reason"
 	else
 		[ "$rc" -eq 0 ] || { tail -n 20 "$log"; echo "✗ $tid: its test failed (exit $rc; log: $log)"; exit 1; }
 		how="its test passed"
