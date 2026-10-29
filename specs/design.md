@@ -286,7 +286,11 @@ Building ("now let's build", the `sdd-build` skill) is a loop the main agent run
 an agent can spawn subagents (D-17.2): `sdd task next` prints the next batch, one builder
 (the `sdd-builder` subagent, or `sdd run builder <id>`) works it, every task of it is ticked by
 `task done` and one commit names them all, until no task is open; the first failure stops the
-loop. A batch is the first open task, joined by the open `size: S` tasks right after it while it
+loop. A role run's builder does tasks only (D-28.1): `sdd run builder` refuses an item with no
+open task, and the finish gate lets a builder under `SDD_RUN` stop once none is open, so the
+finishing (check, security pass, verifier, Built) is the orchestrating session's. An adapter
+may say an exit code is no failure (`agent_exit_note`): narrow's exit 3, "could not verify its
+own work", is logged as 3 and warned about, since sdd's task tests and check decide (D-28.2). A batch is the first open task, joined by the open `size: S` tasks right after it while it
 is S too, up to `[build] batch` (3): the planner sizes tasks and the human approves them, sdd
 only groups, so a batch is the same every run (D-17.1). A batch ends after an `expect: fail`
 task, so the code that makes a test-first task pass is never in the same batch as that test.
@@ -298,7 +302,8 @@ something and report only findings, with the command and its output, never editi
 goes under Built as `Verified by: <model>: <n> of <m> FRs proven; <findings>`, which the
 `verified` gate asks for; it stops a forgotten step, not a forged line (the human reads it in
 review, `sdd usage` shows whether a verifier ran). `sdd review` records the patch id of the
-code diff from the merge base (`specs/` left out) in `.git/sdd/checks/<id>.reviewed`; the
+code diff from the merge base (`specs/` left out; for a contract item, which lands no code, its
+`specs/contracts/` diff) in `.git/sdd/checks/<id>.reviewed`; the
 `reviewed` gate compares it at ship and names the files changed since, and a rebase that keeps
 the change keeps the id. The record is per clone: a teammate's review is the PR's (D-22.2).
 

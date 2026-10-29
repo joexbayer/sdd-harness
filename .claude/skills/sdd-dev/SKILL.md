@@ -88,7 +88,11 @@ refuses a dirty tree), and `fill`.
   makes approve, ship and `tidy --remote` exit 2 while it is set. A builder running this repo's
   suite inherits it, so tests/lib.sh unsets it; a new human-only verb calls `human_only` before
   `need_repo`. Build prompt text that is only for the finisher (check, security pass, Built) goes
-  in prompts/finish.md, which `next` skips while a task is open.
+  in prompts/finish.md, which `next` skips while a task is open. Item 28: a role-run builder does
+  tasks only. `run.sh` refuses `run builder` when WHYCODE is not `task`, and hook stop lets a
+  builder with `SDD_RUN` stop once no task is open (interactive builders are still held). An
+  adapter's optional `agent_exit_note <rc>` turns an exit code into a warning (narrow: 3);
+  run_log keeps the real rc.
 - A new gate: add it to `sdd.gates` in core/config as well as to each profile, because
   `gate_level` says off for any gate the type's list lacks. Types with their own `gates =`
   (hotfix, chore, spike) do not get it unless you add it there; amendment pins every gate to block.
@@ -97,7 +101,8 @@ refuses a dirty tree), and `fill`.
   the code diff, `review_print`; warn in lite). A test that ships in strict needs both: write
   the line into Built and run `sdd review` last. `setcfg` after the review is a code change
   (`.sdd/config` is outside specs/), so the gate then says the code changed since the review.
-  Items with no code diff skip `reviewed`.
+  Items with no code diff skip `reviewed`. A contract item records its `specs/contracts/` diff
+  instead (item 28), so its `reviewed` gate applies.
 - Plan checks (item 19): `plan_findings` reads parse_item lines on stdin, so `next` feeds it
   `IR_FACTS` (no second read) and `analyze`/`approve` feed it `parse_item`. A new mechanical
   check goes there, and its message in tests/t_analyze.sh's exact expected output.
@@ -197,8 +202,8 @@ so inspect the repo itself.
   "verifier"] tier = big` (claude, claude-sonnet-5-5, `args = --allowedTools
   Bash(sh:*),Bash(.sdd/bin/sdd:*),Read,Grep,Glob`). Claude Code's auto-mode classifier refuses
   to start these runs ("Create Unsafe Agents"): the human runs them with `! cd <repo> && ...`.
-  Each `sdd run builder` does one batch; loop with `;`, not `||`: narrow exits 3
-  ("unverified") after a red batch though sdd's tick passed. Outputs: `.git/sdd/runs/<n>/`
+  Each `sdd run builder` does one batch. narrow exits 3 ("unverified") after a red batch though
+  sdd's tick passed; since item 28 `sdd run` warns and exits 0 for it (runs.tsv still says 3). Outputs: `.git/sdd/runs/<n>/`
   (`out` is narrow's JSON events: `jq -r 'select(.type=="tool_call") | .title'`).
 - Lessons (2026-10-28, item 22 trial): qwen ignores the finish steps (security pass, verifier,
   Built) even when its prompt has them, so the orchestrator runs them; a red task batched with

@@ -20,3 +20,10 @@ agent_run() {
 	# shellcheck disable=SC2086 # the tier's args are the developer's words, split on purpose
 	"$1" -C "$ROOT" -m "$2" --json $5 -p "$(cat "$3")" >"$4"
 }
+
+# agent_exit_note <rc>: narrow exits 3 when it could not verify its own work (FR-28.3). That is
+# not a failed run: sdd's task tests and check decide. Any other code is a failure.
+agent_exit_note() {
+	[ "$1" -eq 3 ] || return 1
+	echo "⚠ narrow could not verify its own work (exit 3); sdd's task tests and check decide"
+}

@@ -164,7 +164,9 @@ An agent reads the `AGENTS.md` block, runs `.sdd/bin/sdd next` and follows it. W
 each developer says which agent and model a tier means for them (`[tier "small"] agent = narrow,
 model = qwen3-coder-30b` in `~/.config/sdd/config`). Ask your agent to "run the builder on
 item 16": a role on a Claude model runs as a subagent (`sync claude` writes them), any other
-through `sdd run builder 16`. With `[usage] track = true` every run is logged with its tokens, and
+through `sdd run builder 16`. A builder run does tasks only: with no task open it is refused,
+and its stop hook lets it stop once its batch is ticked; the session orchestrating the build
+does the finishing (check, security pass, verifier, Built). With `[usage] track = true` every run is logged with its tokens, and
 `sdd usage` sums them (off by default).
 
 **Now let's build.** Say it once the plan is approved: the `sdd-build` skill loops over the

@@ -19,6 +19,7 @@ echo "$*" >"$STUB/narrow.args"
 while [ $# -gt 0 ]; do [ "$1" = -p ] && printf '%s\n' "$2" >"$STUB/narrow.prompt"; shift; done
 echo '{"type":"start"}'
 echo '{"type":"finish","exit":0,"verdict":"passed","tokens":{"in":41000,"out":3000}}'
+exit "${NARROW_RC:-0}"
 EOF
 chmod +x "$T/bin/claude" "$T/bin/narrow"
 mkdir -p "$T/stub"
@@ -84,6 +85,34 @@ out=$(sdd run builder 2 2>&1)
 assert_eq $? 2 "(human's turn)"
 assert_contains "$out" 'is waiting for the human'
 git switch -q feature/1-paging
+
+# FR-28.3: narrow exits 3 when it could not verify its own work: logged as 3, a warning, exit 0
+# (sdd's task tests and check decide). Its other non-zero exits still fail the run.
+out=$( (export NARROW_RC=3; sdd run builder 1) 2>&1) || fail "a narrow exit 3 failed the run: $out"
+assert_contains "$out" "⚠ narrow could not verify its own work (exit 3); sdd's task tests and check decide"
+assert_not_contains "$out" 'the agent exited'
+assert_eq "$(tail -n 1 "$log" | cut -f4,13)" "$(printf 'builder\t3')"
+out=$( (export NARROW_RC=4; sdd run builder 1) 2>&1)
+assert_eq $? 1 "(narrow exit 4)"
+assert_contains "$out" 'the agent exited 4'
+assert_not_contains "$out" 'could not verify'
+# An adapter without agent_exit_note: exit 3 fails as before (D-28.2).
+out=$(CLAUDE_RC=3 sdd run planner 1 2>&1)
+assert_eq $? 1 "(claude exit 3)"
+assert_not_contains "$out" 'could not verify'
+
+# FR-28.1: with no open task, a builder run is refused: finishing is the orchestrating session's.
+sdd task 'done' T-1.1 >/dev/null 2>&1 || fail "task done T-1.1 failed"
+git commit -qam "feat(1): T-1.1 page the query"
+runs=$(wc -l <"$log")
+out=$(sdd run builder 1 2>&1)
+assert_eq $? 2 "(builder with no open task)"
+assert_contains "$out" 'item 1 has no open task: finishing (check, security pass, verifier, Built) is the orchestrating session'"'"'s: .sdd/bin/sdd next'
+assert_eq "$(wc -l <"$log")" "$runs" "(no run logged)"
+# Other roles run as before (a verifier, here on the same tier).
+setcfg role.verifier.tier small
+out=$(sdd run verifier 1 2>&1) || fail "verifier run failed: $out"
+assert_contains "$out" 'run '
 
 # Only on the item's own branch.
 git switch -q main
