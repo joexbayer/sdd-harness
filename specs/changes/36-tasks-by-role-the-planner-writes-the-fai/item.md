@@ -4,6 +4,7 @@ type: feature
 title: Tasks by role: the planner writes the failing tests
 status: open
 created: 2026-10-29
+approved: 90b11d177add7ef89eb0a99b6308b4b9a73c2714 2026-10-29 joexbayer
 ---
 # 36 Tasks by role: the planner writes the failing tests
 
