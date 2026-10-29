@@ -2,9 +2,10 @@
 id: 38
 type: refactor
 title: A fast gate for sdd itself
-status: open
+status: shipped
 created: 2026-10-29
 approved: 81776557a506bc7c54ff99ec429f5b42cbd65611 2026-10-29 joexbayer
+shipped: 2026-10-29
 ---
 # 38 A fast gate for sdd itself
 
