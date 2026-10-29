@@ -2,9 +2,10 @@
 id: 26
 type: feature
 title: Contracts
-status: open
+status: shipped
 created: 2026-10-29
 approved: 970829dd457a71231dd8661f81558c9d1dc20112 2026-10-29 joexbayer
+shipped: 2026-10-29
 ---
 # 26 Contracts
 
