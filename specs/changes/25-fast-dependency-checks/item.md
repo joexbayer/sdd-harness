@@ -4,6 +4,7 @@ type: refactor
 title: Fast dependency checks
 status: open
 created: 2026-10-29
+approved: cc029dacc7312da537a78e5b6ba00ecc33bee6db 2026-10-29 joexbayer
 ---
 # 25 Fast dependency checks
 
