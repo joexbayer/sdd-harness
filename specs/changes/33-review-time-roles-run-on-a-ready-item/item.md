@@ -40,6 +40,10 @@ tests/t_run.sh: a ready item lets the verifier run and refuses the builder (fail
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-33.1: .sdd/core/cmd/run.sh, the human's-turn case: `ready` now refuses only the builder.
+tests/t_run.sh (end): a ready fix item runs `sdd run verifier` and refuses `sdd run builder` with
+exit 2; it failed before the fix ("no role runs now"). Verified: `sdd check` passes.
+Verified by: none (one-line fix; its regression test is the proof)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
