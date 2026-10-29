@@ -4,6 +4,7 @@ type: feature
 title: Test-first tasks for small builders
 status: open
 created: 2026-10-29
+approved: 6514d3a77bf21c4e619178e3fe7a932560e48457 2026-10-29 joexbayer
 ---
 # 31 Test-first tasks for small builders
 
