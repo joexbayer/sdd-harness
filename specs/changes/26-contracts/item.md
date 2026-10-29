@@ -106,6 +106,64 @@ full check runs. `.sdd/bin/sdd task done T-26.1` ticks a task when its test pass
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+Per requirement (tests: tests/t_contracts.sh, each block names its FR):
+- FR-26.1 the `contract` type: .sdd/core/templates/contract.md (Why, Contract, Users,
+  Compatibility, Security, Done when, Built, Review), prompts plan.contract.md and
+  build.contract.md, gates in .sdd/core/config:90 (planned analyzed approved check built
+  reviewed; no tasks). Test: t_contracts.sh:8.
+- FR-26.2 the ship guard, in `constitution_guard` (.sdd/core/lib/common.sh:1586), so check and
+  ship both apply it: a contract item with code outside specs/ is refused; any other item that
+  changes specs/contracts/ (committed, unstaged, or a new untracked file) is refused. Tests:
+  t_contracts.sh:18 and :36.
+- FR-26.3 names: `contract_ids` (common.sh:374) resolves each `contracts:` name against one
+  `git ls-tree <base> specs/contracts/` (`contract_tree`, common.sh:411, once per process), file
+  extension removed, a folder by its tree id; a name not [A-Za-z0-9_-]+ is refused in approve and
+  shown as the plan reason in next. Tests: t_contracts.sh:77 (`../etc`), :124 (folder).
+- FR-26.4 the pin: `approval_pin` (common.sh:353) builds `<plan hash>,<name>=<id>,…`; approve
+  (.sdd/core/cmd/approve.sh:18) refuses a contract missing on the base branch or a branch copy that
+  differs, and writes the pin. Every former `${IR_APPROVED%% *}` = plan_hash comparison now goes
+  through `approval_ok` (file) or `approval_current` (item_phase, IR_*), both via approval_pin.
+  Items without contracts keep the bare hash. Tests: t_contracts.sh:85, :91, :109.
+- FR-26.5 back to planning: item_phase (common.sh:731) names the changed contract (reason code
+  `contract`) or says the contracts: list changed (`changed`); open items with contracts are never
+  cached as fixed (item_facts, common.sh:1181), so ls/status see a base-branch change at once.
+  Tests: t_contracts.sh:98 (next, status, ls --json), :117 (list change).
+- FR-26.6 next (.sdd/core/cmd/next.sh:115) lists the contract paths in build. Test: t_contracts.sh:130.
+- FR-26.7 review (.sdd/core/cmd/review.sh:102) prints a contract item's diff of specs/contracts/
+  in full. Test: t_contracts.sh:136.
+
+Small additions outside the task file lists (needed for the new reason code): run.sh treats
+`contract` as the human's time (no role run); summary.sh shows its reason; next.sh shows the
+analyze findings for it too. item_load reads type and contracts in one awk (no extra process), so
+item_rows can fill CTREE before the `$(item_facts)` subshell: one ls-tree per command (D-26.4).
+
+Deviations and choices:
+- The contracts guard is inside `constitution_guard` rather than a new function: the three call
+  sites (check, ship, ship into a PR) need both rules. No bootstrap exception (unlike the
+  constitution): even the first contract must come through a contract item, as FR-26.2 says.
+- A name matching two entries (orders-api.yaml and orders-api/) is refused as ambiguous.
+- A contract deleted on the base branch after approval reads as "changed" (pin id `none`).
+- The pin keeps the list order: reordering `contracts:` voids the approval like any list change.
+
+Security pass (git diff main...HEAD): contract names come from frontmatter; they are validated
+against [A-Za-z0-9_-]+ and only compared with `git ls-tree` output, never used to build a path or
+a command; awk gets them through ENVIRON. The ship guard runs in every profile, for every type
+including spike and roadmap. No new dependency, no network.
+
+Checks: DOD-26.1 `sdd check` passes. DOD-26.2 in a scratch repo
+(/tmp/scratch/d127334b-7fb0-4ca9-b2ea-576d59c62d12/scratchpad/dod26): shipped contract orders-api, approved feature 2 with
+`contracts: orders-api` (pin = main's blob id), shipped contract item 3 changing it; feature 2's
+next said "Phase: plan (contract orders-api changed on main after approval; …)", approve refused
+"specs/contracts/orders-api.yaml differs from main: merge main first", and after merging main it
+re-approved and went back to build.
+
+Follow-ups / for the human:
+- `reviewed` gate: review_print leaves out specs/, so a contract item (like an amendment) has
+  "no code diff" and skips the gate, though D-26.6 lists it. Making it count would mean including
+  specs/contracts/ in review_print for contract items. Decide whether you want that.
+- `contracts:` is not in `ls --json` or roadmap entries (out of scope, as planned).
+
+Verified by: none (builder self-checked; the orchestrator verifies)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
