@@ -2,9 +2,10 @@
 id: 31
 type: feature
 title: Test-first tasks for small builders
-status: open
+status: shipped
 created: 2026-10-29
 approved: 21efdff062b2c6467ee1a6b2a9d99f51ca1209e5 2026-10-29 joexbayer
+shipped: 2026-10-29
 ---
 # 31 Test-first tasks for small builders
 
