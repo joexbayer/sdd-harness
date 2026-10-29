@@ -66,6 +66,11 @@ full check runs. `.sdd/bin/sdd task done T-27.1` ticks a task when its test pass
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-27.1: .sdd/core/cmd/ls.sh (`--pr` flag; `forge_load`/`pr_table` only with it); help, README,
+design and the sdd-dev notes updated. FR-27.2: .sdd/core/cmd/review.sh calls `pr_note` only in the
+pr phase. tests/t_forge.sh proves both with the gh stub's call log (ls, ls --json and review before
+the first ship add no gh calls; ls without --pr shows no PR; ls --pr and --pr --json show it).
+Verified: `sdd check` passes. Verified by: none (lite; the forge test is the proof)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
