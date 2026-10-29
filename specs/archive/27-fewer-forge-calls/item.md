@@ -2,9 +2,10 @@
 id: 27
 type: feature
 title: Fewer forge calls
-status: open
+status: shipped
 created: 2026-10-29
 approved: 0bcfcd2c5f06fd7411c8eb068754c3fefa3d0d72 2026-10-29 joexbayer
+shipped: 2026-10-29
 ---
 # 27 Fewer forge calls
 
