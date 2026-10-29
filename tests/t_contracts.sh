@@ -145,4 +145,14 @@ out=$(sdd review)
 assert_contains "$out" 'Contract diff (against where this branch left main; read it in full)'
 assert_contains "$out" '  -paths: { /orders: {} }'
 assert_contains "$out" '  +paths: { /orders: {}, /orders/{id}: {} }'
+
+# FR-28.4: review records a contract item's specs/contracts/ change, so the reviewed gate sees a
+# contract edited after the review (lite warns and ships).
+fill "$v3" built && git commit -qam "docs: built"
+sdd review >/dev/null
+printf 'openapi: 3.1.0\npaths: { /orders: {}, /orders/{id}: {}, /refunds: {} }\n' >specs/contracts/orders-api.yaml
+git commit -qam "contract v3: refunds"
+out=$(sdd ship 2>&1) || fail "lite ship of a contract changed since review failed: $out"
+assert_contains "$out" 'code changed since your review (specs/contracts/orders-api.yaml) (gate reviewed)'
+assert_contains "$out" 'shipped'
 echo ok

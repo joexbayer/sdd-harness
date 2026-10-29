@@ -59,9 +59,20 @@ assert_not_contains "$out" 'You are done when'
 # FR-21.3: the build rules say approve, ship and tidy --remote are the human's.
 assert_contains "$out" 'Never run `.sdd/bin/sdd approve`, `.sdd/bin/sdd ship` or `.sdd/bin/sdd tidy --remote`: they are the human'"'"'s.'
 
+# FR-28.2: while a task is open, the finish gate holds a role run's builder, as it holds anyone.
+echo work >work.txt && git add work.txt && git commit -qm "feat(1): work"
+(export SDD_RUN=3 SDD_ROLE=builder; sdd hook stop </dev/null >/dev/null 2>&1)
+assert_eq $? 2 "(role-run builder, task open)"
+
 # FR-21.2: once no task is open, the finish steps are back (as today), with the same rule.
 for t in T-1.1 T-1.2 T-1.3; do sdd task 'done' "$t" >/dev/null 2>&1 || fail "task done $t failed"; done
 git commit -qam "feat(1): work"
+# FR-28.2: its tasks ticked, a role run's builder may stop (Built is the orchestrator's); an
+# interactive builder (no SDD_RUN) is still held.
+out=$( (export SDD_RUN=3 SDD_ROLE=builder; sdd hook stop </dev/null) 2>&1) || fail "the finish gate held a role-run builder with no open task: $out"
+assert_eq "$out" "" "(no message)"
+sdd hook stop </dev/null >/dev/null 2>&1
+assert_eq $? 2 "(interactive builder, Built empty)"
 out=$(sdd next)
 assert_not_contains "$out" 'Current task'
 assert_contains "$out" 'run a security pass over this item'"'"'s diff, in a fresh context'
