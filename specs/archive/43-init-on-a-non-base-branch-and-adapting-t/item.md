@@ -2,9 +2,10 @@
 id: 43
 type: fix
 title: Init on a non-base branch, and adapting the gate
-status: open
+status: shipped
 created: 2026-10-30
 approved: c3d9232977d3590d7658b582fa64f5b2fe66bab6 2026-10-30 joexbayer
+shipped: 2026-10-30
 ---
 # 43 Init on a non-base branch, and adapting the gate
 
