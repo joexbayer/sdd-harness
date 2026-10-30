@@ -144,6 +144,9 @@
 # A task with `expect: fail` ends its batch.
 [build]
 	batch = 3
+	# The largest task size the builder takes: S, M or L. Below L, the plan rules tell the planner
+	# to size every task for it, and `sdd analyze` flags each task above it. S suits a small model.
+	max-size = L
 # Usage tracking: one line per role run (sdd run, role subagents) in .git/sdd/runs.tsv, read by
 # `sdd usage`. Off unless someone asks for it, here or in their own ~/.config/sdd/config.
 [usage]
