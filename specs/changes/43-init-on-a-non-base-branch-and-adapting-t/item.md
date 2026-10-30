@@ -4,27 +4,59 @@ type: fix
 title: Init on a non-base branch, and adapting the gate
 status: open
 created: 2026-10-30
+approved: c3d9232977d3590d7658b582fa64f5b2fe66bab6 2026-10-30 joexbayer
 ---
 # 43 Init on a non-base branch, and adapting the gate
 
 ## Current behaviour
-<!-- What happens now, and how to reproduce it. -->
+Found in the narrow pilot (a throwaway local clone, 2026-10-30). `sdd init` run on a feature
+branch installs and commits nothing, and says nothing about the branch. If the install is then
+committed there, `sdd new` branches the item from the base (`main`), which has no `.sdd/`, and
+sdd vanishes from the working tree mid-command:
+`.sdd/bin/sdd: line 16: …/.sdd/core/lib/common.sh: No such file or directory`.
+Repro: `git switch -c wip; sdd init; git add -A; git commit -m sdd; sdd new chore x`.
+
+The pilot also showed three settings every repo adapts, which the README's Customise section
+does not mention: init guesses the gate per language (narrow's real gate is `scripts/check.sh`),
+gitleaks fails on day one on test fixtures (12 fake keys in narrow's `_test.go` files), and the
+30 s check budget warns on every run for a gate that takes about 3 minutes.
 
 ## Expected behaviour
-<!-- FR-43.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-  e.g. <input> → <output> -->
+FR-43.1 WHEN `sdd init` runs on a branch other than the base THE SYSTEM SHALL warn that new items
+branch from the base, so the install must be committed on the base (or merged there) first.
+  e.g. on `feature/wip` with base `main` → stderr has
+  `sdd: warning: you are on feature/wip, not the base main: new items branch from main, so commit this install on main (or merge it there) before sdd new`
+FR-43.2 WHEN `sdd init` runs on the base branch THE SYSTEM SHALL print no such warning.
+  e.g. a fresh repo on `main` → no "not the base" line
+FR-43.3 WHEN a user reads the README's Customise section THE SYSTEM SHALL tell them to adapt the
+gate: point `[check] run` at the repo's own check script, allow test fixtures in gitleaks
+(`.gitleaksignore` with the fingerprints gitleaks prints, or an allowlist in `.gitleaks.toml`),
+and set `[check] budget` to the gate's real time (0 turns the warning off).
+  e.g. README Customise has a "Your gate." bullet naming `run`, `.gitleaksignore` and `budget`
+
+How: in `.sdd/core/cmd/init.sh`, after the config block, compare `current_branch` with
+`sdd.base` from the written config and `warn` when they differ (one `if`). Detached HEAD
+(`current_branch` empty) prints nothing. README: one bullet under "## Customise".
+
+D-43.1 A warning, not a refusal: installing on a branch is right when main is protected and the
+install goes in by pull request; the warning says what to do in both cases.
+D-43.2 Not a check in `sdd new` (refuse when the base lacks `.sdd/`): on a fresh install people
+run `sdd new` before committing `.sdd/`, and the untracked folder survives the switch, so such a
+check would refuse a working flow.
+D-43.3 FR-43.3 is docs; no test pins the README wording.
 
 ## Must not change
-<!-- Behaviour that has to stay exactly as it is (so the fix breaks nothing else). -->
+- Base detection (`detect_base`): a repo with `main` still gets base `main` from a feature branch.
+- init stays idempotent: a second run changes no files (it may warn again).
+- No new config keys or commands.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-43.4 rejects non-images and files over 5 MB -->
+none: a warning line and a README bullet; no input, secrets or new dependency.
 
 ## Test
-<!-- The regression test (name and file) that fails now and passes after the fix. -->
+`tests/t_init.sh`: the existing "wip" case (init on `feature/wip`) asserts the FR-43.1 warning
+text `not the base main`; the "go" case (init on `main`) asserts it is absent (FR-43.2). Both
+together tell the right rule from "always warn" and "never warn". Fails now: no such warning.
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
