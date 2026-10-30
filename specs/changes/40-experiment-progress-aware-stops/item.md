@@ -31,6 +31,37 @@ none: driver logic and config only.
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+Progress-aware stop: experiment/run.sh:308-327. A failed run is progress, not a failure toward
+"2 failed runs in a row", when it ticked a task, or when the failing count of the task it failed
+on dropped since the last run that failed there. The count comes from experiment/lib/xp.py:136
+(`xp.py failing`, the last pytest summary's failed + errors, `?` when unread), and an unread count
+is no progress. The per-task cap is 4 runs (run.sh:279). Each run's count goes to trend.tsv.
+max-size: arms A and C set `build.max-size S` in the run repo's config (run.sh:454); B leaves it
+unset. results.md gains "Failing tests per task run" (xp.py:305).
+Commit subjects: run.sh:292-299 cuts a "commit with:" message longer than 72 characters to a
+subject at a word boundary (xp.py:154), with the whole message as the body.
+Docs: experiment/README.md:69-78 (caps, max-size, subjects), :94-95 (two new dry runs), :118 (the
+trend); the fake agent's docstring names its two new switches.
+
+Proven by dry runs (fake agents, nothing spent): A, B and C each reach ship, with max-size S in A
+and C and unset in B; a long task title gives a 65-character subject and the full message in the
+body. XP_FAKE_CONVERGE=T-1.1 runs 5 → 2 → 0 and ships; XP_FAKE_STALL=T-1.1 runs 2 → 2 and stops
+on "2 failed builder runs in a row". The older dry scenarios behave as before.
+
+Deviations:
+- A failed run that still ticked a task also counts as progress. The plan names only the falling
+  count, but a ticked task is the clearest progress there is.
+- The fake agent now builds every task in a batch, and its tasks are size S, matching the real
+  batched builds since item 31 and max-size S. This was needed to test the new stop.
+
+Follow-ups:
+- arms A and C need item 39 in main before the re-runs. Until then, sdd ignores `[build] max-size`.
+- The README line `XP_FAKE_COST=8 … # the spend cap stops it` is wrong: that run ends at $40 of
+  $150, on main too. It was already wrong before this item, so it is left for its own change.
+
+Security pass: no findings (a fresh Sonnet reviewer given only the diff; agent text reaches git
+and Python only as quoted arguments).
+Verified by: claude-sonnet: 3 of 3 plan points proven, including the unread count and the cap of 4 in variant copies; two doc nits (the fake agent's docstring, fixed; the stale COST=8 README line, a follow-up)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
