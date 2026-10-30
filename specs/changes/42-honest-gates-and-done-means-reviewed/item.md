@@ -98,6 +98,7 @@ Deviations:
   which matches one line, still holds. The test was right, and my first wrap broke it.
 
 Security pass: no findings (a fresh Sonnet reviewer given only the diff).
+Verified by: claude-sonnet: 2 of 2 FRs proven, each test failing when its line is removed; one miscount in experiment-results.md (six stray scripts in arm A, not five), fixed
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
