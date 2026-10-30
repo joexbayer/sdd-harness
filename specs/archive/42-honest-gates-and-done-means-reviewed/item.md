@@ -2,9 +2,10 @@
 id: 42
 type: feature
 title: Honest gates, and done means reviewed
-status: open
+status: shipped
 created: 2026-10-30
 approved: 4b67cf3a8039ff620b168f81da121ee1069785b1 2026-10-30 joexbayer
+shipped: 2026-10-30
 ---
 # 42 Honest gates, and done means reviewed
 
