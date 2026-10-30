@@ -2,6 +2,7 @@
 # expected values taken from the code, and unasked-for code; FR-35.5 the verifier asks, per FR,
 # whether some test would fail if it were dropped. FR-36.6 a test-first task can be by: planner.
 # FR-39.3 the plan rules fix shared names and pin them by a test.
+# FR-41.1 the approval ask is plain, and approve is a command on its own.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -29,6 +30,12 @@ assert_contains "$out" 'Names several tasks share (schema tables and columns, ro
   paths) are fixed in the plan'
 assert_contains "$out" 'pinned by a test in the task that
   first defines them'
+
+# FR-41.1: the approval ask is a plain summary with an ASCII sketch, and approve runs alone.
+assert_contains "$out" 'a command on its own'
+assert_contains "$out" 'ASCII'
+assert_contains "$out" 'a yes in words'
+assert_contains "$out" 'never chained to other commands'
 
 # FR-35.4: build rules.
 git checkout -q main
