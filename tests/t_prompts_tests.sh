@@ -3,6 +3,8 @@
 # whether some test would fail if it were dropped. FR-36.6 a test-first task can be by: planner.
 # FR-39.3 the plan rules fix shared names and pin them by a test.
 # FR-41.1 the approval ask is plain, and approve is a command on its own.
+# FR-42.1 a test's setup tells the right rule from a plausible wrong one; FR-42.2 the verifier runs
+# the tests the check leaves out and reports parts nothing calls or reads.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -37,11 +39,17 @@ assert_contains "$out" 'ASCII'
 assert_contains "$out" 'a yes in words'
 assert_contains "$out" 'never chained to other commands'
 
+# FR-42.1: a test whose setup cannot tell the right rule from a wrong one proves nothing.
+assert_contains "$out" 'a plausible wrong rule'
+
 # FR-35.4: build rules.
 git checkout -q main
 planned_item fix "Retry"
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: build'
+# FR-42.2: the finish step's hand-off to a fresh verifier.
+assert_contains "$out" 'tests the check leaves out'
+assert_contains "$out" 'nothing calls or reads'
 assert_contains "$out" 'still pass if every function returned nothing'
 assert_contains "$out" 'never from the code under
   test'
@@ -57,4 +65,7 @@ assert_contains "$v" 'Per FR, ask: is there a test that would fail if
    that FR were dropped?'
 assert_contains "$v" 'or that
    no test would fail if it were dropped'
+# FR-42.2: the verifier's own rules.
+assert_contains "$v" 'tests the check leaves out'
+assert_contains "$v" 'nothing calls or reads'
 echo ok

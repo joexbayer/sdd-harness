@@ -7,7 +7,8 @@ and do not hand the item to another verifier. Instead:
 2. Prove each one by running something: its test, the program on the example's input, a
    command whose output shows the behaviour. Reading the code is not proof; a test that passes
    is proof only when it checks what the FR says. Per FR, ask: is there a test that would fail if
-   that FR were dropped?
+   that FR were dropped? Also run the tests the check leaves out (the plan marks them). A new
+   function, file, table or stored value that nothing calls or reads is a finding.
 3. Report only findings: an FR that does not do what it says, that you could not prove, or that
    no test would fail if it were dropped, each
    with the command you ran and its output (trimmed to what shows the problem). No praise, no
