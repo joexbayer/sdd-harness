@@ -1,4 +1,5 @@
 # FR-1.1 init vendors .sdd, writes config with detected base and checks, manages AGENTS.md.
+# FR-43.1 init on a branch other than the base warns; FR-43.2 on the base it does not.
 . "$SRC/tests/lib.sh"
 
 mkdir -p "$T/go" && cd "$T/go" || exit 1
@@ -8,6 +9,7 @@ printf '# Mine\n\nKeep this line.\n' >AGENTS.md
 git add -A && git commit -qm init
 
 out=$(sdd init 2>&1) || fail "init exited non-zero: $out"
+assert_not_contains "$out" 'not the base' # FR-43.2
 assert_file .sdd/bin/sdd
 assert_file .sdd/core/lib/common.sh
 assert_file .sdd/VERSION
@@ -41,6 +43,8 @@ assert_contains "$out" 'no test command detected'
 mkdir -p "$T/wip" && cd "$T/wip" || exit 1
 git init -q && echo x >x && git add x && git commit -qm init
 git switch -q -c feature/wip
-sdd init >/dev/null 2>&1
+out=$(sdd init 2>&1)
 assert_eq "$(git config -f .sdd/config sdd.base)" main
+# FR-43.1: items branch from main, so an install committed only here would vanish on sdd new.
+assert_contains "$out" 'sdd: warning: you are on feature/wip, not the base main: new items branch from main, so commit this install on main (or merge it there) before sdd new'
 exit 0
