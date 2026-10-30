@@ -124,6 +124,7 @@ fi
 # FR-39.1, FR-39.2: a builder that takes less than L gets plans sized for it.
 if [ "$PHASE" = plan ]; then
 	max_size
+	# shellcheck disable=SC2034 # read by render (common.sh)
 	case $MAX_SIZE in
 	S) RENDER_SIZE="- Every task is size S: the builder ([build] max-size S) is a small model. An S task is
   one module or behaviour group, at most about 3 FRs, with a test it can run alone. Split
