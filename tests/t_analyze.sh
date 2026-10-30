@@ -1,5 +1,6 @@
 # FR-19.1 sdd analyze: the plan's problems, one line each; FR-19.2 the analyzed gate at approve;
 # FR-19.3 the problems in next's plan step; FR-19.4 the gap checklist in the plan prompt.
+# FR-39.1 [build] max-size: analyze flags bigger tasks, the plan rules say it; FR-39.2 what S means.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -103,3 +104,42 @@ for c in 'check the plan for gaps' 'scope edges' 'errors and edge cases' 'data a
 	'several developers at once' 'security' 'Ask the human about each gap you find'; do
 	assert_contains "$out" "$c"
 done
+
+# FR-39.1: [build] max-size. Tasks above it are findings; the default L flags none.
+git checkout -q main
+sdd new feature "Orders sizes" >/dev/null 2>&1
+k=specs/changes/4-orders-sizes/item.md
+plan "$k" 'FR-4.1 WHEN orders are listed THE SYSTEM SHALL sort them.\n  e.g. 3, 1 → 1, 3' '' '' \
+	'- [ ] T-4.1 Sort, FR-4.1 (test: true; size: S)\n- [ ] T-4.2 Sort faster, FR-4.1 (test: true; size: M)\n- [ ] T-4.3 Sort all, FR-4.1 (test: true; size: L)\n- [ ] T-4.4 Sort again, FR-4.1 (test: true)'
+out=$(sdd analyze 2>&1)
+assert_eq $? 0 "(max-size L: $out)"
+setcfg build.max-size S
+out=$(sdd analyze 2>&1)
+assert_eq $? 1 "(max-size S)"
+assert_eq "$out" "✗ T-4.2 (Sort faster): size M, above the builder's max-size S: split it
+✗ T-4.3 (Sort all): size L, above the builder's max-size S: split it
+✗ T-4.4 (Sort again): size M, above the builder's max-size S: split it"
+setcfg build.max-size M
+out=$(sdd analyze 2>&1)
+assert_eq "$out" "✗ T-4.3 (Sort all): size L, above the builder's max-size M: split it"
+# FR-39.1: any other value warns and counts as L.
+setcfg build.max-size XL
+out=$(sdd analyze 2>&1)
+assert_eq $? 0 "(max-size XL: $out)"
+assert_contains "$out" 'warning: [build] max-size must be S, M or L, not XL: counting it as L'
+
+# FR-39.1, FR-39.2: the plan rules say it when max-size is below L, and nothing at L.
+git checkout -q main
+sdd new feature "Orders sizes rules" >/dev/null 2>&1
+out=$(sdd next 2>&1)
+assert_contains "$out" 'Phase: plan'
+assert_not_contains "$out" 'Every task is size'
+setcfg build.max-size S
+out=$(sdd next 2>&1)
+assert_contains "$out" 'Every task is size S'
+assert_contains "$out" 'one module or behaviour group, at most about 3 FRs, with a test it can run alone'
+assert_contains "$out" "sdd analyze\` flags every task above S"
+setcfg build.max-size M
+out=$(sdd next 2>&1)
+assert_contains "$out" 'Every task is size S or M'
+assert_not_contains "$out" 'at most about 3 FRs'

@@ -316,6 +316,14 @@ role's batch is refused and names whose turn it is, and the batch's own role get
 builder got before: the item file restored and the batch ticked (D-36.2). Every batch run gets
 prompts/role-batch.md (write only these tasks' code and tests; sdd ticks, the orchestrator
 commits; no `cd`) before the project's role-<role>.md (D-36.3).
+The project knows its builder, so `[build] max-size` (S, M or L, default L; item 39, D-39.1)
+says the largest task it takes. Below L, `next` renders the plan prompt's `{{max-size}}` line as a
+rule to size every task for it (for S: one module or behaviour group, at most about 3 FRs, a test
+it can run alone), and `plan_findings` flags each task above it, so analyze, next's plan step and
+the analyzed gate all see it. Size stays the planner's label; sdd only compares (D-39.2). Any
+other value warns and counts as L. The plan rules also fix names that several tasks share and
+have the first task's test pin them: two builders filling in one schema from prose chose
+different column names (pilot 2).
 
 Verifying: once no task is open and the check passes, the finish steps hand the item to the
 `verifier` role (its `sdd-verifier` subagent, `sdd run verifier <id>`, or a fresh subagent on

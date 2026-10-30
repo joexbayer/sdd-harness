@@ -226,19 +226,22 @@ gate_level() {
 # --- text helpers -----------------------------------------------------------------
 
 # render <file> <id> <title> <type>: substitute {{id}} {{title}} {{type}} {{date}}
-# {{cmd}} {{base}} {{name}} literally (no regex, so titles may contain any character).
+# {{cmd}} {{base}} {{name}} literally (no regex, so titles may contain any character). A line that
+# is just {{max-size}} becomes RENDER_SIZE (next sets it; FR-39.1), or nothing when that is empty.
 RENDER_DATE=
 RENDER_BASE=
+RENDER_SIZE=
 render() {
 	[ -n "$RENDER_DATE" ] || RENDER_DATE=$(date +%F)
 	[ -n "$RENDER_BASE" ] || RENDER_BASE=$(cfg sdd.base main)
 	R_ID=$2 R_TITLE=$3 R_TYPE=$4 R_DATE=$RENDER_DATE R_CMD=$CMD R_BASE=$RENDER_BASE R_NAME=$NAME \
-		awk '
+		R_SIZE=$RENDER_SIZE awk '
 	function repl(s, from, to,   out, i) {
 		out = ""
 		while ((i = index(s, from)) > 0) { out = out substr(s, 1, i - 1) to; s = substr(s, i + length(from)) }
 		return out s
 	}
+	$0 == "{{max-size}}" { if (ENVIRON["R_SIZE"] != "") $0 = ENVIRON["R_SIZE"]; else next }
 	{
 		$0 = repl($0, "{{id}}", ENVIRON["R_ID"]); $0 = repl($0, "{{title}}", ENVIRON["R_TITLE"])
 		$0 = repl($0, "{{type}}", ENVIRON["R_TYPE"]); $0 = repl($0, "{{date}}", ENVIRON["R_DATE"])
@@ -454,10 +457,11 @@ plan_frs() {
 # (when there are tasks), an FR with no example, an open question, an ID written twice, a task
 # naming an FR the plan lacks, a task line task_rows cannot read; for roadmap entries (FR-24.2) an
 # unknown type, an after: that is not an earlier entry, a line entry_row cannot read, and a roadmap
-# with none. The short name is the start of the text: an FR's after "SHALL", a question's up to its
-# "?"; an entry has none.
+# with none; a task sized above [build] max-size (FR-39.1). The short name is the start of the
+# text: an FR's after "SHALL", a question's up to its "?"; an entry has none.
 plan_findings() {
-	TY=${ITYPE:-} I=${ID:-} TYPES=$(types | paste -sd ' ' -) awk -F '\t' "$AWK_TASK$AWK_ENTRY"'
+	max_size
+	TY=${ITYPE:-} I=${ID:-} MS=$MAX_SIZE TYPES=$(types | paste -sd ' ' -) awk -F '\t' "$AWK_TASK$AWK_ENTRY"'
 	function short(s,   n, w, i, o) {
 		n = split(s, w, " "); o = ""
 		for (i = 1; i <= n && i <= 6; i++) o = o (i > 1 ? " " : "") w[i]
@@ -482,6 +486,7 @@ plan_findings() {
 			if ($2 !~ /^T-[0-9]+\.[0-9]+$/) bad[n] = "its ID must be T-<item>.<n>"
 			else {
 				split(task_row($2, $3, $4), r, "\t"); s = r[3]; bad[n] = r[8]; names[n] = r[7]
+				if (r[8] == "" && index("SML", r[9]) > index("SML", ENVIRON["MS"])) big[n] = r[9]
 				if ((i = index(s, " ("))) s = substr(s, 1, i - 1)
 				m = split(r[7], x, " "); for (j = 1; j <= m; j++) named[x[j]] = 1
 			}
@@ -497,6 +502,7 @@ plan_findings() {
 			if (kind[i] == "fr" && tasks && !(id[i] in named)) say(i, "no task names it")
 			if (open[i]) say(i, "not decided")
 			if (bad[i] != "") say(i, (kind[i] == "r" && bad[i] ~ /^unknown type/) ? bad[i] : "cannot read it: " bad[i])
+			if (big[i] != "") say(i, "size " big[i] ", above the builder\047s max-size " ENVIRON["MS"] ": split it")
 			m = split(after[i], x, " ")
 			for (j = 1; j <= m; j++)
 				if (!(x[j] in epos)) say(i, "after " x[j] ", which is not an entry")
@@ -534,6 +540,21 @@ AWK_ENTRY='function entry_row(id, txt,   i, ty, ti, af, a, n, x, j, r, bad) {
 	return id "\t" ty "\t" ti "\t" af "\t" bad
 }
 '
+
+# max_size: MAX_SIZE, the largest task size the builder takes, [build] max-size (FR-39.1): S, M or
+# L; any other value warns and counts as L. Read once per run.
+MAX_SIZE=
+max_size() {
+	[ -z "$MAX_SIZE" ] || return 0
+	MAX_SIZE=$(cfg build.max-size L)
+	case $MAX_SIZE in
+	S | M | L) ;;
+	*)
+		warn "[build] max-size must be S, M or L, not $MAX_SIZE: counting it as L"
+		MAX_SIZE=L
+		;;
+	esac
+}
 
 # findings_lines: plan_findings lines on stdin as people read them: "✗ <id> (<name>): <problem>".
 findings_lines() { awk -F '\t' '{ printf "✗ %s%s: %s\n", $1, ($2 == "" ? "" : " (" $2 ")"), $3 }'; }

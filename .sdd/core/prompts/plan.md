@@ -37,6 +37,10 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   batch, so say what it needs to know. A test-first task can be `by: planner` (after its
   size): the planner writes the test that defines done from the FR's example, and the builder
   makes it pass.
+{{max-size}}
+- Names several tasks share (schema tables and columns, routes, function signatures, file
+  paths) are fixed in the plan, written out exactly, and pinned by a test in the task that
+  first defines them, so a later task's builder cannot choose them differently.
 - Tests: The gate (check) stays fast, because it runs after every task. A task's own test may
   be deep (end-to-end, real cost settings): mark it (a tag, a marker, a separate command) so
   check.run leaves it out. Make cost settings (hash rounds, timeouts) configurable and minimal
@@ -52,5 +56,7 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   is fine when every task is small. Split into a roadmap only for features that ship
   separately.
 
-When the plan is complete, summarise it for the human and ask them to approve it. Only the
-human approves: they run `{{cmd}} approve`, or ask you to, and then confirm it.
+When the plan is complete, post a plain summary for the human in at most about 15 lines: the
+problem, what changes, one concrete example, and a small ASCII sketch of the flow. Ask them for
+a yes in words. Only the human approves: they run `{{cmd}} approve`, or ask you to. Only after
+their yes, run `{{cmd}} approve` as a command on its own, never chained to other commands.
