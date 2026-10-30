@@ -72,6 +72,32 @@ full check runs. `.sdd/bin/sdd task done T-39.1` ticks a task when its test pass
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-39.1: `[build] max-size = L` in .sdd/core/config:149. max_size (.sdd/core/lib/common.sh:547)
+reads it once per run, warns on anything but S, M or L, and counts that as L. plan_findings flags
+each task above it (common.sh:489, :505), so analyze, next's plan step and the analyzed gate all
+see it. next renders the plan prompt's `{{max-size}}` line (.sdd/core/prompts/plan.md:40) into a
+size rule below L (.sdd/core/cmd/next.sh:124-134; render in common.sh). Proven by
+tests/t_analyze.sh:108-140: S, M and L tasks under each max-size, a sizeless task counting as M,
+a bad value warning and counting as L, and the rule present below L and absent at L.
+FR-39.2: the S rule says "one module or behaviour group, at most about 3 FRs, with a test it can
+run alone" (next.sh:129). Proven by tests/t_analyze.sh:131.
+FR-39.3: the shared-names rule (plan.md:41-43). Proven by tests/t_prompts_tests.sh:28-32.
+Docs: README.md:180, specs/design.md:319, .claude/skills/sdd-dev/SKILL.md:142-148.
+
+Deviations:
+- analyze words the finding in its existing format, "✗ T-1.2 (Mid): size M, above the builder's
+  max-size S: split it", not the FR example's "T-7.3 is size M, above …". It says the same thing
+  in the form every other plan finding uses.
+- The build was interrupted after T-39.1 (the builder hit a usage limit) and resumed in a new
+  session. T-39.1 had passed its own test but not shellcheck: RENDER_SIZE is set in next.sh and
+  read in common.sh. Fixed with a disable comment and reason, the repo's existing pattern
+  (next.sh:126).
+- main was merged in after item 41 shipped. tests/t_prompts_tests.sh conflicted, because both
+  items added assertions at the same spot, and both were kept.
+
+Security pass: no findings (a fresh Sonnet reviewer given only the diff; the config value is
+validated before use and reaches awk only through ENVIRON).
+Verified by: claude-sonnet: 3 of 3 FRs proven; no findings (each test failed under a mutation of the code it covers)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
