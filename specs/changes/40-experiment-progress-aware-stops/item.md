@@ -55,7 +55,8 @@ Deviations:
   batched builds since item 31 and max-size S. This was needed to test the new stop.
 
 Follow-ups:
-- arms A and C need item 39 in main before the re-runs. Until then, sdd ignores `[build] max-size`.
+- Resolved: item 39 shipped and main was merged in; a dry run of arm A shows the planner's prompt
+  carries "Every task is size S".
 - The README line `XP_FAKE_COST=8 … # the spend cap stops it` is wrong: that run ends at $40 of
   $150, on main too. It was already wrong before this item, so it is left for its own change.
 
