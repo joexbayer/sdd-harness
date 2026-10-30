@@ -67,7 +67,7 @@ L ones alone. Add `; expect: fail` for a test written first (it must fail), or
 full check runs. `.sdd/bin/sdd task done T-39.1` ticks a task when its test passes. -->
 - [x] T-39.1 max-size: the analyze finding and the plan rule, FR-39.1, FR-39.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh, .sdd/core/prompts/plan.md, .sdd/core/config, tests/t_analyze.sh; test: SRC=$PWD SH=dash dash tests/t_analyze.sh; size: M)
 - [x] T-39.2 Shared names pinned by a test, FR-39.3 (files: .sdd/core/prompts/plan.md, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
-- [ ] T-39.3 README, design, sdd-dev notes (files: README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; size: S)
+- [x] T-39.3 README, design, sdd-dev notes (files: README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
