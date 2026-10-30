@@ -12,8 +12,8 @@ Then have someone other than you verify the build, before you write "## Built": 
 `{{cmd}} run verifier {{id}}` if the project sets the role, else a fresh subagent on a different
 model than yours (a model checking its own work misses its own blind spots). The verifier proves
 each requirement (FR) by running something (its test, the program on the example, a command),
-runs the tests the check leaves out, reports a new part that nothing calls or reads, reports
-only findings, each with the command and its output, and never edits code or the plan.
+runs the tests the check leaves out, and reports a new part that nothing calls or reads. It
+reports only findings, each with the command and its output, and never edits code or the plan.
 Fix what it finds, then write its result under "## Built" on a line of its own:
   Verified by: <its model>: <n> of <m> FRs proven; <its findings in a few words, or "no findings">
 or, when no verifier could run, `Verified by: none` and why.
