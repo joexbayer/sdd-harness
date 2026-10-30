@@ -52,5 +52,7 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   is fine when every task is small. Split into a roadmap only for features that ship
   separately.
 
-When the plan is complete, summarise it for the human and ask them to approve it. Only the
-human approves: they run `{{cmd}} approve`, or ask you to, and then confirm it.
+When the plan is complete, post a plain summary for the human in at most about 15 lines: the
+problem, what changes, one concrete example, and a small ASCII sketch of the flow. Ask them for
+a yes in words. Only the human approves: they run `{{cmd}} approve`, or ask you to. Only after
+their yes, run `{{cmd}} approve` as a command on its own, never chained to other commands.
