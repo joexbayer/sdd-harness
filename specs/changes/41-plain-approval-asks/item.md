@@ -9,22 +9,34 @@ created: 2026-10-30
 
 ## Current behaviour
 <!-- What happens now, and how to reproduce it. -->
+The plan rules end with "summarise it for the human and ask them to approve it". On 2026-10-30
+the agent chained plan writing, a commit and `sdd approve` in one shell command, so the human's
+approval prompt showed a wall of Python: "hard to read, barely understandable".
 
 ## Expected behaviour
 <!-- FR-41.1 WHEN <trigger> THE SYSTEM SHALL <response>.
   e.g. <input> → <output> -->
+FR-41.1 WHEN the plan rules reach approval THE SYSTEM SHALL tell the agent to post a plain summary
+of at most about 15 lines (the problem, what changes, one concrete example, a small ASCII sketch
+of the flow), ask for a yes in words, and only then run `sdd approve` as a command on its own,
+never chained to other commands.
+  e.g. `sdd next` in plan → contains "a command on its own"
 
 ## Must not change
 <!-- Behaviour that has to stay exactly as it is (so the fix breaks nothing else). -->
+Only the human approves (human_only, the ask rule); the rest of the plan rules.
 
 ## Security
 <!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
 dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
 what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
     e.g. uploads are untrusted → FR-41.4 rejects non-images and files over 5 MB -->
+none: prompt text. It keeps the human's approval prompt readable, which is what the ask rule
+on approve is for.
 
 ## Test
 <!-- The regression test (name and file) that fails now and passes after the fix. -->
+tests/t_prompts_tests.sh: plan-phase `next` contains "a command on its own" and "ASCII".
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
