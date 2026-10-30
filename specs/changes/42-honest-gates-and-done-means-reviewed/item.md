@@ -75,7 +75,7 @@ L ones alone. Add `; expect: fail` for a test written first (it must fail), or
 `; expect: fail "<text>"` (it must fail with that text in its output); without `test:` the
 full check runs. `.sdd/bin/sdd task done T-42.1` ticks a task when its test passes. -->
 - [x] T-42.1 The plan line and the verifier lines, FR-42.1, FR-42.2 (files: .sdd/core/prompts/plan.md, .sdd/core/prompts/role-verifier.md, .sdd/core/prompts/finish.md, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
-- [ ] T-42.2 Design exit criteria and the experiment results note (files: specs/design.md, specs/kb/experiment-results.md; size: S)
+- [x] T-42.2 Design exit criteria and the experiment results note (files: specs/design.md, specs/kb/experiment-results.md; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
