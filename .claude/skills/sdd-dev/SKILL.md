@@ -139,7 +139,13 @@ refuses a dirty tree), and `fill`.
   instead (item 28), so its `reviewed` gate applies.
 - Plan checks (item 19): `plan_findings` reads parse_item lines on stdin, so `next` feeds it
   `IR_FACTS` (no second read) and `analyze`/`approve` feed it `parse_item`. A new mechanical
-  check goes there, and its message in tests/t_analyze.sh's exact expected output.
+  check goes there, and its message in tests/t_analyze.sh's exact expected output. A check that
+  needs config reads it in the shell before the awk and passes it via ENVIRON (item 39:
+  `max_size` sets `MAX_SIZE` once per run, warning on a bad value; cfg reads the cache, no git).
+- Conditional prompt text: `render` replaces a line that is exactly `{{max-size}}` with
+  `RENDER_SIZE`, or drops it when that is empty (next.sh sets it in the plan phase). Reuse the
+  pattern for other config-dependent rules rather than echoing text after the prompt, so the
+  rule sits where it belongs and a local/ prompt override can place or omit it.
 - Test fixtures: `fill` writes "Filled in by the test" on the line right after each heading. A
   fact you insert after the heading is followed by that text, which continues the fact (a task
   line then "cannot be read": its attributes no longer end it). End inserted facts with a blank

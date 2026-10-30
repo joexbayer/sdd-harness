@@ -177,6 +177,11 @@ tasks, giving each batch to one builder and committing it, and stops at the firs
 The planner sizes each task (`size: S|M|L`); consecutive small ones share a builder
 (`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each. A
 test written first (`expect: fail`) ends its batch, so it is ticked while still red.
+A small builder stalls on a task that bundles many behaviours: set `[build] max-size = S` (or
+`M`; default `L`) and the plan rules tell the planner to size every task for it (for S: one module
+or behaviour group, at most about 3 FRs, a test it can run alone), and `sdd analyze` flags each
+task above it. The plan rules also say to fix names several tasks share (tables and columns,
+routes, signatures, paths) in the plan and pin them by a test in the task that first defines them.
 A task can name the role that builds it, `by: planner`: the planner writes the failing test that
 defines done, the builder makes it pass. A batch belongs to one role, and `sdd run builder 7` on
 the planner's batch is refused with the command to run instead (`sdd run planner 7`). Any batch
