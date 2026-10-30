@@ -58,6 +58,12 @@ if [ ! -f "$config" ]; then
 	echo "wrote $DIRNAME/config (profile lite, base $(git config -f "$config" sdd.base))"
 fi
 
+# Items branch from the base, so an install committed only on another branch vanishes on new.
+base=$(git config -f "$config" sdd.base)
+cur=$(current_branch)
+[ -n "$cur" ] && [ "$cur" != "$base" ] &&
+	warn "you are on $cur, not the base $base: new items branch from $base, so commit this install on $base (or merge it there) before $NAME new"
+
 # Managed block in AGENTS.md, between markers; everything outside them is left alone.
 start="<!-- $NAME:start -->"
 end="<!-- $NAME:end -->"

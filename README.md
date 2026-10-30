@@ -242,6 +242,11 @@ C-4 Only new, approve and ship create commits. No verb pushes, except two human-
 - **Types.** Types live in config, so a team can add `migration` or `security-fix`.
 - **Overrides.** Put a file at the same path under `.sdd/local/` to override a core file, or
   add `<prompt>.append.md` to extend a prompt.
+- **Your gate.** `init` guesses `[check] run` from the language: point it at your own check
+  script if you have one. If gitleaks flags fake keys in test fixtures, list their fingerprints
+  (`gitleaks dir . -v` prints them) in `.gitleaksignore`, or allowlist the paths in
+  `.gitleaks.toml`. Set `[check] budget` to the seconds your gate really takes (0 turns the
+  warning off).
 
 ## Compared with Spec Kit
 
