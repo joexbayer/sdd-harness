@@ -121,6 +121,17 @@ if [ "$PHASE" = build ] && [ -n "$IR_CONTRACTS" ]; then
 	echo "Contracts (read them; they change only through a contract item): $(joinlist "$(printf '%s\n' "$CROWS" | cut -f3)")"
 	echo
 fi
+# FR-39.1, FR-39.2: a builder that takes less than L gets plans sized for it.
+if [ "$PHASE" = plan ]; then
+	max_size
+	case $MAX_SIZE in
+	S) RENDER_SIZE="- Every task is size S: the builder ([build] max-size S) is a small model. An S task is
+  one module or behaviour group, at most about 3 FRs, with a test it can run alone. Split
+  anything bigger; \`{{cmd}} analyze\` flags every task above S." ;;
+	M) RENDER_SIZE="- Every task is size S or M: the builder ([build] max-size M) takes no L task. Split
+  anything bigger; \`{{cmd}} analyze\` flags every task above M." ;;
+	esac
+fi
 prompt "$PHASE" "$ID" "$title" "$ITYPE"
 prompt "$PHASE.$ITYPE" "$ID" "$title" "$ITYPE"
 # A filled-in plan waiting for approval: what analyze finds, for the agent to fix first (FR-19.3).
