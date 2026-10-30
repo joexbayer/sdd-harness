@@ -1,6 +1,7 @@
 # FR-35.3 the plan rules carry the test rules; FR-35.4 the build rules forbid hollow tests,
 # expected values taken from the code, and unasked-for code; FR-35.5 the verifier asks, per FR,
 # whether some test would fail if it were dropped. FR-36.6 a test-first task can be by: planner.
+# FR-41.1 the approval ask is plain, and approve is a command on its own.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -22,6 +23,12 @@ assert_contains "$out" 'A list endpoint gets a test
 assert_contains "$out" 'A test-first task can be `by: planner`'
 assert_contains "$out" "the planner writes the test that defines done from the FR's example, and the builder
   makes it pass"
+
+# FR-41.1: the approval ask is a plain summary with an ASCII sketch, and approve runs alone.
+assert_contains "$out" 'a command on its own'
+assert_contains "$out" 'ASCII'
+assert_contains "$out" 'a yes in words'
+assert_contains "$out" 'never chained to other commands'
 
 # FR-35.4: build rules.
 git checkout -q main
