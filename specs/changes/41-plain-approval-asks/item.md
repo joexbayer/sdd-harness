@@ -42,6 +42,24 @@ tests/t_prompts_tests.sh: plan-phase `next` contains "a command on its own" and 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-41.1: the closing paragraph of the plan rules (.sdd/core/prompts/plan.md:55-58) now tells the
+agent to post a plain summary of at most about 15 lines (problem, what changes, one example, a
+small ASCII sketch), ask for a yes in words, and only after that yes run approve as a command on
+its own, never chained to other commands. Proven by tests/t_prompts_tests.sh:27-31, which failed
+before the change ("expected output to contain [a command on its own]") and passes after.
+
+Deviations:
+- The old phrase "and then confirm it" is gone. The confirmation still happens: approve itself is
+  unchanged and still asks the human (human_only; t_role_guard.sh and t_agents.sh pass).
+- The test asserts two more phrases than the plan's Test section named ("a yes in words",
+  "never chained to other commands"), after the verifier said those parts were untested.
+
+Follow-ups:
+- check took 156 s and then 175 s against its 150 s budget. The two added prompt assertions do not
+  account for that, so it is probably machine load, but the margin is thin.
+
+Security pass: no findings (a fresh Sonnet reviewer given only the diff).
+Verified by: claude-sonnet: 1 of 1 FRs proven; the test was too weak on "a yes in words" and "never chained", now asserted
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

@@ -27,6 +27,8 @@ assert_contains "$out" "the planner writes the test that defines done from the F
 # FR-41.1: the approval ask is a plain summary with an ASCII sketch, and approve runs alone.
 assert_contains "$out" 'a command on its own'
 assert_contains "$out" 'ASCII'
+assert_contains "$out" 'a yes in words'
+assert_contains "$out" 'never chained to other commands'
 
 # FR-35.4: build rules.
 git checkout -q main
