@@ -80,6 +80,24 @@ full check runs. `.sdd/bin/sdd task done T-42.1` ticks a task when its test pass
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-42.1: the plan rules' Tests bullet ends with "A test's setup gives a different result for the
+FR's rule than for a plausible wrong rule (when the FR sorts by date, rows whose date and id
+orders differ), or it proves nothing" (.sdd/core/prompts/plan.md:48-50). Proven by
+tests/t_prompts_tests.sh:42-43, which failed before the change.
+FR-42.2: the verifier's role prompt (.sdd/core/prompts/role-verifier.md:10-11) and the finish
+step's hand-off (.sdd/core/prompts/finish.md:15) tell it to run the tests the check leaves out
+and to report a new part that nothing calls or reads. Proven by tests/t_prompts_tests.sh:50-52
+(the build-phase `next`) and :68-70 (the generated sdd-verifier.md).
+Docs and housekeeping: specs/design.md:441 (the mindset says a human reviews; a smaller builder
+needs more review), :462 (the experiment row is done), :473 (done means a real repo ships about
+10 reviewed items); specs/kb/experiment-results.md (the three arms, and what a human review
+found); specs/kb/private-project-lessons.md and the experiment's claude-experiment config committed.
+
+Deviations:
+- finish.md's hand-off sentence was rewrapped so an existing assertion in tests/t_verified.sh,
+  which matches one line, still holds. The test was right, and my first wrap broke it.
+
+Security pass: no findings (a fresh Sonnet reviewer given only the diff).
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
