@@ -2,9 +2,10 @@
 id: 39
 type: feature
 title: Plans sized for the builder
-status: open
+status: shipped
 created: 2026-10-30
 approved: 62bbc77fb80013445ccd2a0d5c07c76aa59fbc22 2026-10-30 joexbayer
+shipped: 2026-10-30
 ---
 # 39 Plans sized for the builder
 
