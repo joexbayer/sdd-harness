@@ -59,8 +59,18 @@ text `not the base main`; the "go" case (init on `main`) asserts it is absent (F
 together tell the right rule from "always warn" and "never warn". Fails now: no such warning.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-43.1: `.sdd/core/cmd/init.sh:61-65` compares `current_branch` with the written `sdd.base` and
+  warns when they differ; detached HEAD prints nothing (tried by hand). Proven by
+  `tests/t_init.sh:47-49` (the existing init-on-`feature/wip` case asserts the example literally).
+- FR-43.2: same `if`; `tests/t_init.sh:12` asserts no "not the base" line on `main`.
+- FR-43.3: `README.md:245-249`, a "Your gate." bullet under Customise (no test, D-43.3). Checked in
+  the narrow pilot clone: the 12 fingerprints from `gitleaks dir . -v` in `.gitleaksignore` turn
+  gitleaks green (exit 0).
+- Deviation: the bullet says `gitleaks dir . -v` prints the fingerprints, because plain
+  `gitleaks dir .` prints only a count.
+- Check: `sdd check` passed (138 s).
+- Security pass (fresh Sonnet reviewer, given only the diff): no findings.
+Verified by: claude-sonnet-5-5: 3 of 3 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
