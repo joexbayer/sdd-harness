@@ -45,7 +45,9 @@ PLAN: this is the human's time. Plan, discuss and learn together; write no code 
   be deep (end-to-end, real cost settings): mark it (a tag, a marker, a separate command) so
   check.run leaves it out. Make cost settings (hash rounds, timeouts) configurable and minimal
   in tests. Each task's test asserts its FR's example literally. A list endpoint gets a test
-  that counts its queries.
+  that counts its queries. A test's setup gives a different result for the FR's rule than for
+  a plausible wrong rule (when the FR sorts by date, rows whose date and id orders differ), or
+  it proves nothing.
 - Make the plan precise enough that you could build it later without asking anything:
   the approach, the files involved, and how each requirement will be proven by a test.
 - Before asking for approval, check the plan for gaps: scope edges (what is in, what is
