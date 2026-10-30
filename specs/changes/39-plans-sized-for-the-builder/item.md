@@ -77,7 +77,7 @@ reads it once per run, warns on anything but S, M or L, and counts that as L. pl
 each task above it (common.sh:489, :505), so analyze, next's plan step and the analyzed gate all
 see it. next renders the plan prompt's `{{max-size}}` line (.sdd/core/prompts/plan.md:40) into a
 size rule below L (.sdd/core/cmd/next.sh:124-134; render in common.sh). Proven by
-tests/t_analyze.sh:108-140: S, M and L tasks under each max-size, a sizeless task counting as M,
+tests/t_analyze.sh:108-145: S, M and L tasks under each max-size, a sizeless task counting as M,
 a bad value warning and counting as L, and the rule present below L and absent at L.
 FR-39.2: the S rule says "one module or behaviour group, at most about 3 FRs, with a test it can
 run alone" (next.sh:129). Proven by tests/t_analyze.sh:131.
@@ -91,7 +91,7 @@ Deviations:
 - The build was interrupted after T-39.1 (the builder hit a usage limit) and resumed in a new
   session. T-39.1 had passed its own test but not shellcheck: RENDER_SIZE is set in next.sh and
   read in common.sh. Fixed with a disable comment and reason, the repo's existing pattern
-  (next.sh:126).
+  (next.sh:127).
 - main was merged in after item 41 shipped. tests/t_prompts_tests.sh conflicted, because both
   items added assertions at the same spot, and both were kept.
 
