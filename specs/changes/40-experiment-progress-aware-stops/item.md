@@ -4,6 +4,7 @@ type: chore
 title: Experiment: progress-aware stops
 status: open
 created: 2026-10-30
+approved: e4699d59dd4c43a75180721260d5bcbae1cdfdd2 2026-10-30 joexbayer
 ---
 # 40 Experiment: progress-aware stops
 
