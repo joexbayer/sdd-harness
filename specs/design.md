@@ -439,7 +439,9 @@ hijack.
 ## 16. Roadmap and dogfooding
 
 Mindset: agile waterfall. Planning with the human carries the weight, building is mostly
-automated behind gates, and every change leaves the code easy to change again.
+automated behind gates, the human reviews what was built, and every change leaves the code easy
+to change again. sdd is not aiming at an AI that runs unattended: a smaller builder model is
+supported and needs more of the human's review.
 
 | item | what | why now |
 |---|---|---|
@@ -457,7 +459,7 @@ automated behind gates, and every change leaves the code easy to change again.
 | later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
 | later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | 26 | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model, any format); a `contract` item lands only the contract; items name `contracts:` and approval pins their ids, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
-| then | the experiment: a complex multi-phase app, Opus plans and a coder model builds tasks, a scripted human answers and approves, measured against an Opus-only baseline | proves plan big, build small with numbers |
+| 30-40 | the experiment: a complex multi-phase app, Opus plans and a coder model builds tasks, a scripted human answers and approves, measured against an Opus-only baseline. Done 2026-10-30: Opus as builder shipped, qwen needs supervision (kb/experiment-results.md) | proves plan big, build small with numbers |
 | then | `sdd-server` (stdio, then HTTP with mirrors) | team coordination across branches and repos |
 | then | fresh-context review for clean, easy-to-change code | ladder step 5 |
 
@@ -468,5 +470,7 @@ Dogfooding stages:
    to Spec Kit. Old specs are not migrated.
 3. **Replace Spec Kit.** After the team layer: MCP server, team IDs, `ship` via PR, gates in CI.
 
-Exit criteria for the pilot: about 10 items shipped, no gate had to be bypassed, reviews take
-minutes, and the narrow + qwen evaluation stays green.
+Exit criteria for the pilot, and for calling sdd done: a real repo other than this one ships
+about 10 items through sdd, adapted to that codebase through config and `.sdd/local/`. No gate had
+to be bypassed, reviews take minutes, and the human finds the problems at review rather than
+after ship.
