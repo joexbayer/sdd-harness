@@ -4,6 +4,7 @@ type: fix
 title: Plain approval asks
 status: open
 created: 2026-10-30
+approved: 461f497545a6e11f4c7dbe4a2b8a6a364cb0fdb7 2026-10-30 joexbayer
 ---
 # 41 Plain approval asks
 
