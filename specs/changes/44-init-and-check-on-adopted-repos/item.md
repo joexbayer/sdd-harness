@@ -101,8 +101,24 @@ the config, as with today's guesses.
 Each fails now: no such lines, and the guesses win.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-44.1: `no_articles` at `.sdd/core/lib/common.sh:1575-1581`, called in
+  `.sdd/core/cmd/check.sh:47` (after any result, so check still exits 0), `.sdd/core/cmd/next.sh:157`
+  (plan and build) and `.sdd/core/cmd/review.sh:93`. Proven by `tests/t_constitution.sh:131-142`
+  (a prose constitution: check passes and prints the line; next and review print it).
+- FR-44.2: same function returns quietly when a `C-` article exists or there is no file;
+  `tests/t_constitution.sh:23` asserts the line is absent for the C-1/C-2 constitution.
+- FR-44.3: `.sdd/core/cmd/init.sh:15-19`, `git check-ignore -v` on the launcher, warning with the
+  rule's source field. Proven by `tests/t_init.sh:54-59` (`bin/` ignore) and `:15` (absent
+  without one).
+- FR-44.4, FR-44.5: `.sdd/core/cmd/init.sh:30-32`, at the top of `detect_checks`. Proven by
+  `tests/t_init.sh:61-75`; the go case (`tests/t_init.sh:21`) still gets the guesses.
+- FR-44.6: `README.md` "Your gate." bullet and the "Moving from Spec Kit" paragraph under
+  "## Compared with Spec Kit" (no test, D-44.6).
+- Carried: b087293 drops the experiment README line the spend cap never stops (committed before
+  approval, from its own branch; D-44.6).
+- Check: `sdd check` passed (135 s).
+- Security pass (fresh Sonnet reviewer, given only the diff): no findings.
+Verified by: claude-sonnet-5-5: 6 of 6 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
