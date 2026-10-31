@@ -1,16 +1,23 @@
 # shellcheck shell=sh
-# init: install into the current repo. Idempotent: never overwrites config or core.
+# init: install into the current repo, or update an install from this (newer) copy. Idempotent:
+# never overwrites config or .sdd/local/, and never core with uncommitted changes.
 [ $# -eq 0 ] || usage_die "usage: $NAME init"
 need_repo
 
 target="$ROOT/$DIRNAME"
 if [ "$(cd "$target" 2>/dev/null && pwd -P)" != "$SDD_HOME" ]; then
-	if [ -d "$target/core" ]; then
-		echo "$NAME already installed in $DIRNAME/ ($(cat "$target/VERSION" 2>/dev/null)); left as is"
-	else
+	if [ ! -d "$target/core" ]; then
 		mkdir -p "$target"
 		cp -R "$SDD_HOME/bin" "$SDD_HOME/core" "$SDD_HOME/VERSION" "$target/" || die "copy failed"
 		echo "installed $NAME $(cat "$target/VERSION") into $DIRNAME/"
+	elif diff -r "$SDD_HOME/bin" "$target/bin" >/dev/null 2>&1 && diff -r "$SDD_HOME/core" "$target/core" >/dev/null 2>&1; then
+		echo "$NAME already installed in $DIRNAME/ and up to date"
+	elif [ -n "$(git status --porcelain -- "$target/bin" "$target/core")" ]; then
+		die "$DIRNAME/bin or $DIRNAME/core has uncommitted changes: commit or discard them first (overrides belong in $DIRNAME/local/)"
+	else
+		rm -rf "${target:?}/bin" "${target:?}/core"
+		cp -R "$SDD_HOME/bin" "$SDD_HOME/core" "$SDD_HOME/VERSION" "$target/" || die "copy failed"
+		echo "updated $NAME in $DIRNAME/ from $SDD_HOME: commit $DIRNAME/bin and $DIRNAME/core (and run $NAME sync <agent> again if you use it)"
 	fi
 fi
 # A `bin/` ignore (Go, .NET build output) also matches $DIRNAME/bin/: the install would be

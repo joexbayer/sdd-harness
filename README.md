@@ -242,6 +242,9 @@ C-4 Only new, approve and ship create commits. No verb pushes, except two human-
 - **Types.** Types live in config, so a team can add `migration` or `security-fix`.
 - **Overrides.** Put a file at the same path under `.sdd/local/` to override a core file, or
   add `<prompt>.append.md` to extend a prompt.
+- **Upgrades.** In your repo, run the newer sdd's init (`<newer sdd>/.sdd/bin/sdd init`). It
+  replaces `.sdd/bin` and `.sdd/core`, keeps your config and `.sdd/local/`, and refuses while
+  those two folders have uncommitted changes. Review the diff and commit it.
 - **Your gate.** `init` uses an executable `scripts/check.sh` or a `make check` target when the
   repo has one, and otherwise guesses `[check] run` from the language: point it at your own
   check script if it lives elsewhere. If gitleaks flags fake keys in test fixtures, list their fingerprints

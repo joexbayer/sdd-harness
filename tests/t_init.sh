@@ -2,6 +2,8 @@
 # FR-43.1 init on a branch other than the base warns; FR-43.2 on the base it does not.
 # FR-44.3 init warns when git ignores the launcher; FR-44.4/FR-44.5 a repo's own gate
 # (scripts/check.sh, make check) wins over the language guesses.
+# FR-45.1 rerunning init from another sdd updates bin/ and core/; FR-45.2 says up to date when they
+# match; FR-45.3 refuses on uncommitted changes there.
 . "$SRC/tests/lib.sh"
 
 mkdir -p "$T/go" && cd "$T/go" || exit 1
@@ -73,4 +75,31 @@ printf 'check:\n\tgo test ./...\n' >Makefile
 git add -A && git commit -qm init
 sdd init >/dev/null 2>&1
 assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ' | paste -sd '|' -)" 'make check'
+
+# FR-45.1: an install committed in the repo, then hand-changed (an edit and a file the new sdd
+# does not have), is replaced by rerunning init from the source sdd.
+cd "$T/go" || exit 1
+git add -A && git commit -qm "install sdd"
+cfg_before=$(cat .sdd/config)
+echo '# stale' >>.sdd/core/cmd/help.sh && touch .sdd/core/old.sh
+git add -A && git commit -qm "old sdd"
+out=$(sdd init 2>&1) || fail "update failed: $out"
+assert_contains "$out" "updated sdd in .sdd/ from $SRC/.sdd: commit .sdd/bin and .sdd/core (and run sdd sync <agent> again if you use it)"
+diff -r .sdd/core "$SRC/.sdd/core" >/dev/null 2>&1 || fail "core differs from the source after the update"
+[ ! -e .sdd/core/old.sh ] || fail "a file only the old install had is still there"
+assert_eq "$(cat .sdd/config)" "$cfg_before" "(the update changed the config)"
+git add -A && git commit -qm "update sdd"
+
+# FR-45.2: nothing to update.
+out=$(sdd init 2>&1)
+assert_contains "$out" 'sdd already installed in .sdd/ and up to date'
+assert_not_contains "$out" 'updated sdd'
+
+# FR-45.3: uncommitted changes in core are never overwritten.
+echo '# stale' >>.sdd/core/cmd/help.sh && git commit -qam "old sdd again"
+echo '# mine' >>.sdd/core/cmd/help.sh
+out=$(sdd init 2>&1)
+assert_eq $? 1 "(init should refuse)"
+assert_contains "$out" 'sdd: .sdd/bin or .sdd/core has uncommitted changes: commit or discard them first (overrides belong in .sdd/local/)'
+assert_eq "$(tail -n 1 .sdd/core/cmd/help.sh)" '# mine'
 exit 0
