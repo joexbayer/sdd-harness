@@ -13,6 +13,10 @@ if [ "$(cd "$target" 2>/dev/null && pwd -P)" != "$SDD_HOME" ]; then
 		echo "installed $NAME $(cat "$target/VERSION") into $DIRNAME/"
 	fi
 fi
+# A `bin/` ignore (Go, .NET build output) also matches $DIRNAME/bin/: the install would be
+# committed without its launcher. Quiet once the launcher is tracked.
+ign=$(git check-ignore -v "$DIRNAME/bin/$NAME" 2>/dev/null) &&
+	warn "$DIRNAME/bin/$NAME is ignored by git (${ign%%	*}): commit it with git add -f, or anchor the pattern to the root (/bin/)"
 
 detect_base() {
 	_b=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null) && { echo "${_b#origin/}"; return; }
@@ -23,6 +27,9 @@ detect_base() {
 }
 
 detect_checks() {
+	# The repo's own gate, when it has one, beats a guess from the language.
+	[ -x scripts/check.sh ] && { echo scripts/check.sh; return 0; }
+	[ -f Makefile ] && grep -q '^check:' Makefile && { echo 'make check'; return 0; }
 	[ -f go.mod ] && printf '%s\n' 'go vet ./...' 'go test ./...'
 	[ -f Cargo.toml ] && echo 'cargo test'
 	[ -f package.json ] && grep -q '"test"[[:space:]]*:' package.json && echo 'npm test'

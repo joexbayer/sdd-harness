@@ -1,6 +1,7 @@
 # FR-3.1 articles parsed and well formed, FR-3.2 check articles run, FR-3.3 budget,
 # FR-3.4 rules in next, FR-3.5 review articles to confirm, FR-3.6 guard, FR-3.7 amendment
-# gates, FR-3.8 amendment diff in review.
+# gates, FR-3.8 amendment diff in review. FR-44.1 a constitution with no C-<n> articles is named in
+# check, next and review; FR-44.2 one with articles is not.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -19,6 +20,7 @@ C-2 Humans own the data model.
   Enforced: review
 EOF
 out=$(sdd check 2>&1) || fail "check should pass: $out"
+assert_not_contains "$out" 'has no C-<n> articles' # FR-44.2
 
 # FR-3.1: an article without its Enforced line fails the check, naming it.
 printf 'C-3 Unenforced.\n  Why: oops.\n' >>specs/constitution.md
@@ -125,4 +127,16 @@ git switch -q feature/4-in-flight
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(the new article must run at ship)"
 assert_contains "$out" 'C-4 No feature.txt. (its check failed)'
+
+# FR-44.1: a constitution in another format (Spec Kit's prose articles) yields no rules; say so
+# in check (which still passes), next and review instead of showing nothing.
+new_repo prose
+mkdir -p specs && printf '# Constitution\n\n### I. Mechanism in Go, policy in Lisp\n\n- The core stays small.\n' >specs/constitution.md
+git add -A && git commit -qm "prose constitution"
+line='⚠ specs/constitution.md has no C-<n> articles, so no rule is shown or enforced: write each rule as "C-1 <rule>" with indented Why: and Enforced: lines (through an amendment item)'
+sdd new feature "Prose" >/dev/null 2>&1 || fail "new failed"
+assert_contains "$(sdd next 2>&1)" "$line"
+out=$(sdd check 2>&1) || fail "check should still pass: $out"
+assert_contains "$out" "$line"
+assert_contains "$(sdd review 2>&1)" "$line"
 exit 0

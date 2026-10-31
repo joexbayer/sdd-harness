@@ -1572,6 +1572,14 @@ articles() {
 	END { flush() }'
 }
 
+# no_articles: a constitution in another format (prose articles) yields no rules, silently
+# otherwise (FR-44.1). Prints the warning line, or nothing.
+no_articles() {
+	[ -f "$CONST" ] || return 0
+	articles | grep -q '^C-' && return 0
+	echo "⚠ $CONST has no C-<n> articles, so no rule is shown or enforced: write each rule as \"C-1 <rule>\" with indented Why: and Enforced: lines (through an amendment item)"
+}
+
 # check_articles <log>: the constitution's own gate. Fails, with CHECK_ARTICLES holding one
 # problem per line, when an article is malformed, the constitution is over budget, or an
 # "Enforced: check" command fails (its output goes to <log>).
