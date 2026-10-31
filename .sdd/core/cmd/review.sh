@@ -90,6 +90,7 @@ if [ -n "$frs" ]; then
 	[ -z "$unnamed" ] || echo "  (✗ is for your review only: ship does not check it)"
 fi
 
+no_articles
 confirm=$(articles | awk -F '\t' '$2 == "review" { print "  [ ] " $1 " " $4 }')
 if [ -n "$confirm" ]; then
 	echo

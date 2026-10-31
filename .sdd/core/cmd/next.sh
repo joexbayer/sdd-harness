@@ -154,5 +154,6 @@ plan | build)
 		echo "Constitution (ground truths; changing one needs: $CMD new amendment \"…\"):"
 		printf '%s\n' "$rules"
 	fi
+	no_articles
 	;;
 esac
