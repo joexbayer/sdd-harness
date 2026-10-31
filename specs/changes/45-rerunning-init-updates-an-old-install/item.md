@@ -77,8 +77,22 @@ commit"). No new dependency.
 Fails now: init prints "left as is" and changes nothing.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-45.1: `.sdd/core/cmd/init.sh:17-20`, the update branch: `rm -rf` the two folders (guarded
+  with `${target:?}`, which shellcheck SC2115 asked for), copy from `$SDD_HOME`, print the line.
+  Proven by `tests/t_init.sh:79-91` (stale edit and extra file gone, core equals the source,
+  config unchanged).
+- FR-45.2: `.sdd/core/cmd/init.sh:13-14`, `diff -r` on bin and core first. Proven by
+  `tests/t_init.sh:93-96` ("and up to date", no "updated sdd").
+- FR-45.3: `.sdd/core/cmd/init.sh:15-16`, `git status --porcelain` on the two folders, then
+  `die`. Proven by `tests/t_init.sh:98-104` (exit 1, the line, the uncommitted edit kept).
+- FR-45.4: `README.md:245` "Upgrades." bullet; `specs/design.md` §14 upgrade bullet now says
+  rerun `init` (no test, docs).
+- The header comment at `.sdd/core/cmd/init.sh:2-3` no longer says "never overwrites core".
+- Check: `sdd check` passed (132 s).
+- Security pass (fresh Sonnet reviewer, given only the diff): no findings. I checked the part it
+  skipped: `ROOT` is the git top level (`need_repo` dies outside one) and `DIRNAME` the running
+  sdd's folder name, so the delete only reaches `<repo>/.sdd/bin` and `<repo>/.sdd/core`.
+Verified by: claude-sonnet-5-5: 4 of 4 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
