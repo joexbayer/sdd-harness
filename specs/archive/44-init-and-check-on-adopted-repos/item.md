@@ -2,9 +2,10 @@
 id: 44
 type: fix
 title: Init and check on adopted repos
-status: open
+status: shipped
 created: 2026-10-31
 approved: 2860705b6955d5a11f868c5a336b143af974bf74 2026-10-31 joexbayer
+shipped: 2026-10-31
 ---
 # 44 Init and check on adopted repos
 
