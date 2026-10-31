@@ -422,8 +422,9 @@ hijack.
 
 - Override any core file by placing it at the same path under `.sdd/local/`.
 - Prompts can be extended with `<name>.append.md` instead of replaced (spec-kit#4065).
-- `upgrade` (step 5) replaces `core/` only, and refuses if `core/` was hand-edited
-  (spec-kit#3849).
+- Upgrading is rerunning `init` from the newer copy (item 45): it replaces `bin/` and `core/`
+  only, and refuses while they have uncommitted changes (spec-kit#3849); the result is a diff the
+  human reviews and commits. Checksums stay with step 5's `upgrade`.
 - One implementation language for the CLI (spec-kit#4884). Windows is supported through WSL or
   Git Bash.
 - **Renaming.** The name lives in `NAME` in `core/lib/common.sh`. Rename the `.sdd/` folder,
