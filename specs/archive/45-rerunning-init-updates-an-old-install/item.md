@@ -2,9 +2,10 @@
 id: 45
 type: fix
 title: Rerunning init updates an old install
-status: open
+status: shipped
 created: 2026-10-31
 approved: 6d414cc74b4653d40cacc33f755d77ffe168ec99 2026-10-31 joexbayer
+shipped: 2026-10-31
 ---
 # 45 Rerunning init updates an old install
 
