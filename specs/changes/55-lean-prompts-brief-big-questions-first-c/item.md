@@ -4,6 +4,7 @@ type: feature
 title: Lean prompts: brief, big questions first, chat reviews, fewer tests
 status: open
 created: 2026-11-01
+approved: 4b542e66a25342f3ecdd1dd5e5cc82946be44434 2026-11-01 joexbayer
 ---
 # 55 Lean prompts: brief, big questions first, chat reviews, fewer tests
 
