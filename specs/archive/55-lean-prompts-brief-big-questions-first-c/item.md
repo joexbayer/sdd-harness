@@ -2,9 +2,10 @@
 id: 55
 type: feature
 title: Lean prompts: brief, big questions first, chat reviews, fewer tests
-status: open
+status: shipped
 created: 2026-11-01
 approved: 4b735705e844a233c8c343f8ad3295e39c793b9c 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 55 Lean prompts: brief, big questions first, chat reviews, fewer tests
 
