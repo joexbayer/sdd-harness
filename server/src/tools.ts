@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import { NAME } from "./config.ts";
 import { now, type RepoIndex, type Row } from "./repo-index.ts";
+import { search, type Match } from "./search.ts";
 
 export type Log = (line: Record<string, unknown>) => void;
 
@@ -16,6 +17,8 @@ const RepoOut = z.object({ name: z.string(), ok: z.boolean(), fetched: z.string(
 const ItemsOut = z.object({ server_sdd: z.string(), repos: z.array(RepoOut),
   items: z.array(z.looseObject({ repo: z.string(), id: z.number() })), truncated: z.boolean() });
 const ItemOut = z.looseObject({ repo: z.string(), id: z.number() });
+const SearchOut = z.object({ matches: z.array(z.object({ repo: z.string(), ref: z.string(), item: z.number().nullable(),
+  path: z.string(), line: z.number(), text: z.string() })), truncated: z.boolean() });
 
 type Text = { type: "text"; text: string };
 type Out = { content: Text[]; structuredContent?: Record<string, unknown>; isError?: boolean };
@@ -111,6 +114,10 @@ export function itemText(it: Record<string, any>): string {
   return lines.join("\n");
 }
 
+// matchLine: `api 22 FR-22.3 WHEN a key names its tenant …`, or the ref and place for the base.
+const matchLine = (m: Match) =>
+  cut(m.item === null ? `${m.repo} ${m.ref} ${m.path}:${m.line} ${m.text.trim()}` : `${m.repo} ${m.item} ${m.text.trim()}`);
+
 // buildServer: a fresh McpServer per request (createMcpHandler's factory, D-53.12). Every call that
 // runs writes one audit line through log (FR-53.15): who, what, how many, how long; no results.
 export function buildServer(ix: RepoIndex, log: Log = () => {}): McpServer {
@@ -134,7 +141,7 @@ export function buildServer(ix: RepoIndex, log: Log = () => {}): McpServer {
     const t0 = Date.now();
     const fields = { repo: input.repo ?? "", q: input.owner ?? "" };
     if (input.repo && !ix.names().includes(input.repo)) {
-      const msg = `no repo ${input.repo} (repos: ${ix.names().join(", ")})`;
+      const msg = `no repo ${input.repo} (repos: ${[...ix.names()].sort().join(", ")})`;
       audit(ctx, "items", fields, t0, 0, msg);
       return fail(msg);
     }
@@ -161,6 +168,31 @@ export function buildServer(ix: RepoIndex, log: Log = () => {}): McpServer {
       audit(ctx, "item", fields, t0, 0, msg);
       return fail(msg);
     }
+  });
+  server.registerTool("search", {
+    description: "Search the plans of every open sdd item (on its branch) and the specs of each repo's base branch " +
+      "for a fixed text, case-insensitive. Use it before planning, to find work that overlaps. " + DATA,
+    inputSchema: z.strictObject({
+      query: z.string().min(2).max(200),
+      repo: RepoName.or(z.literal("")).optional(),
+      limit: z.int().min(1).max(200).optional(),
+    }),
+    outputSchema: SearchOut,
+    annotations: { readOnlyHint: true },
+  }, async (input, ctx) => {
+    const t0 = Date.now();
+    const repo = input.repo || undefined;
+    const fields = { repo: repo ?? "", q: input.query };
+    if (repo && !ix.names().includes(repo)) {
+      const msg = `no repo ${repo} (repos: ${[...ix.names()].sort().join(", ")})`;
+      audit(ctx, "search", fields, t0, 0, msg);
+      return fail(msg);
+    }
+    const out = await search(ix, { query: input.query, repo, limit: input.limit });
+    audit(ctx, "search", fields, t0, out.matches.length);
+    const where = repo ?? plural(ix.names().length, "repo");
+    const head = `${plural(out.matches.length, "match", "matches")} for "${input.query}" in ${where}${out.truncated ? " · truncated" : ""}`;
+    return { content: [{ type: "text", text: [cut(head), ...out.matches.map(matchLine)].join("\n") }], structuredContent: out };
   });
   return server;
 }
