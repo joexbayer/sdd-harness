@@ -930,6 +930,23 @@ unnamed_note() {
 	[ -z "$_u" ] || echo "⚠ ticked and committed, but no commit subject names them: $(joinlist "$_u"). Ship refuses this: name each task ID in a commit subject (amend that commit while it is the last one)."
 }
 
+# bent_tests: one line per file of a done `by: planner` task that changed after the commit naming
+# the task (later commits or the working tree), unless "## Built" names the file (FR-58.1).
+bent_tests() {
+	_built=$(awk '/^## Built/ { on = 1; next } /^## / { on = 0 } on' "$IFILE")
+	_tab=$(printf '\t')
+	task_rows | awk -F '\t' '$2 == "done" && $11 == "planner" { print $1 "\t" $4 }' |
+		while IFS="$_tab" read -r _t _files; do
+			_c=$(task_commit "$_t")
+			[ -n "$_c" ] || continue
+			for _f in $(printf '%s\n' "$_files" | tr ',' ' '); do
+				[ -n "$(git diff --name-only "$_c" -- "$_f")" ] || continue
+				printf '%s\n' "$_built" | grep -qF -- "$_f" && continue
+				echo "item $ID: $_t's test $_f (written by the planner) changed after it was written: undo it, or say why under \"## Built\" naming the file"
+			done
+		done
+}
+
 # usage_on: usage tracking is switched on ([usage] track = true, yours or the project's); off by
 # default, so nothing about runs is kept unless someone asks for it.
 usage_on() { [ "$(cfg_mine usage.track false)" = true ]; }
