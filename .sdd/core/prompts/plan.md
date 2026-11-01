@@ -21,14 +21,15 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
 - End the plan with small, ordered tasks under "## Tasks", each naming its files, FRs,
   `size: S|M|L` and a test that can pass before later tasks exist (new, or extending an
   existing one). An `expect: fail` task only writes the failing test; its code is the next task. A
-  test-first task can be `by: planner` (the planner writes the test).
+  test-first task can be `by: planner`: the planner writes the test, the builder makes it pass. The
+  builder may be a small model that sees only its batch: say what it needs to know.
 {{max-size}}
 - Names several tasks share (tables, routes, signatures, file paths) are fixed in the plan and
   pinned by a test in the task that first defines them.
 - Tests: the gate (check) runs after every task, so keep it fast; mark deep tests so check.run
   leaves them out, and make cost settings minimal in tests. Each test
-  asserts its FR's example, and its setup tells the FR's rule from a plausible wrong rule (sorting
-  by date: rows whose date and id orders differ). Few tests that bite beat many that repeat.
+  asserts its FR's example, and its setup tells the FR's rule from a plausible wrong rule (when the
+  FR sorts by date: rows whose date and id orders differ, so sorting by id fails the test). Few tests that bite beat many that repeat.
 - Before approval, check the plan for gaps: scope edges, errors and edge cases, data and state,
   speed, several developers at once, and security. Ask the human about each gap you find, then run
   `{{cmd}} analyze` and fix what it lists.
