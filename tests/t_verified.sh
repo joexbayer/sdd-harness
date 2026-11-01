@@ -25,10 +25,9 @@ built_with() {
 planned_item fix "Retry"
 # FR-22.2: once no task is open, the finish steps hand the item to the verifier.
 out=$(sdd next)
-assert_contains "$out" 'hand item
-1 to the `verifier` role: its `sdd-verifier` subagent if this agent has one, else
-`.sdd/bin/sdd run verifier 1` if the project sets the role, else a fresh subagent on a different
-model than yours'
+assert_contains "$out" 'hand item 1 to the `verifier` role: its `sdd-verifier` subagent if this agent has'
+assert_contains "$out" 'else `.sdd/bin/sdd run verifier 1` if the project sets the role, else a fresh subagent on a'
+assert_contains "$out" 'different model than yours'
 assert_contains "$out" 'reports only findings, each with the command and its output, and never edits code or the plan'
 assert_contains "$out" '  Verified by: <its model>: <n> of <m> FRs proven; <its findings in a few words, or "no findings">'
 assert_contains "$out" 'or, when no verifier could run, `Verified by: none` and why.'

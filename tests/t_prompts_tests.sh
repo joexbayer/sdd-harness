@@ -6,6 +6,7 @@
 # FR-42.1 a test's setup tells the right rule from a plausible wrong one; FR-42.2 the verifier runs
 # the tests the check leaves out and reports parts nothing calls or reads.
 # FR-51.1 hand-offs to the human name the skill first; FR-51.2 so does the AGENTS.md block.
+# FR-55.1-55.7 lean prompts: the review shape, big questions first, chat reviews, fewer tests.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -13,64 +14,48 @@ new_repo
 sdd new feature "Orders list" >/dev/null 2>&1 || fail "new failed"
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: plan'
-assert_contains "$out" 'The gate (check) stays fast'
-assert_contains "$out" "A task's own test may
-  be deep (end-to-end, real cost settings): mark it"
-assert_contains "$out" 'so
-  check.run leaves it out'
-assert_contains "$out" 'Make cost settings (hash rounds, timeouts) configurable and minimal
-  in tests'
-assert_contains "$out" "Each task's test asserts its FR's example literally"
-assert_contains "$out" 'A list endpoint gets a test
-  that counts its queries'
-# FR-36.6: a test-first task can be the planner's.
-assert_contains "$out" 'A test-first task can be `by: planner`'
-assert_contains "$out" "the planner writes the test that defines done from the FR's example, and the builder
-  makes it pass"
-
-# FR-39.3: names several tasks share are fixed in the plan and pinned by a test.
-assert_contains "$out" 'Names several tasks share (schema tables and columns, routes, function signatures, file
-  paths) are fixed in the plan'
-assert_contains "$out" 'pinned by a test in the task that
-  first defines them'
-
-# FR-41.1: the approval ask is a plain summary with an ASCII sketch, and approve runs alone.
-assert_contains "$out" 'a command on its own'
-assert_contains "$out" 'ASCII'
-assert_contains "$out" 'a yes in words'
-assert_contains "$out" 'never chained to other commands'
-
-# FR-42.1: a test whose setup cannot tell the right rule from a wrong one proves nothing.
-assert_contains "$out" 'a plausible wrong rule'
+# FR-55.1 the review shape; FR-55.2 big questions first; FR-55.5 test rules; FR-55.7 a loose word ceiling.
+assert_contains "$out" 'Critical parts'
+assert_contains "$out" 'Assumptions to check'
+assert_contains "$out" 'load-bearing questions first'
+assert_contains "$out" 'Cases that share one rule share one FR'
+w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
+[ "$w" -le 750 ] || fail "plan step is $w words (ceiling 750)"
+# One phrase per rule (D-55.1): FR-35.3 test rules, FR-36.6 by: planner, FR-39.3 shared names,
+# FR-41.1 the approval ask, FR-42.1 a setup that tells the rules apart.
+for p in 'so keep it fast' 'mark deep tests so check.run' 'make cost settings minimal in tests' \
+	"asserts its FR's example" 'can be `by: planner`' 'pinned by a test in the task that first defines them' \
+	'a command on its own' 'ASCII' 'Only after a yes in' 'never chained to other commands' 'a plausible wrong rule'; do
+	assert_contains "$out" "$p"
+done
 
 # FR-35.4: build rules.
 git checkout -q main
 planned_item fix "Retry"
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: build'
-# FR-42.2: the finish step's hand-off to a fresh verifier.
-assert_contains "$out" 'tests the check leaves out'
-assert_contains "$out" 'nothing calls or reads'
-# FR-51.1: the hand-off names the skill, with the command as fallback.
-assert_contains "$out" 'tell the human it is ready for review: `/sdd-review` (or `.sdd/bin/sdd review`)'
-assert_contains "$out" 'still pass if every function returned nothing'
-assert_contains "$out" 'never from the code under
-  test'
-assert_contains "$out" 'Write just enough code to pass the test, without abstractions, options or defensive code
-  nothing asked for'
-assert_not_contains "$out" 'The gate (check) stays fast'
+# One phrase per rule: FR-42.2 the verifier hand-off, FR-51.1 the review hand-off names the skill,
+# FR-35.4 test rules, FR-55.5 duplicates may go; FR-55.7 a loose word ceiling.
+for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review: `/sdd-review`' \
+	'still pass if every function returned nothing' 'never from the code under test' \
+	'Write just enough code to pass the test' 'extend an existing test'; do
+	assert_contains "$out" "$p"
+done
+assert_contains "$out" "A test that only repeats another's case may be deleted"
+assert_not_contains "$out" 'so keep it fast'
+w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
+[ "$w" -le 700 ] || fail "build step is $w words (ceiling 700)"
 
 # FR-35.5: the verifier's prompt.
 setcfg role.verifier.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
 out=$(sdd sync claude 2>&1) || fail "sync failed: $out"
 v=$(cat .claude/agents/sdd-verifier.md)
-assert_contains "$v" 'Per FR, ask: is there a test that would fail if
-   that FR were dropped?'
-assert_contains "$v" 'or that
-   no test would fail if it were dropped'
-# FR-42.2: the verifier's own rules.
-assert_contains "$v" 'tests the check leaves out'
-assert_contains "$v" 'nothing calls or reads'
+# FR-35.5, FR-55.6: the verifier proves an FR by undoing its code; FR-42.2 its other rules.
+for p in "undo that FR's code in a scratch copy" 'report the FR unproven if the test still passes' \
+	'no test would fail if it were dropped' 'tests the check leaves out' 'nothing calls or reads' \
+	"only repeats another"; do
+	assert_contains "$v" "$p"
+done
 # FR-51.1: the build skill's hand-off, and the review step's ship hand-off.
 assert_contains "$(cat .claude/skills/sdd-build/SKILL.md)" 'Then tell the user it is ready
 for review: `/sdd-review` (or `.sdd/bin/sdd review`)'
@@ -80,6 +65,11 @@ git add -A && git commit -qm "docs: built" && sdd check >/dev/null 2>&1
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: review'
 assert_contains "$out" 'they run `/sdd-ship` (or `.sdd/bin/sdd ship`)'
+# FR-55.3: the review is presented in chat; the human never opens a file.
+assert_contains "$out" 'never send the human to read a file'
+assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'never send the human to read a file'
+# FR-55.4: the AGENTS.md block says be brief.
+assert_contains "$(cat AGENTS.md)" 'Never send the human to read a file: summarise it in chat with an example.'
 # FR-51.2: the AGENTS.md block init writes.
 assert_contains "$(cat AGENTS.md)" '- Handing the human a step: name its skill (`/sdd-new`, `/sdd-review`, `/sdd-ship`) when this
   agent has them (`.sdd/bin/sdd sync <agent>`), with the command as fallback.'

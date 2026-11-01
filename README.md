@@ -241,7 +241,8 @@ C-4 Only new, approve and ship create commits. No verb pushes, except two human-
   each gate is.
 - **Types.** Types live in config, so a team can add `migration` or `security-fix`.
 - **Overrides.** Put a file at the same path under `.sdd/local/` to override a core file, or
-  add `<prompt>.append.md` to extend a prompt.
+  add `<prompt>.append.md` to extend a prompt. E.g. a web app's `.sdd/local/prompts/plan.append.md`:
+  `- A list endpoint gets a test that counts its queries.`
 - **Upgrades.** In your repo, run the newer sdd's init (`<newer sdd>/.sdd/bin/sdd init`). It
   replaces `.sdd/bin` and `.sdd/core`, keeps your config and `.sdd/local/`, and refuses while
   those two folders have uncommitted changes. Review the diff and commit it.
