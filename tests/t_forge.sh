@@ -1,6 +1,7 @@
 # FR-10.1 ship opens a PR; FR-10.2 shipping again pushes new commits into it; FR-10.3 and again
 # merges it; FR-10.4 not while CI fails or is pending, or the PR is closed; FR-10.5 PR state in
-# status, ls, review; FR-10.6 gh missing or logged out; FR-10.7 init suggests the forge.
+# status, ls, review; FR-10.6 gh missing or logged out; FR-10.7 init suggests the forge. FR-54.1 the
+# PR body points at the item file; FR-54.2 a later ship leaves it alone.
 # GitHub is a stub gh (below) over a bare origin: nothing here talks to the network.
 . "$SRC/tests/lib.sh"
 new_repo
@@ -37,15 +38,14 @@ case "$1 $2" in
 "pr create")
 	shift 2
 	while [ $# -gt 0 ]; do
-		case $1 in --head) b=$2 ;; --title) t=$2 ;; --body-file) f=$2 ;; esac
+		case $1 in --head) b=$2 ;; --title) t=$2 ;; --body) body=$2 ;; esac
 		shift
 	done
 	n=$(($(wc -l <"$G/prs") + 1))
 	{ printf '%s\t%s\tOPEN\t\thttps://github.test/pr/%s\t\n' "$b" "$n" "$n"; cat "$G/prs"; } >"$G/prs.new" && mv "$G/prs.new" "$G/prs"
-	cp "$f" "$G/body.$n" && echo "$t" >"$G/title.$n"
+	printf '%s\n' "$body" >"$G/body.$n" && echo "$t" >"$G/title.$n"
 	echo "https://github.test/pr/$n"
 	;;
-"pr edit") cp "$5" "$G/body.$3" ;;
 "pr merge")
 	n=$3 sha=$6
 	b=$(awk -F '\t' -v n="$n" '$2 == n { print $1 }' "$G/prs")
@@ -83,12 +83,15 @@ echo 0 >"$T/gh/auth"
 nogh=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gh" ] || printf '%s:' "$d"; done)
 assert_contains "$(PATH=$nogh sdd ship 2>&1)" 'gh is not installed'
 
-# FR-10.1: gates, archive on the branch, push, PR with the item as body; main is untouched.
+# FR-10.1: gates, archive on the branch, push, PR; main is untouched. FR-54.1: the body points at
+# the item file instead of copying it.
 main_before=$(git rev-parse main)
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'PR opened for item 1: https://github.test/pr/1'
 assert_eq "$(cat "$T/gh/title.1")" 'feature(1): Faster search'
-assert_eq "$(cat "$T/gh/body.1")" "$(cat specs/archive/1-faster-search/item.md)"
+assert_eq "$(cat "$T/gh/body.1")" 'Item 1 (feature): Faster search
+
+The plan, its requirements and the build notes: `specs/archive/1-faster-search/item.md` on this branch.'
 assert_eq "$(git --git-dir="$T/origin.git" rev-parse feature/1-faster-search)" "$(git rev-parse HEAD)"
 assert_eq "$(git rev-parse main)" "$main_before" "(main moves only when the PR merges)"
 
@@ -123,6 +126,7 @@ out=$(sdd ship 2>&1) || fail "second ship failed: $out"
 assert_contains "$out" 'pushed new commits to PR #1'
 assert_eq "$(git --git-dir="$T/origin.git" rev-parse feature/1-faster-search)" "$(git rev-parse HEAD)"
 assert_eq "$(wc -l <"$T/gh/prs" | tr -d ' ')" 1
+assert_eq "$(grep -c 'pr edit' "$T/gh/log")" 0 "(FR-54.2: the body is left alone)"
 
 # FR-10.3: shipped again with nothing new: merged with a merge commit, base updated, branches gone.
 out=$(sdd ship 2>&1) || fail "merge failed: $out"

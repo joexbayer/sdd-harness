@@ -111,11 +111,14 @@ pr_push() {
 	git push -q -u "$remote" "$BRANCH" || fail "could not push $BRANCH to $remote" # C-4: ship (forge)
 	pr_line=$(forge_pr_state "$BRANCH") || die "pushed, but $FORGE_NAME did not answer; run $CMD ship again"
 	if [ "$(printf '%s\n' "$pr_line" | cut -f3)" = OPEN ]; then
-		pr_num=$(printf '%s\n' "$pr_line" | cut -f2)
-		forge_pr_edit "$pr_num" "$IFILE" || die "pushed, but could not update the body of PR #$pr_num"
-		echo "✓ $1 PR #$pr_num: $(printf '%s\n' "$pr_line" | cut -f6)"
+		# FR-54.2: the body only points at the item file, so new commits leave it as it is.
+		echo "✓ $1 PR #$(printf '%s\n' "$pr_line" | cut -f2): $(printf '%s\n' "$pr_line" | cut -f6)"
 	else
-		pr_url=$(forge_pr_create "$BRANCH" "$base" "$ITYPE($ID): $title" "$IFILE") ||
+		# FR-54.1: the body points at the item file; a copy would go stale and outgrow the forge.
+		pr_body="Item $ID ($ITYPE): $title
+
+The plan, its requirements and the build notes: \`$IFILE\` on this branch."
+		pr_url=$(forge_pr_create "$BRANCH" "$base" "$ITYPE($ID): $title" "$pr_body") ||
 			die "pushed $BRANCH, but could not open the PR; run $CMD ship again"
 		echo "✓ PR opened for item $ID: $pr_url"
 	fi
