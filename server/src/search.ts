@@ -19,12 +19,13 @@ export async function search(ix: RepoIndex, q: { query: string; repo?: string; l
   for (const name of q.repo ? [q.repo] : [...ix.names()].sort()) {
     const s = ix.snapshot(name);
     if (!s || s.gen === 0) continue;
-    // Item branches first (by id), then the base: a line on both is reported once, from the item.
+    // The base first, then item branches (by id): a line on both is reported once, from the base,
+    // so an item branch is named only for lines it added or changed (FR-53.32).
     const refs: { git: string; ref: string; item: number | null }[] = s.rows
       .filter((r) => r.status === "open" && r.branch !== "" && (r.source === "remote" || r.source === "local"))
       .sort((a, b) => a.id - b.id)
       .map((r) => ({ git: r.source === "remote" ? `refs/remotes/${r.branch}` : `refs/heads/${r.branch}`, ref: r.branch, item: r.id }));
-    refs.push({ git: `refs/heads/${s.base}`, ref: s.base, item: null });
+    refs.unshift({ git: `refs/heads/${s.base}`, ref: s.base, item: null });
     const left = budgetMs - (Date.now() - t0);
     if (left <= 0) { truncated = true; break; }
     const r = await run("git", ["grep", "-n", "-I", "-i", "-F", "-z", "--no-textconv", "-e", q.query,

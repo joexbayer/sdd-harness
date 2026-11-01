@@ -77,10 +77,10 @@ test("FR-53.31 search stops at the limit or the time budget and says truncated",
   assert.equal((await search(ix, { query: "the line" }, 0)).truncated, true);
 });
 
-// FR-53.32: a line on the base and on an item branch is one match, from the item branch.
-test("FR-53.32 a line on the base and an item branch is returned once, from the item", async () => {
+// FR-53.32: a line on the base and on an item branch is one match, from the base.
+test("FR-53.32 a line on the base and an item branch is returned once, from the base", async () => {
   const out = await search(ix, { query: "old tenant decision" });
-  assert.deepEqual(out.matches, [{ repo: "api", ref: `origin/${tenants}`, item: 6, path: "specs/archive/5-old/item.md",
+  assert.deepEqual(out.matches, [{ repo: "api", ref: "main", item: null, path: "specs/archive/5-old/item.md",
     line: 8, text: "old tenant decision" }]);
 });
 
