@@ -8,13 +8,12 @@ created: 2026-11-01
 # 57 MIGRATE.md: adopting sdd in new, brownfield and Spec Kit repos
 
 ## What and why
-<!-- 1-3 lines: what changes (dependencies, config, CI, ...) and why now. No behaviour change. -->
+`MIGRATE.md` at the repo root (one page, ~80 lines): adopting sdd in a new project, a brownfield
+repo, and a Spec Kit repo, from the NarrowBot pilot's 11 problems. README's "Moving from Spec Kit"
+paragraph becomes a link to it. For the beta: the user tries sdd on new projects (2026-11-01).
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-57.4 rejects non-images and files over 5 MB -->
+none: docs only.
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
