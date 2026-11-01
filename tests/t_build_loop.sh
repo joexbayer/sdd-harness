@@ -24,10 +24,10 @@ assert_file .claude/agents/sdd-builder.md
 assert_contains "$(cat .agents/skills/sdd-build/SKILL.md)" 'Run `.sdd/bin/sdd task next`'
 assert_not_contains "$(cat .agents/skills/sdd-build/SKILL.md)" 'In Claude Code'
 
-# The loop, played: S, S, L tasks; a stub builder (sdd run builder on narrow) does what next
+# The loop, played: S, S, L tasks; a stub builder (sdd run builder on narrowbot) does what next
 # tells it: task done for each task of its batch, then one commit naming them.
 mkdir -p "$T/bin"
-cat >"$T/bin/narrow" <<'EOF'
+cat >"$T/bin/narrowbot" <<'EOF'
 #!/bin/sh
 while [ $# -gt 0 ]; do [ "$1" = -p ] && p=$2; shift; done
 ids=$(printf '%s\n' "$p" | sed -n 's/^Current batch: \([^(]*[^ (]\) (.*/\1/p; s/^Current task: \(T-[0-9.]*\) .*/\1/p')
@@ -36,8 +36,8 @@ for t in $ids; do "$SH" "$SRC/.sdd/bin/sdd" task done "$t" >/dev/null 2>&1 || { 
 git add -A && git commit -qm "feat(1): $ids work"
 echo '{"type":"finish","exit":0,"verdict":"passed","tokens":{"in":10,"out":1}}'
 EOF
-chmod +x "$T/bin/narrow"
-setcfg tier.small.agent narrow && setcfg tier.small.model m
+chmod +x "$T/bin/narrowbot"
+setcfg tier.small.agent narrowbot && setcfg tier.small.model m
 sdd new feature "Loop" >/dev/null 2>&1
 f=specs/changes/1-loop/item.md
 fill "$f" plan

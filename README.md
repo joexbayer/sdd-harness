@@ -161,7 +161,7 @@ An agent reads the `AGENTS.md` block, runs `.sdd/bin/sdd next` and follows it. W
   click, however the agent spells the command.
 
 **Roles and models.** The team names roles in `.sdd/config` (`[role "builder"] tier = small`);
-each developer says which agent and model a tier means for them (`[tier "small"] agent = narrow,
+each developer says which agent and model a tier means for them (`[tier "small"] agent = narrowbot,
 model = qwen3-coder-30b` in `~/.config/sdd/config`). Ask your agent to "run the builder on
 item 16": a role on a Claude model runs as a subagent (`sync claude` writes them), any other
 through `sdd run builder 16`. A builder run does tasks only: with no task open it is refused,

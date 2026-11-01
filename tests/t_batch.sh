@@ -74,16 +74,16 @@ assert_contains "$out" 'serves  FR-2.1 WHEN x THE SYSTEM SHALL y.'
 assert_contains "$out" 'e.g. feat(2): T-2.1 T-2.2 T-2.3 Small 1; Small 2; Small 3'
 # FR-17.3: sdd run builder (item 16) runs on that batch: its prompt is next's, its log names it.
 mkdir -p "$T/bin" "$T/stub"
-cat >"$T/bin/narrow" <<'EOF'
+cat >"$T/bin/narrowbot" <<'EOF'
 #!/bin/sh
-while [ $# -gt 0 ]; do [ "$1" = -p ] && printf '%s\n' "$2" >"$STUB/narrow.prompt"; shift; done
+while [ $# -gt 0 ]; do [ "$1" = -p ] && printf '%s\n' "$2" >"$STUB/narrowbot.prompt"; shift; done
 echo '{"type":"finish","exit":0,"verdict":"passed","tokens":{"in":1000,"out":100}}'
 EOF
-chmod +x "$T/bin/narrow"
-setcfg role.builder.tier small && setcfg tier.small.agent narrow && setcfg tier.small.model m
+chmod +x "$T/bin/narrowbot"
+setcfg role.builder.tier small && setcfg tier.small.agent narrowbot && setcfg tier.small.model m
 out=$(export PATH="$T/bin:$PATH" STUB="$T/stub"; sdd run builder 2 2>&1) || fail "run failed: $out"
 assert_contains "$out" 'item 2 T-2.1 T-2.2 T-2.3 · started'
-assert_contains "$(cat "$T/stub/narrow.prompt")" 'Current batch: T-2.1 T-2.2 T-2.3'
+assert_contains "$(cat "$T/stub/narrowbot.prompt")" 'Current batch: T-2.1 T-2.2 T-2.3'
 # FR-31.1: the stub ticked nothing; the run ticked the batch and left the commit to us.
 assert_contains "$out" 'ticked 3 of 3 · commit with: feat(2): T-2.1 T-2.2 T-2.3'
 git commit -qam "feat(2): T-2.1 T-2.2 T-2.3"

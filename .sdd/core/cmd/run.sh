@@ -20,7 +20,7 @@ model=$(tier_get "$tier" model)
 [ -n "$agent" ] && [ -n "$model" ] ||
 	usage_die "tier $tier has no agent or model; add to $(user_config) (yours) or $DIRNAME/config:
 [tier \"$tier\"]
-	agent = <claude|narrow>
+	agent = <claude|narrowbot>
 	model = <model name>"
 tier_ok "$agent" "$model" || usage_die "tier $tier: agent must be a word and model a name without spaces or quotes (got: $agent, $model)"
 args=$(tier_get "$tier" args)

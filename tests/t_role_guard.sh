@@ -4,11 +4,11 @@
 . "$SRC/tests/lib.sh"
 new_repo
 setcfg usage.track true
-setcfg role.builder.tier small && setcfg tier.small.agent narrow && setcfg tier.small.model m
+setcfg role.builder.tier small && setcfg tier.small.agent narrowbot && setcfg tier.small.model m
 
 # A careless builder: it tries every human-only verb (item 17's trial chained ship after a commit).
 mkdir -p "$T/bin" "$T/stub"
-cat >"$T/bin/narrow" <<'EOF'
+cat >"$T/bin/narrowbot" <<'EOF'
 #!/bin/sh
 echo "${SDD_RUN:-}" >"$STUB/run"
 for v in approve ship tidy; do
@@ -20,7 +20,7 @@ for v in approve ship tidy; do
 done
 echo '{"type":"finish","exit":0,"verdict":"passed","tokens":{"in":10,"out":1}}'
 EOF
-chmod +x "$T/bin/narrow"
+chmod +x "$T/bin/narrowbot"
 
 sdd new feature "Guard" >/dev/null 2>&1
 f=specs/changes/1-guard/item.md
@@ -85,7 +85,7 @@ assert_contains "$out" 'tidy --remote`: they are the human'"'"'s.'
 
 # FR-21.4: the run above logged the batch "T-1.1 T-1.2"; with a one-task row the columns line up.
 log=$(git rev-parse --git-common-dir)/sdd/runs.tsv
-printf '9\tt\t1\tbuilder\tnarrow\tm\tbuild\tT-1.3\t5000\t500\t\t10\t0\tpassed\n' >>"$log"
+printf '9\tt\t1\tbuilder\tnarrowbot\tm\tbuild\tT-1.3\t5000\t500\t\t10\t0\tpassed\n' >>"$log"
 out=$(sdd usage 1)
 assert_contains "$out" "$(printf '%-6s %-10s %-11s %5s' item role task runs)"
 assert_contains "$out" "$(printf '%-6s %-10s %-11s %5d' 1 builder 'T-1.1 T-1.2' 1)"

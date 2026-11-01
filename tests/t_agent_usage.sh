@@ -1,5 +1,5 @@
 # FR-16.5 reading tokens, cost and verdict from each agent's output: claude -p's result line,
-# a Claude Code subagent transcript (each message once), and narrow's finish event.
+# a Claude Code subagent transcript (each message once), and narrowbot's finish event.
 . "$SRC/tests/lib.sh"
 # use <agent> <function> <args>: call an adapter function, as sdd itself loads it.
 # shellcheck disable=SC1090,SC2034 # the adapter is chosen per call; SDD_HOME is read by common.sh
@@ -27,9 +27,9 @@ cat >"$T/agent.jsonl" <<'EOF'
 EOF
 assert_eq "$(use claude agent_transcript_usage "$T/agent.jsonl")" "1015${tab}47${tab}claude-opus-5-5"
 
-# narrow --json: the finish event (cost only when priced).
-printf '%s\n' '{"type":"start","model":"qwen3-coder-30b"}' '{"type":"finish","exit":0,"verdict":"passed","result":"Done.","end_reason":"","tokens":{"in":812,"out":40},"time":"t"}' >"$T/narrow.jsonl"
-assert_eq "$(use narrow agent_usage "$T/narrow.jsonl")" "812${tab}40${tab}${tab}passed"
+# narrowbot --json: the finish event (cost only when priced).
+printf '%s\n' '{"type":"start","model":"qwen3-coder-30b"}' '{"type":"finish","exit":0,"verdict":"passed","result":"Done.","end_reason":"","tokens":{"in":812,"out":40},"time":"t"}' >"$T/narrowbot.jsonl"
+assert_eq "$(use narrowbot agent_usage "$T/narrowbot.jsonl")" "812${tab}40${tab}${tab}passed"
 printf '%s\n' '{"type":"finish","exit":1,"verdict":"failing","tokens":{"in":5,"out":6},"cost":0.002}' >"$T/narrow2.jsonl"
-assert_eq "$(use narrow agent_usage "$T/narrow2.jsonl")" "5${tab}6${tab}0.002${tab}failing"
+assert_eq "$(use narrowbot agent_usage "$T/narrow2.jsonl")" "5${tab}6${tab}0.002${tab}failing"
 exit 0
