@@ -2,6 +2,7 @@
 # change, or no docs glob runs both; FR-48.3 code alone is a valid check, and is checked for masking.
 . "$SRC/tests/lib.sh"
 new_repo
+echo 'echo app' >app.sh && git add app.sh && git commit -qm app
 setcfg check.code 'echo CODE-RAN'
 setcfg --add check.docs '*.md'
 setcfg --add check.docs 'docs/*'
@@ -23,6 +24,12 @@ out=$(sdd check 2>&1) || fail "check failed: $out"
 assert_not_contains "$out" 'docs-only change'
 assert_contains "$(log "$id")" 'CODE-RAN'
 rm notes.md.txt
+
+# FR-48.2: moving code into a docs path is a code change (its old path counts too).
+mkdir -p docs && git mv app.sh docs/app.md
+out=$(sdd check 2>&1) || fail "check failed: $out"
+assert_not_contains "$out" 'docs-only change'
+git mv docs/app.md app.sh
 
 # FR-48.2: on the base, nothing changed: everything runs.
 git checkout -q README.md && rm -r docs

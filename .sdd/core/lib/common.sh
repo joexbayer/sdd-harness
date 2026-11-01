@@ -667,9 +667,10 @@ code_changed() {
 changed_paths() {
 	_b=$(cfg sdd.base main)
 	{
-		git -C "$ROOT" diff --name-only --merge-base "$_b" 2>/dev/null || {
+		# --no-renames: a rename lists its old path too (src/a.go → docs/a.md is not docs-only).
+		git -C "$ROOT" diff --name-only --no-renames --merge-base "$_b" 2>/dev/null || {
 			_mb=$(git -C "$ROOT" merge-base "$_b" HEAD 2>/dev/null) || _mb=HEAD
-			git -C "$ROOT" diff --name-only "$_mb"
+			git -C "$ROOT" diff --name-only --no-renames "$_mb"
 		}
 		git -C "$ROOT" ls-files --others --exclude-standard
 	} | grep -v "^$SPECS/" | sort -u
