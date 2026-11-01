@@ -2,9 +2,10 @@
 id: 50
 type: refactor
 title: Follow narrow's rename to NarrowBot
-status: open
+status: shipped
 created: 2026-11-01
 approved: 61d8812298aabb1a95f5117c625a085b80c21c12 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 50 Follow narrow's rename to NarrowBot
 
