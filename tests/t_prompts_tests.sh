@@ -22,10 +22,13 @@ assert_contains "$out" 'Cases that share one rule share one FR'
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
 [ "$w" -le 750 ] || fail "plan step is $w words (ceiling 750)"
 # One phrase per rule (D-55.1): FR-35.3 test rules, FR-36.6 by: planner, FR-39.3 shared names,
-# FR-41.1 the approval ask, FR-42.1 a setup that tells the rules apart.
+# FR-41.1 the approval ask, FR-42.1 a setup that tells the rules apart; FR-20.3 subtract before
+# adding, FR-20.5 probe before asking (were t_discipline.sh).
 for p in 'so keep it fast' 'mark deep tests so check.run' 'make cost settings minimal in tests' \
 	"asserts its FR's example" 'can be `by: planner`' 'pinned by a test in the task that first defines them' \
-	'a command on its own' 'ASCII' 'Only after a yes in' 'never chained to other commands' 'a plausible wrong rule'; do
+	'a command on its own' 'ASCII' 'Only after a yes in' 'never chained to other commands' 'a plausible wrong rule' \
+	'Subtract before you add' 'had the requirement been there from the start' \
+	'Before writing a question for the human, check whether running something'; do
 	assert_contains "$out" "$p"
 done
 
@@ -35,9 +38,11 @@ planned_item fix "Retry"
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: build'
 # One phrase per rule: FR-42.2 the verifier hand-off, FR-51.1 the review hand-off names the skill,
-# FR-35.4 test rules, FR-55.5 duplicates may go; FR-55.7 a loose word ceiling.
+# FR-35.4 test rules, FR-55.5 duplicates may go, FR-20.1 stop after two failed fixes, FR-20.2
+# tests check behaviour (were t_discipline.sh); FR-55.7 a loose word ceiling.
 for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review: `/sdd-review`' \
 	'still pass if every function returned nothing' 'never from the code under test' \
+	'After two fixes resting on the same assumption fail' \
 	'Write just enough code to pass the test' 'extend an existing test'; do
 	assert_contains "$out" "$p"
 done

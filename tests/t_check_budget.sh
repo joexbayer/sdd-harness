@@ -22,10 +22,12 @@ s=$(sed -n 's/^secs=//p' "$(git rev-parse --git-path sdd/checks/"$id")")
 assert_contains "$out" "($s s)"
 assert_contains "$out" "⚠ the check took $s s (budget 1 s): keep the gate fast. Slow tests (end-to-end, real hash cost, sleeps, network) belong to their task's test: mark them and leave them out of check.run; make cost settings (hash rounds, timeouts) configurable and minimal in tests, with one test on the real values"
 
-# FR-35.2: budget 0 turns the warning off.
+# FR-35.2: budget 0 turns the warning off, on the same slow check.
 setcfg check.budget 0
 out=$(sdd check 2>&1) || fail "check failed: $out"
 assert_not_contains "$out" '⚠ the check took'
+# The sleep has made its point: drop it (item 56).
+setcfg --unset check.run '^sleep 2$'
 
 # FR-35.1: a failing check shows its time too.
 setcfg --add check.run 'false'

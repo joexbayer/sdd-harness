@@ -127,7 +127,8 @@ assert_eq "$(tail -n 1 "$log" | cut -f4,13)" "$(printf 'builder\t3')"
 assert_contains "$out" 'ticked 1 of 1 · commit with: feat(1): T-1.3 Sort it'   # FR-31.1, after exit 3
 git commit -qam "feat(1): T-1.3 Sort it"
 out=$( (export NARROWBOT_RC=4; sdd run builder 1) 2>&1)
-assert_eq $? 1 "(narrowbot exit 4)"
+# Item 56: this once gave exit 2 under load (not reproduced in 40 runs); show what sdd said.
+assert_eq $? 1 "(narrowbot exit 4; sdd said: $out)"
 assert_contains "$out" 'the agent exited 4'
 assert_not_contains "$out" 'could not verify'
 grep -q '^- \[ \] T-1.4 ' "$ITEM" || fail "a failed run ticked T-1.4"   # FR-31.1: exit not accepted
