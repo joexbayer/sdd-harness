@@ -44,12 +44,13 @@ git checkout -q -- .sdd/core/lib/common.sh
 tgz="$T/sdd-server-0.1.0.tgz"
 [ -f "$tgz" ] || fail "no $tgz"
 [ ! -e server/sdd ] || fail "postpack left server/sdd behind"
+[ ! -e server/LICENSE ] || fail "postpack left server/LICENSE behind"
 top=$(tar -tzf "$tgz" | sed 's|^package/||; s|/.*||' | sort -u | paste -sd ' ' -)
 allowed=" dist sdd package.json npm-shrinkwrap.json README.md LICENSE "
 for f in $top; do
 	case $allowed in *" $f "*) ;; *) fail "unexpected $f in the package ($top)" ;; esac
 done
-for f in dist sdd package.json npm-shrinkwrap.json; do
+for f in dist sdd package.json npm-shrinkwrap.json LICENSE; do
 	case " $top " in *" $f "*) ;; *) fail "the package lacks $f ($top)" ;; esac
 done
 tar -tzf "$tgz" | grep -qx 'package/dist/src/cli.js' || fail "no dist/src/cli.js in the package"

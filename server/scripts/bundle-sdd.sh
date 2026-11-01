@@ -19,5 +19,6 @@ fi
 rm -rf "$server/sdd"
 mkdir "$server/sdd"
 cp -R "$src/bin" "$src/core" "$server/sdd/"
+cp "$repo/LICENSE" "$server/LICENSE"
 printf '%s (%s)\n' "$(cat "$src/VERSION")" "$(git -C "$repo" rev-parse --short=12 HEAD)" >"$server/sdd/VERSION"
 echo "prepack: bundled sdd $(cat "$server/sdd/VERSION")"

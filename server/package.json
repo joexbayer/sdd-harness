@@ -2,6 +2,7 @@
   "name": "sdd-server",
   "version": "0.1.0",
   "description": "Team coordination for sdd over MCP: every open item, across repos and unmerged branches, for your agents",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "sdd-server": "dist/src/cli.js"
@@ -12,7 +13,8 @@
   "files": [
     "dist",
     "sdd",
-    "npm-shrinkwrap.json"
+    "npm-shrinkwrap.json",
+    "LICENSE"
   ],
   "repository": {
     "type": "git",
@@ -23,7 +25,7 @@
     "build": "tsc -p .",
     "test": "node --test 'test/*.test.ts'",
     "prepack": "npm run build && sh scripts/bundle-sdd.sh",
-    "postpack": "rm -rf sdd"
+    "postpack": "rm -rf sdd LICENSE"
   },
   "dependencies": {
     "@modelcontextprotocol/node": "2.1.2",
