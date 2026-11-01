@@ -2,9 +2,10 @@
 id: 47
 type: fix
 title: Review counts FR names only in the item's files
-status: open
+status: shipped
 created: 2026-11-01
 approved: c824cd5a54c5f4a6adce6cd48551b920cfee914f 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 47 Review counts FR names only in the item's files
 
