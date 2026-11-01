@@ -4,7 +4,7 @@ type: feature
 title: Lean prompts: brief, big questions first, chat reviews, fewer tests
 status: open
 created: 2026-11-01
-approved: 4b542e66a25342f3ecdd1dd5e5cc82946be44434 2026-11-01 joexbayer
+approved: 4b735705e844a233c8c343f8ad3295e39c793b9c 2026-11-01 joexbayer
 ---
 # 55 Lean prompts: brief, big questions first, chat reviews, fewer tests
 
@@ -43,9 +43,10 @@ FR-55.6 WHEN the verifier checks an FR THE SYSTEM SHALL tell it to undo that FR'
 run its test, and report the FR unproven if the test still passes; and to report tests that repeat
 another test's case.
   e.g. the synced verifier agent contains "undo that FR's code in a scratch copy"
-FR-55.7 WHEN `sdd next` prints the plan or build step THE SYSTEM SHALL use at most 600 words (plan) and
-550 words (build), counted with `wc -w` in a fresh repo.
-  e.g. plan step today ~898 words → at most 600
+FR-55.7 WHEN `sdd next` prints the plan or build step THE SYSTEM SHALL stay under a loose ceiling of
+750 words (plan) and 700 words (build), counted with `wc -w` in a fresh repo: it catches bloat, not
+useful lines (amended 2026-11-01, the user's choice: "goal is a good product").
+  e.g. plan step today ~898 words → under 750
 
 ## Not in scope (optional)
 - The test suite itself (wording checks, gate speed, merged files): item 56.
