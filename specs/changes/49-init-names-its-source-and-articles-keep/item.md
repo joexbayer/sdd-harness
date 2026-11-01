@@ -77,8 +77,23 @@ none: extra warnings and a stamp in VERSION; read-only git calls on the source; 
 Fails now: VERSION is plain, no warnings, the second rule line is missing.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-49.1: `source_stamp` at `.sdd/core/cmd/init.sh:8-23`, called before each copy (install
+  `:27`, update `:36`); the stamp is written to the installed VERSION after the copy (`:29`,
+  `:39`). Proven by `tests/t_init.sh:107-116` (a source repo built in the test: VERSION and the
+  "installed" line carry its commit).
+- FR-49.2: same function, `git status --porcelain` on the source folder. `tests/t_init.sh:118-124`.
+- FR-49.3: same function, branch against the source's `sdd.base`. `tests/t_init.sh:126-131`.
+- FR-49.4: `rev-parse` fails outside a checkout and the plain version stays.
+  `tests/t_init.sh:133-138`.
+- FR-49.5: `articles()` at `.sdd/core/lib/common.sh:1613-1614`. Proven by
+  `tests/t_constitution.sh:144-151` (two-line rule whole in next and review). sdd's own C-1 now
+  shows whole in `sdd next`.
+- Security pass (the fresh verifier, Sonnet, read the diff for it): no findings; only read-only git
+  calls on the source, and the one write is the installed `.sdd/VERSION`.
+- Follow-up (noted by the verifier): the update path's stamp has no assertion of its own; it is
+  the same `source_stamp` and the same two lines as install.
+- Check: `sdd check` passed (130 s).
+Verified by: claude-sonnet-5-5: 5 of 5 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
