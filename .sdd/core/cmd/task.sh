@@ -162,4 +162,6 @@ T=$tid awk '
 echo "$tid" >>"$record"
 case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
 printf '✓ %s done (%s) · commit with: %s(%s): %s %s\n' "$tid" "$how" "$kind" "$ID" "$tid" "$(tsv 3 "$row")"
+# FR-51.3: an earlier tick its commit did not name, while an amend still fixes it.
+unnamed_note
 echo "next    commit the code and $IFILE together, then: $CMD next"
