@@ -54,6 +54,7 @@ ship passes the check (FR-58.2). An untouched planner task and a builder task ed
 - FR-58.3: `review.sh` prints the lines with ⚠ under the verify line. Test: same section.
 - Must not change: the builder's own test (b.sh) edited later shows nothing (same section).
 - Check passed. Security: a stricter local gate; read-only git calls.
+Verified by: claude-sonnet-5-5: 3 of 3 FRs proven; no findings (deleted, renamed, uncommitted and teammate edits are caught)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
