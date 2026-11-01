@@ -29,8 +29,9 @@ saves little and churns history.
 ## Built
 - `tests/run.sh`: `t_perf*.sh` runs and counts only with `SDD_PERF=1` (job loop and results loop).
   Checked: without it 35 tests, with it 36 and t_perf passes.
-- `tests/t_check_budget.sh`: the `sleep 2` is dropped after the warning case (one slow check, not
-  three).
+- `tests/t_check_budget.sh`: the `sleep 2` stays for the warning and budget-0 cases, then is dropped
+  (two slow checks, not three). Verifier finding fixed: dropping it before budget 0 left FR-35.2's
+  "off" half unproven; now removing the `budget -gt 0` guard fails the test (checked).
 - `tests/t_discipline.sh` deleted; its phrases (FR-20.1, 20.3, 20.5) joined the phrase lists in
   `tests/t_prompts_tests.sh`.
 - t_run flake: 40 parallel runs (20 dash, 20 bash) passed, so not reproduced. The exit-2 paths in
@@ -39,6 +40,7 @@ saves little and churns history.
 - AGENTS.md and `.claude/skills/sdd-dev/SKILL.md` name `SDD_PERF=1 sh tests/run.sh /bin/sh` as the
   test the check leaves out.
 - Check passed under sh and dash. Security: test files only.
+Verified by: claude-sonnet-5-5: 3 of 4 invariants proven; FR-35.2 budget-0 case lost its slow check (fixed)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
