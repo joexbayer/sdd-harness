@@ -914,6 +914,22 @@ task_commit() {
 			} }'
 }
 
+# unnamed_ticks: ticked tasks whose tick is committed at HEAD but no commit subject since the base
+# names (ship refuses them). Ticks not committed yet are left out: the build commits next.
+unnamed_ticks() {
+	_head=$(git show "HEAD:$IFILE" 2>/dev/null) || return 0
+	task_rows | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r _t; do
+		printf '%s\n' "$_head" | grep -qF -- "- [x] $_t " || continue
+		[ -n "$(task_commit "$_t")" ] || echo "$_t"
+	done
+}
+
+# unnamed_note: FR-51.3's line for unnamed_ticks, or nothing.
+unnamed_note() {
+	_u=$(unnamed_ticks)
+	[ -z "$_u" ] || echo "⚠ ticked and committed, but no commit subject names them: $(joinlist "$_u"). Ship refuses this: name each task ID in a commit subject (git commit --amend while it is the last commit)."
+}
+
 # usage_on: usage tracking is switched on ([usage] track = true, yours or the project's); off by
 # default, so nothing about runs is kept unless someone asks for it.
 usage_on() { [ "$(cfg_mine usage.track false)" = true ]; }
