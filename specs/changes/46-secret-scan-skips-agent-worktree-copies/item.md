@@ -82,8 +82,22 @@ written into the repo where the human sees and commits it. No new dependency.
 Fails now: no file is written and no tip is printed.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-46.1: `.sdd/core/cmd/init.sh:76-90`, after the config block (so the upgrade rerun also
+  does it), gated on a `gitleaks ` line in `[check] run`; writes the file with a heredoc.
+  Proven by `tests/t_security.sh:74-85` (exact file text and the printed line).
+- FR-46.2: `.sdd/core/cmd/init.sh:91-92`, tip only. Proven by `tests/t_security.sh:90-95` (the
+  repo's own file unchanged, the tip printed).
+- FR-46.3: proven by `tests/t_security.sh:86-89` (second run prints neither line) and `:101` (no
+  gitleaks, no file).
+- FR-46.4: `README.md` "Your gate." bullet (no test, docs); rewrapped the bullet while there.
+- Deviation in the test setup: `new_repo` runs init with this machine's gitleaks, so it already
+  writes `.gitleaks.toml`; the gl1 and gl2 cases now remove it with `.sdd` before their own init.
+- Check: `sdd check` passed (156 s).
+- Security pass (fresh Sonnet reviewer, given only the diff): no findings. The regex is anchored
+  at the root; only a forced `git add -f` of a file inside `.claude/worktrees/` would escape the
+  scan (accepted: a worktree folder holds its own `.git`, so a plain `git add` records it as an
+  embedded repo, not its files).
+Verified by: claude-sonnet-5-5: 4 of 4 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
