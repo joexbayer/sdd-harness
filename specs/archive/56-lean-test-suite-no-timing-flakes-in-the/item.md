@@ -2,9 +2,10 @@
 id: 56
 type: refactor
 title: Lean test suite: no timing flakes in the gate, less duplicate work
-status: open
+status: shipped
 created: 2026-11-01
 approved: d27e14379becaf74f49e2262b6affe801f564f75 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 56 Lean test suite: no timing flakes in the gate, less duplicate work
 
