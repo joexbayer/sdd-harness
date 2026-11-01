@@ -17,7 +17,7 @@ facts() {
 			print "<!-- FR-" i ".9 only guidance, not a requirement -->"
 			print ""
 			print "- [x] T-" i ".1 the form"
-			print "- [ ] T-" i ".2 the session"
+			print "- [ ] T-" i ".2 the session (files: src/a.go,  src/b.go ; test: go test)"
 			print ""
 			print "D-" i ".1 Use a cookie, because \"tokens\" leak."
 			print "Q-" i ".1 Remember for how long? → recommend: 30 days"
@@ -85,6 +85,9 @@ assert_eq "$(printf '%s' "$j" | jq -r '.requirements | map(.id) | join(" ")')" '
 assert_eq "$(printf '%s' "$j" | jq -r '.decisions[0].text')" 'Use a cookie, because "tokens" leak.'
 assert_eq "$(printf '%s' "$j" | jq -r '.tasks | map(.done) | join(" ")')" 'true false'
 assert_eq "$(printf '%s' "$j" | jq -r '.questions[0].decided')" false
+# FR-53.2: a task's files: split on commas and trimmed, [] without any.
+assert_eq "$(printf '%s' "$j" | jq -c '.tasks | map(.files)')" '[[],["src/a.go","src/b.go"]]'
+
 assert_eq "$(sdd show 1 --json | jq -r '.status')" shipped
 
 # FR-53.1: two people's clones gave out id 12 (kari on feature/12-login, ola on fix/12-typo). ls

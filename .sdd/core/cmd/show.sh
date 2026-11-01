@@ -30,13 +30,18 @@ r$(printf '\t')"*) rows=$(item_rows) ;; esac
 
 if [ -n "$json" ]; then
 	# The item_row fields, then one array per fact kind, in a fixed order.
-	{ printf '%s\n' "$row"; [ -z "$facts" ] || printf '%s\n' "$facts"; } | ROWS=$rows awk -F '\t' "$AWK_JSON$AWK_ENTRY$AWK_DEPS"'
+	{ printf '%s\n' "$row"; [ -z "$facts" ] || printf '%s\n' "$facts"; } | ROWS=$rows awk -F '\t' "$AWK_JSON$AWK_ENTRY$AWK_DEPS$AWK_TASK"'
 	BEGIN { deps_load() }
 	NR == 1 { head = row_json(); next }
 	{
 		e = "{\"id\":\"" esc($2) "\",\"text\":\"" esc($4) "\""
 		if ($1 == "fr" || $1 == "us") e = e ",\"example\":\"" esc($5) "\""
-		if ($1 == "task") e = e ",\"done\":" ($3 == "done" ? "true" : "false")
+		if ($1 == "task") {
+			# FR-53.2: its files: as task done reads them (task_row), split on commas and trimmed.
+			split(task_row($2, $3, $4), tr, "\t"); m = split(tr[4], a, ","); fs = ""
+			for (j = 1; j <= m; j++) { gsub(/^[ \t]+|[ \t]+$/, "", a[j]); if (a[j] != "") fs = fs (fs == "" ? "" : ",") "\"" esc(a[j]) "\"" }
+			e = e ",\"done\":" ($3 == "done" ? "true" : "false") ",\"files\":[" fs "]"
+		}
 		if ($1 == "q") e = e ",\"decided\":" ($3 == "decided" ? "true" : "false")
 		if ($1 == "r") {
 			split(entry_row($2, $4), x, "\t"); m = split(x[4], a, " "); af = ""
