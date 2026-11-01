@@ -91,7 +91,14 @@ none: prompt text only; the security rules in build.md stay word for word.
 - Cut on purpose: "a list endpoint gets a test that counts its queries" (web-only; teams add it
   in `plan.append.md`).
 - Flaky, for item 56: `t_run.sh` failed once under load (exit 2 for 1), then passed 4 of 4.
+- Verifier findings fixed: finish.md's security-pass scope restored (what to look for; skip DoS
+  and theory); plan.md again names `expect: fail "<text>"`, the S/M/L meaning and "precise enough
+  to build later"; build.md again says "if one is wrong, say so" and "the way its user does";
+  README has the query-count example for `plan.append.md`; the two weak FR-55.5 checks now match
+  "share one FR" and "may be deleted" (both mutations now fail the test); "never send the human
+  to read a file" is one line everywhere, and the tests match it whole.
 - Check passed.
+Verified by: claude-sonnet-5-5: 5 of 7 FRs proven; FR-55.5 half-proven and FR-55.3 in meaning only (both fixed: tests now match whole phrases), finish.md security scope dropped (restored)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

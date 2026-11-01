@@ -12,15 +12,17 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
   `→ decided: <answer> (<who>, <date>)`. Choices a reviewer would question go in as D-{{id}}.n
   with the reason. Never guess the human's answer.
 - Fill every section above "## Built". Requirements: `FR-{{id}}.1 WHEN <trigger> THE SYSTEM SHALL
-  <response>`, each with an "e.g." example; never renumber. Cases that share one rule share one
-  FR, one example per case.
+  <response>`, each with an "e.g." example; never renumber.
+  Cases that share one rule share one FR, one example per case.
 - Security: go through the questions in "## Security" with the human; each mitigation is an FR
   whose example is the attack and the refusal. Name each new dependency and why; check that it
   exists in the official registry under exactly that name and is maintained. Prefer the framework's own auth,
   escaping and crypto.
 - End the plan with small, ordered tasks under "## Tasks", each naming its files, FRs,
   `size: S|M|L` and a test that can pass before later tasks exist (new, or extending an
-  existing one). An `expect: fail` task only writes the failing test; its code is the next task. A
+  existing one). An `expect: fail` task (or `expect: fail "<text>"`, the text its red run must print) only
+  writes the failing test; its code is the next task. Sizes: S a few lines, M a sitting, L a big
+  one; consecutive S tasks share a builder. A
   test-first task can be `by: planner`: the planner writes the test, the builder makes it pass. The
   builder may be a small model that sees only its batch: say what it needs to know.
 {{max-size}}
@@ -33,6 +35,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
 - Before approval, check the plan for gaps: scope edges, errors and edge cases, data and state,
   speed, several developers at once, and security. Ask the human about each gap you find, then run
   `{{cmd}} analyze` and fix what it lists.
+- Make the plan precise enough to build later without asking: approach, files, how each FR is proven.
 - One item is one spec; split into a roadmap only for parts that ship separately.
 
 When the plan is complete, present it in chat, short and plain (never send the human to read a

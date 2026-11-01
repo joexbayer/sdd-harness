@@ -18,7 +18,7 @@ assert_contains "$out" 'Phase: plan'
 assert_contains "$out" 'Critical parts'
 assert_contains "$out" 'Assumptions to check'
 assert_contains "$out" 'load-bearing questions first'
-assert_contains "$out" 'share one'
+assert_contains "$out" 'Cases that share one rule share one FR'
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
 [ "$w" -le 750 ] || fail "plan step is $w words (ceiling 750)"
 # One phrase per rule (D-55.1): FR-35.3 test rules, FR-36.6 by: planner, FR-39.3 shared names,
@@ -41,7 +41,7 @@ for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review
 	'Write just enough code to pass the test' 'extend an existing test'; do
 	assert_contains "$out" "$p"
 done
-assert_contains "$out" "a test that only repeats another's case may"
+assert_contains "$out" "A test that only repeats another's case may be deleted"
 assert_not_contains "$out" 'so keep it fast'
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
 [ "$w" -le 700 ] || fail "build step is $w words (ceiling 700)"
@@ -66,10 +66,10 @@ out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: review'
 assert_contains "$out" 'they run `/sdd-ship` (or `.sdd/bin/sdd ship`)'
 # FR-55.3: the review is presented in chat; the human never opens a file.
-assert_contains "$out" 'present it in chat, short and plain; never send the human to read a'
-assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'present it in chat, short and plain; never send the human to read a'
+assert_contains "$out" 'never send the human to read a file'
+assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'never send the human to read a file'
 # FR-55.4: the AGENTS.md block says be brief.
-assert_contains "$(cat AGENTS.md)" '- Be brief: short plain words, only what is needed, in chat and in files. Never send the human to'
+assert_contains "$(cat AGENTS.md)" 'Never send the human to read a file: summarise it in chat with an example.'
 # FR-51.2: the AGENTS.md block init writes.
 assert_contains "$(cat AGENTS.md)" '- Handing the human a step: name its skill (`/sdd-new`, `/sdd-review`, `/sdd-ship`) when this
   agent has them (`.sdd/bin/sdd sync <agent>`), with the command as fallback.'

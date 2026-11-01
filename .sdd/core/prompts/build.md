@@ -15,10 +15,11 @@ done, without questions. Be brief.
   - Do not change CI workflows, agent config, AGENTS.md or the folder holding `{{cmd}}`
     unless the plan says so, and never disable a check or scanner to get green.
 - Every FR gets a test that names it (`// FR-{{id}}.1`); extend an existing test when it
-  covers the case. Never weaken or skip a test to pass; a test that only repeats another's case may
-  be deleted, listed under "## Built".
-- If a test would still pass if every function returned nothing, or fail after a change that keeps
-  the behaviour, rewrite it. Expected values come from
+  covers the case. Never weaken or skip a test to pass; if one is wrong, say so under "## Built".
+  A test that only repeats another's case may be deleted, listed under "## Built".
+- A test calls the code the way its user does. If it would
+  still pass if every function returned nothing, or fail after a change that keeps the behaviour,
+  rewrite it. Expected values come from
   the FR's example, never from the code under test.
 - Write just enough code to pass the test: no abstractions, options or defensive code nothing
   asked for.
