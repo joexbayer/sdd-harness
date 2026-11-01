@@ -77,8 +77,27 @@ none: text in prompts and AGENTS.md, and a read-only warning from git log and th
 - [x] T-51.2 Unnamed task commits show early, FR-51.3, FR-51.4 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh, .sdd/core/cmd/review.sh, tests/t_task.sh; test: SRC=$PWD SH=dash dash tests/t_task.sh; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-51.1: `prompts/finish.md` (ready for review), `prompts/review.md` and `prompts/pr.md`
+  (ship), `agents/skills/build.md` (end) name `/{{name}}-review` or `/{{name}}-ship` with the
+  command as fallback. Proven by `tests/t_prompts_tests.sh` (build-phase next, the synced build
+  skill, review-phase next).
+- FR-51.2: `.sdd/core/cmd/init.sh` AGENTS.md block, the new line after "Only the human approves".
+  `tests/t_prompts_tests.sh` (the AGENTS.md init wrote).
+- FR-51.3, FR-51.4: `unnamed_ticks` and `unnamed_note` in `.sdd/core/lib/common.sh`, called in
+  `.sdd/core/cmd/task.sh` (after the tick) and `.sdd/core/cmd/review.sh` (after the verify line).
+  Proven by `tests/t_task.sh` (review lists T-1.2 committed under "docs(1): built", not T-1.1;
+  the next `task done` lists the earlier tick committed as "feat(1): the batch", not the tick it
+  just made).
+- Deviation 1: the warning is in `task done`, not `next`. `next` has a budget of 2 git calls
+  (`tests/t_gitcalls.sh`, item 23) and the check needs more; `task done` runs right after each
+  batch's commit, which is what NarrowBot first suggested. The plan named next.
+- Deviation 2: the warning ends "(amend that commit while it is the last one)", not "(git commit
+  --amend …)": C-4's check (`tests/constitution/c4-commits.sh`) counts any `git commit` text in
+  `common.sh` as a verb that commits. Follow-up: that check could drop quoted text the way its push
+  check does (an amendment).
+- Process note: cbf2242 was committed while the check was failing (on the git-call budget); the
+  next commit 3aaad48 fixed it and the check passed on it.
+- Check: `sdd check` passed (144 s).
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

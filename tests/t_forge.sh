@@ -101,6 +101,8 @@ assert_not_contains "$(sdd ls)" 'PR #1'
 assert_eq "$(sdd ls --pr --json | jq -r 'select(.id == 1) | "\(.pr.number) \(.pr.state) \(.pr.ci)"')" '1 OPEN passing'
 assert_contains "$(sdd review)" 'pr      PR #1 open'
 assert_contains "$(sdd summary --md)" 'in a pull request, waiting to merge'
+# FR-51.1: the pr step's ship hand-off names the skill, with the command as fallback.
+assert_contains "$(sdd next 2>&1)" 'they run `/sdd-ship` (or `.sdd/bin/sdd ship`) again once CI passes'
 
 # FR-10.4: no merge while CI is pending or failing.
 echo "pending: test" >"$T/gh/ci"
