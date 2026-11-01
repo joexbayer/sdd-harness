@@ -1,0 +1,17 @@
+services:
+  sdd-server:
+    build: { context: ., args: { SDD_SERVER_VERSION: "0.1.0" } }
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    volumes:
+      - sdd-data:/data
+      - ./sdd-server.conf:/etc/sdd-server/config:ro
+      - ./known_hosts:/etc/sdd-server/known_hosts:ro
+      - ./keys:/etc/sdd-server/keys:ro
+  caddy:
+    image: caddy:2.11
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile:ro, caddy-data:/data]
+volumes: { sdd-data: {}, caddy-data: {} }

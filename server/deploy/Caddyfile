@@ -1,0 +1,3 @@
+sdd.example.com {
+	reverse_proxy sdd-server:8080
+}
