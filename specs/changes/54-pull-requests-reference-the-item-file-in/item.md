@@ -46,8 +46,13 @@ the item file); after FR-10.2's second ship, the stub gh's log has no `pr edit` 
 `pr create` takes `--body`.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-54.1: `.sdd/core/cmd/ship.sh` `pr_push` builds the two-line body; `forge_pr_create` passes
+  `--body`. Test: `tests/t_forge.sh` (body is exactly the two lines).
+- FR-54.2: the body-edit branch and `forge_pr_edit` are gone; the stub gh has no `pr edit` case,
+  so a call would fail. Test: `tests/t_forge.sh` (no `pr edit` in the log after the second ship).
+- `specs/design.md` §11 wording updated.
+- Check passed (132 s). Security: less text to the forge; no new input.
+Verified by: claude-sonnet-5-5: 2 of 2 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
