@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // sdd-server: serve | token | check | health | version. The one module that wires the others.
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tokenLines } from "./auth.ts";
@@ -10,8 +10,10 @@ import { now, poll, RepoIndex } from "./repo-index.ts";
 
 const DEFAULT_CONFIG = "/etc/sdd-server/config";
 const USAGE = `usage: sdd-server serve [--config <file>]
+       sdd-server check [--config <file>] [--offline]
        sdd-server token <name>
        sdd-server health [--config <file>]
+       sdd-server version
 (the config defaults to ${DEFAULT_CONFIG})`;
 
 function packageRoot(): string {
@@ -73,11 +75,45 @@ async function health(path: string): Promise<void> {
   process.exit(r.status === 200 ? 0 : 1);
 }
 
+// check (FR-53.18): the config, then every repo cloned or fetched and indexed once, one line each.
+// --offline stops after the config.
+async function check(args: string[]): Promise<void> {
+  const offline = args.includes("--offline");
+  const cfg = await loadConfig(configArg(args.filter((a) => a !== "--offline")));
+  const n = (k: number, w: string) => `${k} ${w}${k === 1 ? "" : "s"}`;
+  if (offline) {
+    process.stdout.write(`config ok: ${n(cfg.repos.length, "repo")}, ${n(cfg.tokens.length, "token")}\n`);
+    return;
+  }
+  await mkdir(cfg.data, { recursive: true });
+  const ix = new RepoIndex({ data: cfg.data, knownHosts: cfg.knownHosts, bundled: bundledSdd(), repos: cfg.repos });
+  let failed = 0;
+  for (const r of cfg.repos) {
+    await ix.rebuild(r);
+    const s = ix.snapshot(r.name)!;
+    if (!s.ok) failed++;
+    process.stdout.write(s.ok ? `${r.name} ok ${n(s.rows.length, "item")}\n` : `${r.name} FAILED ${s.error}\n`);
+  }
+  process.exit(failed === 0 ? 0 : 1);
+}
+
+// version (FR-53.34): the server's version and the bundled sdd's.
+function version(): string {
+  const pkg = JSON.parse(readFileSync(join(packageRoot(), "package.json"), "utf8")) as { version: string };
+  const sdd = readFileSync(join(bundledSdd(), "VERSION"), "utf8").split("\n")[0].trim();
+  return `sdd-server ${pkg.version} · sdd ${sdd}\n`;
+}
+
 async function main(argv: string[]): Promise<void> {
   const [cmd, ...args] = argv;
   switch (cmd) {
     case "serve": return serve(configArg(args));
     case "health": return health(configArg(args));
+    case "check": return check(args);
+    case "version":
+      if (args.length !== 0) die(USAGE, 2);
+      process.stdout.write(version());
+      return;
     case "token":
       if (args.length !== 1) die(USAGE, 2);
       process.stdout.write(tokenLines(args[0]));

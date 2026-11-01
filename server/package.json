@@ -11,7 +11,8 @@
   },
   "files": [
     "dist",
-    "sdd"
+    "sdd",
+    "npm-shrinkwrap.json"
   ],
   "repository": {
     "type": "git",
@@ -21,7 +22,8 @@
   "scripts": {
     "build": "tsc -p .",
     "test": "node --test 'test/*.test.ts'",
-    "prepack": "npm run build && sh scripts/bundle-sdd.sh"
+    "prepack": "npm run build && sh scripts/bundle-sdd.sh",
+    "postpack": "rm -rf sdd"
   },
   "dependencies": {
     "@modelcontextprotocol/node": "2.1.2",
