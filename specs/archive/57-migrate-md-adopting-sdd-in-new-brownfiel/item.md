@@ -2,9 +2,10 @@
 id: 57
 type: chore
 title: MIGRATE.md: adopting sdd in new, brownfield and Spec Kit repos
-status: open
+status: shipped
 created: 2026-11-01
 approved: f8fe79a6f196367414dc471f77de20a18d914e5f 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 57 MIGRATE.md: adopting sdd in new, brownfield and Spec Kit repos
 
