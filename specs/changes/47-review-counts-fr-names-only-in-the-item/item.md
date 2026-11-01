@@ -57,8 +57,18 @@ asserts `FR-1.1     code.txt:1 in_item.txt:1` (committed and untracked both coun
 is listed at `old.md:1`.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-47.1: `.sdd/core/cmd/review.sh:84-91`: `changed` is the item's files (`git diff --name-only
+  --relative "$mb"` plus untracked), and awk keeps only grep hits in them. Proven by
+  `tests/t_phase.sh:6-7` (`old.md` on main says FR-1.2) and `:69-70` (FR-1.1 found in the
+  committed `in_item.txt` and untracked `code.txt`; FR-1.2 not found in `old.md`).
+- FR-47.2: the heading and `none` text at `.sdd/core/cmd/review.sh:82,86`; `tests/t_phase.sh:70-71`.
+- Deviation: the ✗ text sits in a variable (`none`) because bash 3.2 (macOS /bin/sh) reads the
+  apostrophe in `"${hits:-… item's …}"` as a quote and fails to parse the rest of review.sh;
+  dash did not. Added to `.claude/skills/sdd-dev/SKILL.md` (bash quirks).
+- Check: `sdd check` passed (163 s).
+- Security pass (the fresh verifier, Sonnet, read the diff for it): no findings; `$changed`
+  reaches awk through ENVIRON, `$fr` goes to `git grep -F`.
+Verified by: claude-sonnet-5-5: 2 of 2 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
