@@ -2,7 +2,8 @@
 # FR-15.4 ticks do not void approval, FR-15.5 the current task in the phase and next, FR-15.6
 # sdd task lists tasks and their commits, FR-15.7 ship's drift check and tasks gate, FR-15.8 the
 # template and plan prompt ask for tasks. FR-51.3 task done and review show a committed tick no
-# commit names; FR-51.4 not before the commit, nor for a named one.
+# commit names; FR-51.4 not before the commit, nor for a named one. FR-58.1-58.3 a planner's test
+# changed later is shown in review and refused at ship, unless Built names the file.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -170,4 +171,34 @@ assert_not_contains "$out" 'no commit subject names them'
 git add -A && git commit -qm "feat(1): the batch"
 out=$(sdd task 'done' T-1.2 2>&1) || fail "T-1.2 failed: $out"
 assert_contains "$out" '⚠ ticked and committed, but no commit subject names them: T-1.1. Ship refuses this'
+
+# FR-58.1: a planner's test, changed after it was written, is shown in review and refused at ship.
+new_repo bent
+sdd new feature "Paging" >/dev/null 2>&1
+f=specs/changes/1-paging/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print
+	print "- [ ] T-1.1 Page test, FR-1.1 (files: t1.sh; test: sh t1.sh; expect: fail; size: S; by: planner)"
+	print "- [ ] T-1.2 Page, FR-1.1 (files: q.sh; test: sh t1.sh; size: S)"
+	print "- [ ] T-1.3 Own test (files: b.sh; test: sh b.sh; size: S)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
+echo 'grep -q page q.sh' >t1.sh && sdd task 'done' T-1.1 >/dev/null 2>&1 && git add -A && git commit -qm "test(1): T-1.1 page test" || fail "T-1.1 failed"
+echo page >q.sh && sdd task 'done' T-1.2 >/dev/null 2>&1 && git add -A && git commit -qm "feat(1): T-1.2 page" || fail "T-1.2 failed"
+echo 'exit 0' >b.sh && sdd task 'done' T-1.3 >/dev/null 2>&1 && git add -A && git commit -qm "test(1): T-1.3 own test" || fail "T-1.3 failed"
+# Must not change: the builder may change its own test later.
+echo '# tidied' >>b.sh && git commit -qam "fix(1): T-1.3 tidy own test"
+fill "$f" built && git commit -qam "docs(1): built"
+assert_not_contains "$(sdd review 2>&1)" 'written by the planner'
+# The planner's test is bent.
+echo 'exit 0' >t1.sh && git commit -qam "fix(1): T-1.2 make it pass"
+line='item 1: T-1.1'"'"'s test t1.sh (written by the planner) changed after it was written: undo it, or say why under "## Built" naming the file'
+assert_contains "$(sdd review 2>&1)" "⚠ $line"   # FR-58.3
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(a bent planner test must not ship)"
+assert_contains "$out" "$line"
+# FR-58.2: Built names the file and says why: ship goes on.
+awk '/^## Review/ { print "- t1.sh: the planner sample was wrong (no page check needed)." } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): say why t1.sh changed"
+out=$(sdd ship 2>&1)
+assert_not_contains "$out" 'written by the planner'
 exit 0

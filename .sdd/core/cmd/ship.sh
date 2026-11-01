@@ -223,6 +223,9 @@ trows=$(task_rows)
 unproven=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' |
 	while IFS= read -r t; do [ -n "$(task_commit "$t")" ] || echo "$t"; done)
 [ -z "$unproven" ] || fail "item $ID: ticked, but no commit names them: $(joinlist "$unproven") (put the task ID in the commit subject)"
+# FR-58.1: a test the planner wrote is the contract; the builder may not quietly change it.
+bent=$(bent_tests)
+[ -z "$bent" ] || fail "$bent"
 me=$(git config user.name)
 byhand=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r t; do
 	grep -qx "$t" "$ST/checks/$ID.tasks" 2>/dev/null && continue
