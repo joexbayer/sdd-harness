@@ -2,9 +2,10 @@
 id: 46
 type: fix
 title: Secret scan skips agent worktree copies
-status: open
+status: shipped
 created: 2026-11-01
 approved: cc5ee4a8da5a91107a8e568022ee8516d75bf982 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 46 Secret scan skips agent worktree copies
 
