@@ -79,13 +79,18 @@ section() {
 frs=$(plan_frs)
 if [ -n "$frs" ]; then
 	echo
-	echo "Requirements → where they are named outside $SPECS/ (tests should name the FR they prove)"
+	echo "Requirements → where this item's changes name them outside $SPECS/ (tests should name the FR they prove)"
 	unnamed=
+	# Only files this item changed (FR-47.1): an adopted repo's older text can say FR-1.3 too.
+	# Uncommitted and untracked count: agents often leave new tests uncommitted until the human ships.
+	none="✗ not named in this item's changes"
+	changed=$( { git diff --name-only --relative "$mb"; git ls-files --others --exclude-standard; } | sort -u)
 	for fr in $frs; do
-		# --untracked: agents often leave new tests uncommitted until the human ships.
-		hits=$(git grep --untracked -nwF "$fr" -- . ":(exclude)$SPECS" 2>/dev/null | cut -d: -f1,2 | head -n 5 | paste -sd ' ' -)
+		hits=$(git grep --untracked -nwF "$fr" -- . ":(exclude)$SPECS" 2>/dev/null |
+			C=$changed awk -F: 'BEGIN { n = split(ENVIRON["C"], f, "\n"); for (i = 1; i <= n; i++) in_item[f[i]] = 1 } $1 in in_item { print $1 ":" $2 }' |
+			head -n 5 | paste -sd ' ' -)
 		[ -n "$hits" ] || unnamed=1
-		printf '  %-10s %s\n' "$fr" "${hits:-✗ not named anywhere}"
+		printf '  %-10s %s\n' "$fr" "${hits:-$none}"
 	done
 	[ -z "$unnamed" ] || echo "  (✗ is for your review only: ship does not check it)"
 fi

@@ -158,6 +158,10 @@ refuses a dirty tree), and `fill`.
 - bash 3.2 (macOS /bin/sh) fails to parse a `case … in x) …;; esac` inside `$( … )` when a
   pattern's `)` closes early (`syntax error near unexpected token ;;`); dash is fine. Use
   `[ … ] || …` inside command substitutions.
+- bash 3.2 (macOS /bin/sh) treats an apostrophe inside `"${var:-word}"` as opening a quote, so
+  `"${hits:-✗ not in this item's changes}"` breaks the parse of the rest of the file (`syntax
+  error near unexpected token (` many lines later); dash is fine. Put such text in a variable
+  first: `none="… item's …"`, then `"${hits:-$none}"` (item 47).
 - Roadmaps (item 24): entries are parse_item facts of kind `r` (AWK_PARSE), split by
   `entry_row` (AWK_ENTRY); `shipped_roadmaps` reads them from the base branch (the working tree
   when on the base, so `next` there runs no git with no roadmap); `AWK_DEPS` over `item_rows`
