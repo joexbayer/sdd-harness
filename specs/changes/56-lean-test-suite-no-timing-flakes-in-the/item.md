@@ -27,8 +27,18 @@ saves little and churns history.
 - `sdd check` passes under sh and dash.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- `tests/run.sh`: `t_perf*.sh` runs and counts only with `SDD_PERF=1` (job loop and results loop).
+  Checked: without it 35 tests, with it 36 and t_perf passes.
+- `tests/t_check_budget.sh`: the `sleep 2` is dropped after the warning case (one slow check, not
+  three).
+- `tests/t_discipline.sh` deleted; its phrases (FR-20.1, 20.3, 20.5) joined the phrase lists in
+  `tests/t_prompts_tests.sh`.
+- t_run flake: 40 parallel runs (20 dash, 20 bash) passed, so not reproduced. The exit-2 paths in
+  `sdd run` are usage errors (e.g. "item waiting for the human"); the assertion now prints what sdd
+  said, so the next one shows its cause.
+- AGENTS.md and `.claude/skills/sdd-dev/SKILL.md` name `SDD_PERF=1 sh tests/run.sh /bin/sh` as the
+  test the check leaves out.
+- Check passed under sh and dash. Security: test files only.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
