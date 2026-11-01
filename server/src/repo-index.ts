@@ -123,3 +123,22 @@ export class RepoIndex {
       : { markdown: r.stdout, markdown_truncated: false };
   }
 }
+
+// poll: rebuild every repo, one after another (D-53.20), then again fetch-interval seconds later
+// (FR-53.7). A round longer than the interval is logged: it is the trigger for parallel indexing.
+export function poll(ix: RepoIndex, intervalSec: number, log: (line: Record<string, unknown>) => void): { stop: () => void } {
+  let timer: NodeJS.Timeout | undefined;
+  let stopped = false;
+  const round = async () => {
+    const t0 = Date.now();
+    for (const r of ix.repos) {
+      if (stopped) return;
+      await ix.rebuild(r);
+    }
+    const ms = Date.now() - t0;
+    if (ms > intervalSec * 1000) log({ t: now(), warning: "a rebuild round took longer than fetch-interval", ms });
+    if (!stopped) timer = setTimeout(round, intervalSec * 1000);
+  };
+  void round();
+  return { stop: () => { stopped = true; clearTimeout(timer); } };
+}
