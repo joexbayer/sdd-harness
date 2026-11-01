@@ -13,14 +13,14 @@ done
 [ -n "$id" ] || usage_die "usage: $NAME show <id> [--json]"
 need_repo
 
-src=$(item_sources | while IFS="$(printf '\t')" read -r o r p _; do
-	[ "$(id_of "${p%/item.md}")" = "$id" ] && printf '%s\t%s\t%s\n' "$o" "$r" "$p"
-done | head -n 1)
+# The id from the folder name, as id_of has it (item_sources gives each id once).
+src=$(item_sources | I=$id awk -F '\t' '{ d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
+	if (i == ENVIRON["I"]) { print $1 "\t" $2 "\t" $3 "\t" $5; exit } }')
 [ -n "$src" ] || die "no item $id (see: $CMD ls)"
-o=$(printf '%s' "$src" | cut -f1)
-r=$(printf '%s' "$src" | cut -f2)
-p=$(printf '%s' "$src" | cut -f3)
-row=$(item_row "$o" "$r" "$p") && item_load "$o" "$r" "$p" || die "could not read item $id from $r"
+o=$(tsv 1 "$src")
+r=$(tsv 2 "$src")
+p=$(tsv 3 "$src")
+row=$(item_row "$o" "$r" "$p" "$(tsv 4 "$src")") && item_load "$o" "$r" "$p" || die "could not read item $id from $r"
 facts=$(parse_item "$IFILE" "$ID")
 [ -z "$ITMP" ] || rm -f "$ITMP"
 # A roadmap's entries say where each stands (FR-24.5), from the items opened from them.
