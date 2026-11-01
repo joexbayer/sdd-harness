@@ -34,29 +34,28 @@ git checkout -q main
 planned_item fix "Retry"
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: build'
-# FR-42.2: the finish step's hand-off to a fresh verifier.
-assert_contains "$out" 'tests the check leaves out'
-assert_contains "$out" 'nothing calls or reads'
-# FR-51.1: the hand-off names the skill, with the command as fallback.
-assert_contains "$out" 'tell the human it is ready for review: `/sdd-review` (or `.sdd/bin/sdd review`)'
-assert_contains "$out" 'still pass if every function returned nothing'
-assert_contains "$out" 'never from the code under
-  test'
-assert_contains "$out" 'Write just enough code to pass the test, without abstractions, options or defensive code
-  nothing asked for'
-assert_not_contains "$out" 'The gate (check) stays fast'
+# One phrase per rule: FR-42.2 the verifier hand-off, FR-51.1 the review hand-off names the skill,
+# FR-35.4 test rules, FR-55.5 duplicates may go; FR-55.7 at most 550 words.
+for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review: `/sdd-review`' \
+	'still pass if every function returned nothing' 'never from the code under test' \
+	'Write just enough code to pass the test' 'extend an existing test'; do
+	assert_contains "$out" "$p"
+done
+assert_contains "$out" "a test that only repeats another's case may"
+assert_not_contains "$out" 'so keep it fast'
+w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
+[ "$w" -le 550 ] || fail "build step is $w words (at most 550)"
 
 # FR-35.5: the verifier's prompt.
 setcfg role.verifier.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
 out=$(sdd sync claude 2>&1) || fail "sync failed: $out"
 v=$(cat .claude/agents/sdd-verifier.md)
-assert_contains "$v" 'Per FR, ask: is there a test that would fail if
-   that FR were dropped?'
-assert_contains "$v" 'or that
-   no test would fail if it were dropped'
-# FR-42.2: the verifier's own rules.
-assert_contains "$v" 'tests the check leaves out'
-assert_contains "$v" 'nothing calls or reads'
+# FR-35.5, FR-55.6: the verifier proves an FR by undoing its code; FR-42.2 its other rules.
+for p in "undo that FR's code in a scratch copy" 'report the FR unproven if the test still passes' \
+	'no test would fail if it were dropped' 'tests the check leaves out' 'nothing calls or reads' \
+	"only repeats another"; do
+	assert_contains "$v" "$p"
+done
 # FR-51.1: the build skill's hand-off, and the review step's ship hand-off.
 assert_contains "$(cat .claude/skills/sdd-build/SKILL.md)" 'Then tell the user it is ready
 for review: `/sdd-review` (or `.sdd/bin/sdd review`)'
@@ -66,6 +65,11 @@ git add -A && git commit -qm "docs: built" && sdd check >/dev/null 2>&1
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: review'
 assert_contains "$out" 'they run `/sdd-ship` (or `.sdd/bin/sdd ship`)'
+# FR-55.3: the review is presented in chat; the human never opens a file.
+assert_contains "$out" 'present it in chat, short and plain; never send the human to read a'
+assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'present it in chat, short and plain; never send the human to read a'
+# FR-55.4: the AGENTS.md block says be brief.
+assert_contains "$(cat AGENTS.md)" '- Be brief: short plain words, only what is needed, in chat and in files. Never send the human to'
 # FR-51.2: the AGENTS.md block init writes.
 assert_contains "$(cat AGENTS.md)" '- Handing the human a step: name its skill (`/sdd-new`, `/sdd-review`, `/sdd-ship`) when this
   agent has them (`.sdd/bin/sdd sync <agent>`), with the command as fallback.'
