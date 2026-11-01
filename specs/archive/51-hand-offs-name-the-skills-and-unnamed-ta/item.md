@@ -2,9 +2,10 @@
 id: 51
 type: feature
 title: Hand-offs name the skills, and unnamed task commits show early
-status: open
+status: shipped
 created: 2026-11-01
 approved: 84cbd4e8f4869565e1864521637620f4ad20b2d4 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 51 Hand-offs name the skills, and unnamed task commits show early
 
