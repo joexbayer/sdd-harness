@@ -927,7 +927,7 @@ unnamed_ticks() {
 # unnamed_note: FR-51.3's line for unnamed_ticks, or nothing.
 unnamed_note() {
 	_u=$(unnamed_ticks)
-	[ -z "$_u" ] || echo "⚠ ticked and committed, but no commit subject names them: $(joinlist "$_u"). Ship refuses this: name each task ID in a commit subject (git commit --amend while it is the last commit)."
+	[ -z "$_u" ] || echo "⚠ ticked and committed, but no commit subject names them: $(joinlist "$_u"). Ship refuses this: name each task ID in a commit subject (amend that commit while it is the last one)."
 }
 
 # usage_on: usage tracking is switched on ([usage] track = true, yours or the project's); off by

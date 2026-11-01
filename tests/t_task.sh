@@ -75,7 +75,7 @@ assert_contains "$(sdd status)" 'task T-1.3 of 3: Docs'
 fill "$f" built && git add -A && git commit -qm "docs(1): built"
 # FR-51.3: committed under a subject that does not name it: said in next and review, before ship.
 # FR-51.4: T-1.1, named in its own commit, is not listed.
-line='⚠ ticked and committed, but no commit subject names them: T-1.2. Ship refuses this: name each task ID in a commit subject (git commit --amend while it is the last commit).'
+line='⚠ ticked and committed, but no commit subject names them: T-1.2. Ship refuses this: name each task ID in a commit subject (amend that commit while it is the last one).'
 assert_contains "$(sdd next 2>&1)" "$line"
 assert_contains "$(sdd review 2>&1)" "$line"
 out=$(sdd ship 2>&1)
