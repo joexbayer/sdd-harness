@@ -5,7 +5,7 @@ title: sdd-server first slice: `items`, `item`, `search` and sdd versions over H
 status: open
 created: 2026-11-01
 roadmap: R-52.1
-approved: 30bca7b16abe8c02ed8ba1a9b86a47d58090f4a5 2026-11-01 joexbayer
+approved: d9e44bd7d5f63b73337cd9abefdf778a1bdb9189 2026-11-01 joexbayer
 ---
 # 53 sdd-server first slice: `items`, `item`, `search` and sdd versions over HTTPS, on npm (core: id collisions and task files in `--json`)
 
@@ -228,8 +228,10 @@ FR-53.31 WHEN `search` finds more than `limit` matches (default 50, at most 200)
   THE SYSTEM SHALL return what it has and `"truncated":true`.
   e.g. `{"query":"the"}` → 50 matches, truncated
 FR-53.32 WHEN the same line matches on the base branch and on an item branch THE SYSTEM SHALL
-  return it once, from the item branch.
-  e.g. an unchanged spec line in specs/archive/ on main and on origin/feature/23-x → one match, item 23
+  return it once, from the base branch (item null): an item branch is named only for lines it
+  added or changed (amended in review, the human's choice, 2026-11-01).
+  e.g. an unchanged spec line in specs/archive/ on main and on origin/feature/23-x → one match,
+  ref main, item null
 
 ### Package and release
 
@@ -1056,6 +1058,9 @@ Review notes worked through:
   lists it in `files`; `server/scripts/smoke.sh` now requires it in the tarball (passes). Also
   fixed `repository.url` to `joexbayer/sdd-harness` (the GitHub repo moved).
 - Not published: `npm publish` was never run; DOD-53.4's registry half waits for the human.
+- search attribution: FR-53.32 amended (the base wins); `server/src/search.ts` puts the base
+  ref first, so `git grep`'s first hit for a line is the base's; `server/test/search.test.ts`
+  expects `ref main, item null` (fails with the old order, checked).
 - Security pass (fresh Sonnet reviewer, the diff and all of server/src and server/deploy): no
   findings (auth before every tool, timing-safe tokens, execFile only, `-e` before the query, raw
   paths matched to item files, no work tree and the bundled sdd only, no secrets in logs,
@@ -1068,3 +1073,4 @@ Verified by: claude-sonnet-5-5: 35 of 35 FRs proven; no findings (one search-att
 ## Review (optional)
 - License: MIT, for the whole repo and the sdd-server package (joexbayer, 2026-11-01).
 - Do not publish to npm yet (joexbayer, 2026-11-01).
+- search: a line unchanged from main is credited to main, not to the lowest open item (joexbayer, 2026-11-01).
