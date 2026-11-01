@@ -1050,6 +1050,21 @@ Follow-ups:
 - Not changed, noted: `forge_load` sources `core/forges/<sdd.forge>.sh` from config; the server never
   passes `--pr`, so a hostile `forge` value is inert there.
 
+Review notes worked through:
+- License: MIT `LICENSE` at the repo root; `server/scripts/bundle-sdd.sh` copies it into the
+  package at prepack (postpack removes it), `server/package.json` has `"license": "MIT"` and
+  lists it in `files`; `server/scripts/smoke.sh` now requires it in the tarball (passes). Also
+  fixed `repository.url` to `joexbayer/sdd-harness` (the GitHub repo moved).
+- Not published: `npm publish` was never run; DOD-53.4's registry half waits for the human.
+- Security pass (fresh Sonnet reviewer, the diff and all of server/src and server/deploy): no
+  findings (auth before every tool, timing-safe tokens, execFile only, `-e` before the query, raw
+  paths matched to item files, no work tree and the bundled sdd only, no secrets in logs,
+  non-root read-only container).
+- Not run (human steps): DOD-53.1 and DOD-53.2 with real hosts and real Claude Code / Codex
+  clients; `npx sdd-server@0.1.0 version` from the registry.
+Verified by: claude-sonnet-5-5: 35 of 35 FRs proven; no findings (one search-attribution deviation for the human to confirm)
+
+
 ## Review (optional)
-<!-- The human's review notes: what to change, one per line. The agent works through them
-and says under "## Built" what it changed for each. -->
+- License: MIT, for the whole repo and the sdd-server package (joexbayer, 2026-11-01).
+- Do not publish to npm yet (joexbayer, 2026-11-01).
