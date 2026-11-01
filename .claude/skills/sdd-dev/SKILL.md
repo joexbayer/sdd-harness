@@ -20,8 +20,8 @@ the cost is process starts (system time is 2x user time on macOS), and they cont
 Before the jobs, run.sh builds one `new_repo` per shell and exports it as `SDD_TEMPLATE`;
 `new_repo` copies it (`cp -R`, dropping the `.git/sdd-config` cache) instead of git init, sdd
 init and two commits. A test run alone (no `SDD_TEMPLATE`) builds its repo as before. So a
-change to what `new_repo` sets up needs no template rebuild: each run.sh builds it fresh. `t_perf*.sh` (timing budgets on a generated 100-item repo) runs alone
-after the rest; `SDD_PERF_SLACK=2` doubles its budgets on a slow machine, and
+change to what `new_repo` sets up needs no template rebuild: each run.sh builds it fresh. `t_perf*.sh` (timing budgets on a generated 100-item repo) runs only
+with `SDD_PERF=1 sh tests/run.sh` (item 56: a busy machine failed the gate), alone after the rest; `SDD_PERF_SLACK=2` doubles its budgets on a slow machine, and
 `SDD_PERF_SLACK=0.01` makes it fail on purpose so it prints every measured time.
 Profile the suite (item 38): time each file alone with
 `SRC=$PWD SH=dash dash tests/t_x.sh` and note `uptime` (the dev Mac is often loaded by other
