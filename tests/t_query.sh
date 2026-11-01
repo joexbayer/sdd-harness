@@ -17,7 +17,7 @@ facts() {
 			print "<!-- FR-" i ".9 only guidance, not a requirement -->"
 			print ""
 			print "- [x] T-" i ".1 the form"
-			print "- [ ] T-" i ".2 the session"
+			print "- [ ] T-" i ".2 the session (files: src/a.go,  src/b.go ; test: go test)"
 			print ""
 			print "D-" i ".1 Use a cookie, because \"tokens\" leak."
 			print "Q-" i ".1 Remember for how long? → recommend: 30 days"
@@ -85,7 +85,35 @@ assert_eq "$(printf '%s' "$j" | jq -r '.requirements | map(.id) | join(" ")')" '
 assert_eq "$(printf '%s' "$j" | jq -r '.decisions[0].text')" 'Use a cookie, because "tokens" leak.'
 assert_eq "$(printf '%s' "$j" | jq -r '.tasks | map(.done) | join(" ")')" 'true false'
 assert_eq "$(printf '%s' "$j" | jq -r '.questions[0].decided')" false
+# FR-53.2: a task's files: split on commas and trimmed, [] without any.
+assert_eq "$(printf '%s' "$j" | jq -c '.tasks | map(.files)')" '[[],["src/a.go","src/b.go"]]'
+
 assert_eq "$(sdd show 1 --json | jq -r '.status')" shipped
+
+# FR-53.1: two people's clones gave out id 12 (kari on feature/12-login, ola on fix/12-typo). ls
+# keeps the row it shows today (the first source) and names the other branch.
+cd "$T/mate" || exit 1
+for b in feature/12-login:Login:kari fix/12-typo:Typo:ola; do
+	br=${b%%:*} rest=${b#*:}
+	tt=${rest%%:*} who=${rest#*:}
+	d=specs/changes/12-${br#*/12-}
+	git switch -q -c "$br" main && mkdir -p "$d"
+	printf -- '---\nid: 12\ntype: %s\ntitle: %s\nstatus: open\n---\n# 12 %s\n' "${br%%/*}" "$tt" "$tt" >"$d/item.md"
+	git add -A && git -c user.name="$who" commit -qm "docs(12): open ${br%%/*} \"$tt\"" && git push -q origin HEAD
+	git switch -q main
+done
+cd "$R" && git fetch -q origin
+json=$(sdd ls --json)
+assert_eq "$(printf '%s\n' "$json" | jq -s 'map(select(.id == 12)) | length')" 1 "(one row for id 12)"
+assert_eq "$(printf '%s\n' "$json" | jq -r 'select(.id == 12) | .branch + " " + .opened_by')" 'origin/feature/12-login kari'
+assert_eq "$(printf '%s\n' "$json" | jq -r 'select(.id == 12) | .collides_with')" 'origin/fix/12-typo'
+# The same item on a local branch and its remote is no collision.
+assert_eq "$(printf '%s\n' "$json" | jq -r 'select(.id == 2) | .collides_with')" ''
+assert_eq "$(sdd show 12 --json | jq -r '.collides_with')" 'origin/fix/12-typo'
+assert_eq "$(sdd show 2 --json | jq -r '.collides_with')" ''
+line=$(sdd ls | grep '^12 ')
+case $line in *' · id also on origin/fix/12-typo') ;; *) fail "ls line for 12 should end with the collision: $line" ;; esac
+assert_not_contains "$(sdd ls | grep '^2 ')" 'id also on'
 
 sdd show 99 >/dev/null 2>&1
 assert_eq $? 1 "(unknown id)"

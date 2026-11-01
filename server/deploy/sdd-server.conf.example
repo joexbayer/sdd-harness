@@ -1,0 +1,22 @@
+# sdd-server config (git-config format; read once at start: restart after a change).
+# Copy to sdd-server.conf, then set your domain, your repos and your team's tokens.
+[server]
+	listen = :8080
+	public-host = sdd.example.com
+	data = /data
+	known-hosts = /etc/sdd-server/known_hosts
+	fetch-interval = 60
+# One block per repo, each with its own read-only deploy key (GitHub refuses one key on two repos).
+# Add only repos the whole team can read: every token sees every repo.
+[repo "api"]
+	url = git@github.com:acme/api.git
+	key = /etc/sdd-server/keys/api
+[repo "web"]
+	url = git@github.com:acme/web.git
+	key = /etc/sdd-server/keys/web
+# One block per person: paste what `npx sdd-server@0.1.0 token <name>` prints, and replace these
+# examples (nobody holds a token for them).
+[token "kari"]
+	sha256 = 9f2c4b1e0d6a8c3f5e7b9a1d2c4e6f8a0b1c3d5e7f9a2b4c6d8e0f1a3b5c7d9e
+[token "ola"]
+	sha256 = 51d07a93e2b4c6d8f0a1b3c5d7e9f2a4b6c8d0e1f3a5b7c9d2e4f6a8b0c1d3e5

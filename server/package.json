@@ -1,0 +1,39 @@
+{
+  "name": "sdd-server",
+  "version": "0.1.0",
+  "description": "Team coordination for sdd over MCP: every open item, across repos and unmerged branches, for your agents",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "sdd-server": "dist/src/cli.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "sdd",
+    "npm-shrinkwrap.json",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joexbayer/sdd-harness.git",
+    "directory": "server"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "node --test 'test/*.test.ts'",
+    "prepack": "npm run build && sh scripts/bundle-sdd.sh",
+    "postpack": "rm -rf sdd LICENSE"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.1.2",
+    "@modelcontextprotocol/server": "2.4.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2"
+  }
+}

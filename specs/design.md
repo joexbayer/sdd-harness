@@ -346,35 +346,41 @@ Team mode adds:
 - approval is a review by someone other than the author
 - CI runs the gates, and nobody can skip them
 
-**sdd-server** is a self-hostable coordination service with no UI.
+**sdd-server** (`server/`, published to npm as `sdd-server`, item 53) is a self-hostable
+coordination service with no UI. HTTPS first; a stdio transport waits for its trigger (R-52.5).
 
 ```
- agents / humans ──MCP (Streamable HTTP, bearer token)──▶ sdd-server
-                                                            │ git fetch every 60s
-                                                            │ (+ optional push webhook)
-                                                            ▼
-                                     bare mirrors of each repo (read-only deploy key)
+ agents ──MCP (Streamable HTTP over HTTPS, a bearer token per person)──▶ Caddy ──▶ sdd-server (Node)
+                                                                                  │ git fetch --prune every 60 s
+                                                                                  ▼
+                          no-checkout clones of each repo (read-only deploy key, pinned known_hosts),
+                          indexed by the bundled sdd's `ls --json --all`, held in memory
 ```
 
-- **Read-only.** It never writes to git, and has no database. Git stays the only write path.
-  If it is compromised, an attacker can read specs and nothing else.
-- **Why it exists.** In plain git, items on unmerged branches are invisible to teammates. The
-  server reads every branch with `git for-each-ref`, `git ls-tree`, `git show` and `git grep`.
+- **Read-only.** It never writes to git and has no database; the index is rebuilt from git at
+  start. Git stays the only write path. The clones hold each repo's **full code and history**,
+  not only specs, so a compromised server can read those too; it can write nothing, because its
+  keys are read-only deploy keys.
+- **One parser.** The npm package bundles the sdd of the commit it is packed from and runs its
+  `ls --json` and `show --json` on each clone, with the repo's `.sdd/config` read as data. It never
+  runs a file of the repo. Each repo's and branch's `.sdd/VERSION` is reported, and branches behind
+  their base's sdd are flagged, because each repo commits its own `.sdd/` (reviewed upgrades).
+- **Why it exists.** In plain git, items on unmerged branches are invisible to teammates until
+  they fetch, and nothing looks across repos.
 - **Tools** (tools only; MCP prompt and resource support varies by agent):
 
 | tool | returns |
 |---|---|
-| `items` | open items across all branches and repos: id, type, title, status, owner, branch, updated |
-| `item` | an item's files from its branch |
-| `search` | `git grep` over specs and kb on the default branch plus open item branches |
-| `read` | a file at a ref |
-| `trace` | where an ID appears: specs, code, tests, commit messages |
-| `overlaps` | other open items touching the same files or requirement IDs |
+| `items` | open items across repos and branches: who, phase, tasks, questions, idle days, `depends`, id collisions, sdd version against the base |
+| `item` | `sdd show --json` of one item from its branch; `raw` adds the item file |
+| `search` | fixed-string `git grep` over `specs/` on the base branch and every open item's branch |
+| `overlaps` (R-52.3) | other open items planning or changing the same files |
 
-- **Deploy.** One static Go binary (or container) plus a git-config-format config with
-  listen address, repos, and token hashes. TLS comes from a reverse proxy (Caddy).
-  `sdd-server stdio --repo .` serves a single local repo to MCP-only clients.
-- **Clients.** The `sdd` CLI calls the same tools with `curl`.
+  `read` and `trace` are dropped: each is one git command in the agent's own clone (D-53.5).
+- **Deploy.** `npx sdd-server` or one container (`node:26-trixie-slim`), plus a git-config-format
+  config with the listen address, the public host, repos with their deploy keys, and token
+  hashes. TLS comes from a reverse proxy (Caddy). server/README.md has both walkthroughs.
+- **Clients.** Any MCP client (Claude Code, Codex). The `sdd` CLI has no client for now (Q-53.4).
 
 ## 12. Knowledge base
 
@@ -461,7 +467,7 @@ supported and needs more of the human's review.
 | later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | 26 | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model, any format); a `contract` item lands only the contract; items name `contracts:` and approval pins their ids, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
 | 30-40 | the experiment: a complex multi-phase app, Opus plans and a coder model builds tasks, a scripted human answers and approves, measured against an Opus-only baseline. Done 2026-10-30: Opus as builder shipped, qwen needs supervision (kb/experiment-results.md) | proves plan big, build small with numbers |
-| then | `sdd-server` (stdio, then HTTP with mirrors) | team coordination across branches and repos |
+| 52-53 | `sdd-server` over HTTPS with no-checkout clones: `items`, `item`, `search` and sdd versions per branch, on npm (item 53); then `sdd overlaps` and its tool, a push webhook, stdio, the step skills as MCP prompts (roadmap 52) | team coordination across branches and repos |
 | then | fresh-context review for clean, easy-to-change code | ladder step 5 |
 
 Dogfooding stages:

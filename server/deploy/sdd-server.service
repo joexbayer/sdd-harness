@@ -1,0 +1,18 @@
+# sdd-server without a container: Node 22+, git, ssh and a POSIX sh with awk on the host, and
+# `npm install -g sdd-server@0.1.0` first (an installed package, so a restart never needs the
+# npm registry). Set `data = /var/lib/sdd-server` in the config; Caddy on the host proxies to
+# 127.0.0.1:8080.
+[Unit]
+Description=sdd-server
+After=network-online.target
+[Service]
+User=sdd-server
+ExecStart=/usr/bin/sdd-server serve --config /etc/sdd-server/config
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sdd-server
+ProtectHome=yes
+PrivateTmp=yes
+[Install]
+WantedBy=multi-user.target

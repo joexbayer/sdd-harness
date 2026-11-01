@@ -1120,7 +1120,7 @@ pr_note() {
 
 # pr_table: every PR as "<branch>\t<number>\t<state>\t<review>\t<ci>\t<url>\t<words>", newest
 # first: the forge's PR line with the words in place of the head sha, so ls appends fields
-# 2-7 to a row as they are (row_json reads them as $20..$25). One forge call for all items;
+# 2-7 to a row as they are (row_json reads them as $21..$26). One forge call for all items;
 # fails, saying why, when the forge cannot be asked.
 pr_table() {
 	_why=$(forge_ready) || { echo "$_why"; return 1; }
@@ -1130,8 +1130,8 @@ pr_table() {
 
 # AWK_JSON: awk functions to prepend to a program. esc(s) makes s safe inside a JSON string
 # (character by character, because gsub's backslash handling differs between awks; tabs never
-# reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$17,
-# plus $20..$25 = a PR's number, state, review, ci, url, words when ls joined one) as the fields
+# reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$20,
+# plus $21..$26 = a PR's number, state, review, ci, url, words when ls joined one) as the fields
 # every reader sees, so a new column is added here and nowhere else.
 AWK_JSON='function esc(s,   o, i, c) {
 	o = ""
@@ -1146,16 +1146,18 @@ function row_json() {
 		$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10)) \
 		sprintf(",\"questions_open\":%d,\"approved_by\":\"%s\",\"opened_by\":\"%s\",\"shipped\":\"%s\",\"active\":\"%s\",\"reason\":\"%s\"", \
 		$11, esc($12), esc($13), esc($14), esc($15), esc($16)) \
-		sprintf(",\"reason_code\":\"%s\",\"roadmap\":\"%s\",\"depends\":\"%s\"", esc($17), esc($18), esc($19)) \
-		($20 == "" ? "" : sprintf(",\"pr\":{\"number\":%d,\"state\":\"%s\",\"review\":\"%s\",\"ci\":\"%s\",\"url\":\"%s\"}", \
-			$20, esc($21), esc($22), esc($23), esc($24)))
+		sprintf(",\"reason_code\":\"%s\",\"roadmap\":\"%s\",\"depends\":\"%s\",\"collides_with\":\"%s\"", esc($17), esc($18), esc($19), esc($20)) \
+		($21 == "" ? "" : sprintf(",\"pr\":{\"number\":%d,\"state\":\"%s\",\"review\":\"%s\",\"ci\":\"%s\",\"url\":\"%s\"}", \
+			$21, esc($22), esc($23), esc($24), esc($25)))
 }
 '
 
-# item_sources: "<origin>\t<ref>\t<path>\t<blob>" for every item, the first source of an id
-# winning: archive (on the base branch), worktree (the current item), local and remote branches,
-# then base (specs/changes on the base branch). <blob> is the item file's hash in <ref>, empty
-# for the worktree (its file may have edits).
+# item_sources: "<origin>\t<ref>\t<path>\t<blob>\t<collides>" for every item, the first source of
+# an id winning: archive (on the base branch), worktree (the current item), local and remote
+# branches, then base (specs/changes on the base branch). <blob> is the item file's hash in <ref>,
+# empty for the worktree (its file may have edits). <collides> (FR-53.1) names, comma-separated,
+# the first ref of each other item folder with the same id (two people's solo-mode ids): the same
+# folder on a local branch and its remote is the same item, not a collision.
 item_sources() {
 	_base=$(cfg sdd.base main)
 	# Everything but the worktree row follows from the branch tips alone: cached in
@@ -1194,9 +1196,11 @@ item_sources() {
 	{
 		# The id from the folder name, as id_of has it: the digits before its first "-".
 		d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
-		if (i == "" || i ~ /[^0-9]/ || i == d || seen[i]++) next
-		print
-	}'
+		if (i == "" || i ~ /[^0-9]/ || i == d) next
+		if (!(i in win)) { win[i] = ++n; line[n] = $0; key[n] = i; fold[i SUBSEP d] = 1; next }
+		if (!((i SUBSEP d) in fold)) { fold[i SUBSEP d] = 1; cw[i] = cw[i] (cw[i] == "" ? "" : ",") $2 }
+	}
+	END { for (k = 1; k <= n; k++) print line[k] "\t" cw[key[k]] }'
 }
 
 # AWK_TREE: `git ls-tree -r` lines to item_sources lines: every */item.md, as origin O and ref R.
@@ -1274,10 +1278,11 @@ item_facts() {
 		"$_ap" "$IR_SHIPPED" "$WHY" "$WHYCODE" "$IR_ROADMAP" "$IR_DEPENDS"
 }
 
-# item_row <origin> <ref> <path>: one TSV summary line (see row_json):
+# item_row <origin> <ref> <path> [collides]: one TSV summary line (see row_json):
 #  1 id  2 type  3 status  4 phase  5 frs  6 tasks_done  7 tasks_total  8 title  9 branch
 # 10 origin  11 questions_open  12 approved_by  13 opened_by  14 shipped  15 active  16 reason
 # 17 reason_code (WHYCODE)  18 roadmap (R-<id>.<n> it was opened from)  19 depends (as written)
+# 20 collides_with (item_sources)
 # "active" is the shipped date, else the last commit on the branch (today if the working
 # tree has edits); "opened_by" is the author of the item's open commit.
 item_row() {
@@ -1286,7 +1291,7 @@ item_row() {
 	[ -z "$ITMP" ] || rm -f "$ITMP"
 	PHASE_FP=
 	PHASE_REF=
-	printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "${_facts#*"$(printf '\t')"}" | item_rows_finish
+	printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "${_facts#*"$(printf '\t')"}" "${4:-}" | item_rows_finish
 }
 
 # item_rows [origin]: item_row for every item (item_sources), or only those from <origin>. The
@@ -1299,7 +1304,7 @@ item_rows() {
 	_src=$(item_sources | O=${1:-} awk -F '\t' 'ENVIRON["O"] == "" || $1 == ENVIRON["O"]')
 	[ -n "$_src" ] || return 0
 	# Facts for the files the cache does not know yet; the ones only their file decides go into it.
-	_new=$(printf '%s\n' "$_src" | C=$_cf awk -F '\t' "$AWK_CACHE"'!(($4 SUBSEP $1 SUBSEP $3) in c) || $1 == "worktree"' |
+	_new=$(printf '%s\n' "$_src" | C=$_cf awk -F '\t' "$AWK_CACHE"'!(($4 SUBSEP $1 SUBSEP $3) in c) || $1 == "worktree" { print $1 "\t" $2 "\t" $3 "\t" $4 }' |
 		while IFS="$(printf '\t')" read -r _o _r _p _bl; do
 			item_load "$_o" "$_r" "$_p" || continue
 			[ -z "$ILCONTRACTS" ] || contract_tree
@@ -1317,7 +1322,7 @@ item_rows() {
 			if (($1 SUBSEP $3) in nf) x = nf[$1 SUBSEP $3]
 			else if (($4 SUBSEP $1 SUBSEP $3) in c) x = c[$4 SUBSEP $1 SUBSEP $3]
 			else next
-			print $1 "\t" $2 "\t" $3 "\t" x
+			print $1 "\t" $2 "\t" $3 "\t" x "\t" $5
 		}' | item_rows_finish
 }
 
@@ -1332,8 +1337,8 @@ AWK_CACHE='BEGIN {
 }
 '
 
-# item_rows_finish: "<origin>\t<ref>\t<path>\t<facts without the cache field>" lines (15 facts)
-# to item_row lines, adding what git says: opened_by (open_authors) and active.
+# item_rows_finish: "<origin>\t<ref>\t<path>\t<facts without the cache field>\t<collides>" lines
+# (15 facts) to item_row lines, adding what git says: opened_by (open_authors) and active.
 item_rows_finish() {
 	_in=$(cat)
 	[ -n "$_in" ] || return 0
@@ -1361,9 +1366,9 @@ worktree$_tab"*) [ -z "$(git status --porcelain 2>/dev/null)" ] || _today=$(date
 		}
 		{
 			# $4 id 5 type 6 status 7 phase 8 frs 9 done 10 total 11 title 12 q 13 approved_by
-			# 14 shipped 15 reason 16 reason_code 17 roadmap 18 depends
+			# 14 shipped 15 reason 16 reason_code 17 roadmap 18 depends 19 collides
 			act = $14 != "" ? $14 : ($1 == "worktree" && ENVIRON["TODAY"] != "") ? ENVIRON["TODAY"] : day[$2]
-			print $4, $5, $6, $7, $8, $9, $10, $11, ($1 == "archive" ? "" : $2), $1, $12, $13, by[$2 SUBSEP $4], $14, act, $15, $16, $17, $18
+			print $4, $5, $6, $7, $8, $9, $10, $11, ($1 == "archive" ? "" : $2), $1, $12, $13, by[$2 SUBSEP $4], $14, act, $15, $16, $17, $18, $19
 		}'
 }
 

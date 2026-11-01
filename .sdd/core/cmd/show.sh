@@ -13,14 +13,14 @@ done
 [ -n "$id" ] || usage_die "usage: $NAME show <id> [--json]"
 need_repo
 
-src=$(item_sources | while IFS="$(printf '\t')" read -r o r p _; do
-	[ "$(id_of "${p%/item.md}")" = "$id" ] && printf '%s\t%s\t%s\n' "$o" "$r" "$p"
-done | head -n 1)
+# The id from the folder name, as id_of has it (item_sources gives each id once).
+src=$(item_sources | I=$id awk -F '\t' '{ d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
+	if (i == ENVIRON["I"]) { print $1 "\t" $2 "\t" $3 "\t" $5; exit } }')
 [ -n "$src" ] || die "no item $id (see: $CMD ls)"
-o=$(printf '%s' "$src" | cut -f1)
-r=$(printf '%s' "$src" | cut -f2)
-p=$(printf '%s' "$src" | cut -f3)
-row=$(item_row "$o" "$r" "$p") && item_load "$o" "$r" "$p" || die "could not read item $id from $r"
+o=$(tsv 1 "$src")
+r=$(tsv 2 "$src")
+p=$(tsv 3 "$src")
+row=$(item_row "$o" "$r" "$p" "$(tsv 4 "$src")") && item_load "$o" "$r" "$p" || die "could not read item $id from $r"
 facts=$(parse_item "$IFILE" "$ID")
 [ -z "$ITMP" ] || rm -f "$ITMP"
 # A roadmap's entries say where each stands (FR-24.5), from the items opened from them.
@@ -30,13 +30,18 @@ r$(printf '\t')"*) rows=$(item_rows) ;; esac
 
 if [ -n "$json" ]; then
 	# The item_row fields, then one array per fact kind, in a fixed order.
-	{ printf '%s\n' "$row"; [ -z "$facts" ] || printf '%s\n' "$facts"; } | ROWS=$rows awk -F '\t' "$AWK_JSON$AWK_ENTRY$AWK_DEPS"'
+	{ printf '%s\n' "$row"; [ -z "$facts" ] || printf '%s\n' "$facts"; } | ROWS=$rows awk -F '\t' "$AWK_JSON$AWK_ENTRY$AWK_DEPS$AWK_TASK"'
 	BEGIN { deps_load() }
 	NR == 1 { head = row_json(); next }
 	{
 		e = "{\"id\":\"" esc($2) "\",\"text\":\"" esc($4) "\""
 		if ($1 == "fr" || $1 == "us") e = e ",\"example\":\"" esc($5) "\""
-		if ($1 == "task") e = e ",\"done\":" ($3 == "done" ? "true" : "false")
+		if ($1 == "task") {
+			# FR-53.2: its files: as task done reads them (task_row), split on commas and trimmed.
+			split(task_row($2, $3, $4), tr, "\t"); m = split(tr[4], a, ","); fs = ""
+			for (j = 1; j <= m; j++) { gsub(/^[ \t]+|[ \t]+$/, "", a[j]); if (a[j] != "") fs = fs (fs == "" ? "" : ",") "\"" esc(a[j]) "\"" }
+			e = e ",\"done\":" ($3 == "done" ? "true" : "false") ",\"files\":[" fs "]"
+		}
 		if ($1 == "q") e = e ",\"decided\":" ($3 == "decided" ? "true" : "false")
 		if ($1 == "r") {
 			split(entry_row($2, $4), x, "\t"); m = split(x[4], a, " "); af = ""
