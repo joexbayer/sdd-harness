@@ -2,9 +2,10 @@
 id: 49
 type: fix
 title: Init names its source, and articles keep their whole rule
-status: open
+status: shipped
 created: 2026-11-01
 approved: 10c9c8de616bd9d96ac008d8b8ca3c07ea26b310 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 49 Init names its source, and articles keep their whole rule
 
