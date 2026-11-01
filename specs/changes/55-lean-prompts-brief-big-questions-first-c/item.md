@@ -74,8 +74,24 @@ none: prompt text only; the security rules in build.md stay word for word.
 - [x] T-55.2 Build, finish, review, verifier, review skill and AGENTS block, FR-55.3, FR-55.4, FR-55.5, FR-55.6, FR-55.7 (files: .sdd/core/prompts/build.md, .sdd/core/prompts/finish.md, .sdd/core/prompts/review.md, .sdd/core/prompts/role-verifier.md, .sdd/core/agents/skills/review.md, .sdd/core/cmd/init.sh, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-55.1, FR-55.2, FR-55.5: `.sdd/core/prompts/plan.md` rewritten (852 → ~620 words): the review
+  shape at the end, load-bearing questions first, "cases that share one rule share one FR", tests
+  may extend existing ones, an `expect: fail` task only writes the test (item 48's lesson).
+- FR-55.3: `prompts/review.md` and `agents/skills/review.md`: present in chat, never send the human
+  to read a file, write the human's changes under "## Review".
+- FR-55.4: the AGENTS.md block in `.sdd/core/cmd/init.sh`: the "Be brief … Never send the human to
+  read a file" line.
+- FR-55.5, FR-55.6: `prompts/build.md` (a duplicate test may be deleted, listed under Built;
+  extend existing tests) and `prompts/role-verifier.md` (undo the FR's code in a scratch copy, run
+  its test; report tests that only repeat another's case). `build.fix.md` shortened.
+- FR-55.7: plan step 898 → under 750 words, build step 726 → under 700 (loose ceiling, amended).
+- Tests: `tests/t_prompts_tests.sh` checks one phrase per rule plus the ceilings; old wrapped
+  checks there and in `t_verified.sh` became one-line phrases (same rules). Phrases other tests
+  quote (t_analyze, t_batch, t_discipline, t_phase, t_security, t_task) were kept in the prompts.
+- Cut on purpose: "a list endpoint gets a test that counts its queries" (web-only; teams add it
+  in `plan.append.md`).
+- Flaky, for item 56: `t_run.sh` failed once under load (exit 2 for 1), then passed 4 of 4.
+- Check passed.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
