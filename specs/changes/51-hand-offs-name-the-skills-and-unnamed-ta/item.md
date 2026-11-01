@@ -4,7 +4,7 @@ type: feature
 title: Hand-offs name the skills, and unnamed task commits show early
 status: open
 created: 2026-11-01
-approved: 5bb6ac801a13575f67e7630f2555bcfac77bf7d7 2026-11-01 joexbayer
+approved: 84cbd4e8f4869565e1864521637620f4ad20b2d4 2026-11-01 joexbayer
 ---
 # 51 Hand-offs name the skills, and unnamed task commits show early
 
@@ -31,10 +31,11 @@ the "Only the human approves" line.
       agent has them (`.sdd/bin/sdd sync <agent>`), with the command as fallback.
 
 FR-51.3 WHEN a task is ticked in the item file as committed at HEAD and no commit subject since the
-base names its ID THE SYSTEM SHALL print, in `sdd next` (under the Phase line) and `sdd review`
+base names its ID THE SYSTEM SHALL print, in `sdd task done` (after its result) and `sdd review`
 (under the verify line),
-`⚠ ticked and committed, but no commit subject names them: <IDs>. Ship refuses this: name each task ID in a commit subject (git commit --amend while it is the last commit).`
-  e.g. T-1.2 ticked and committed as "docs(1): built" → that line with `T-1.2`
+`⚠ ticked and committed, but no commit subject names them: <IDs>. Ship refuses this: name each task ID in a commit subject (amend that commit while it is the last one).`
+  e.g. T-1.2 ticked and committed as "docs(1): built" → that line with `T-1.2` in review; T-1.1
+  committed as "feat(1): the batch" → that line with `T-1.1` at the next `task done`
 FR-51.4 WHEN a ticked task is not committed yet, or some commit subject names it THE SYSTEM SHALL
 print no such line.
   e.g. right after `sdd task done T-1.2`, before the commit → no line; T-1.1 committed as
@@ -54,12 +55,16 @@ print no such line.
 - `.sdd/core/lib/common.sh`: new `unnamed_ticks`: the done tasks from `task_rows` whose `- [x] <ID> `
   line is in `git show "HEAD:$IFILE"` and for which `task_commit` finds nothing; new
   `unnamed_note` prints the FR-51.3 line (IDs joined with ", ") or nothing. Called once in
-  `.sdd/core/cmd/next.sh` after the Phase line and once in `.sdd/core/cmd/review.sh` after the
-  verify line.
+  `.sdd/core/cmd/task.sh` after the tick and once in `.sdd/core/cmd/review.sh` after the verify
+  line.
 Fixed names: `unnamed_ticks`, `unnamed_note`, the FR-51.2 and FR-51.3 texts.
 
 D-51.1 The skill name with the command as fallback, not the skill alone: agents without synced
 skills (NarrowBot's session before `sync claude`, Codex) still get a command that works.
+D-51.3 `task done`, not `next` (amended 2026-11-01, the user's choice): `next` may make only 2 git
+calls (`tests/t_gitcalls.sh`), and `task done` runs right after each batch's commit. The wording
+avoids `git commit` because C-4's check (`tests/constitution/c4-commits.sh`) counts that text
+as a verb that commits.
 D-51.2 Only ticks committed at HEAD count: right after `task done` the tick is uncommitted and
 the build flow commits next, so warning then would be noise.
 
@@ -74,7 +79,7 @@ none: text in prompts and AGENTS.md, and a read-only warning from git log and th
 
 ## Tasks (optional)
 - [x] T-51.1 Hand-offs name the skills, FR-51.1, FR-51.2 (files: .sdd/core/prompts/finish.md, .sdd/core/prompts/review.md, .sdd/core/prompts/pr.md, .sdd/core/agents/skills/build.md, .sdd/core/cmd/init.sh, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
-- [x] T-51.2 Unnamed task commits show early, FR-51.3, FR-51.4 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh, .sdd/core/cmd/review.sh, tests/t_task.sh; test: SRC=$PWD SH=dash dash tests/t_task.sh; size: S)
+- [x] T-51.2 Unnamed task commits show early, FR-51.3, FR-51.4 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/cmd/review.sh, tests/t_task.sh; test: SRC=$PWD SH=dash dash tests/t_task.sh; size: S)
 
 ## Built
 - FR-51.1: `prompts/finish.md` (ready for review), `prompts/review.md` and `prompts/pr.md`
@@ -88,13 +93,11 @@ none: text in prompts and AGENTS.md, and a read-only warning from git log and th
   Proven by `tests/t_task.sh` (review lists T-1.2 committed under "docs(1): built", not T-1.1;
   the next `task done` lists the earlier tick committed as "feat(1): the batch", not the tick it
   just made).
-- Deviation 1: the warning is in `task done`, not `next`. `next` has a budget of 2 git calls
-  (`tests/t_gitcalls.sh`, item 23) and the check needs more; `task done` runs right after each
-  batch's commit, which is what NarrowBot first suggested. The plan named next.
-- Deviation 2: the warning ends "(amend that commit while it is the last one)", not "(git commit
-  --amend …)": C-4's check (`tests/constitution/c4-commits.sh`) counts any `git commit` text in
-  `common.sh` as a verb that commits. Follow-up: that check could drop quoted text the way its push
-  check does (an amendment).
+- FR-51.3 was amended after the verifier's report (D-51.3, the user's choice): `task done`
+  instead of `next`, and the wording without `git commit`. Follow-up: C-4's check could drop
+  quoted text the way its push check does (an amendment).
+- Verifier finding fixed: `prompts/pr.md`'s hand-off had no test; `tests/t_forge.sh` now asserts
+  it in the pr phase.
 - Process note: cbf2242 was committed while the check was failing (on the git-call budget); the
   next commit 3aaad48 fixed it and the check passed on it.
 - Check: `sdd check` passed (144 s).
