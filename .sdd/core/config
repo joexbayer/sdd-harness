@@ -109,6 +109,10 @@
 	# Seconds a check may take before `check` warns (never fails); 0 turns the warning off. The
 	# gate runs after every task: slow tests belong to their task's own test, not check.run.
 	budget = 30
+	# `run` commands always run. `code` commands are skipped when every path the item changed
+	# matches a `docs` glob (a shell case pattern, where * also matches /). No default: what is
+	# docs differs per repo. E.g. run = gitleaks dir . --no-banner, code = scripts/check.sh,
+	# docs = *.md, docs = docs/*.
 
 # The constitution (specs/constitution.md) is capped, because budgets are lint errors.
 [constitution]

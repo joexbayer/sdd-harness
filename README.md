@@ -251,7 +251,10 @@ C-4 Only new, approve and ship create commits. No verb pushes, except two human-
   gitleaks' default rules and skips `.claude/worktrees/` (agents' copies of the repo). If gitleaks
   flags fake keys in test fixtures, list their fingerprints (`gitleaks dir . -v` prints them) in
   `.gitleaksignore`, or allowlist the paths in `.gitleaks.toml`. Set `[check] budget` to the
-  seconds your gate really takes (0 turns the warning off).
+  seconds your gate really takes (0 turns the warning off). For a slow gate, move it from `run`
+  to `code` and list your docs: `run = gitleaks dir . --no-banner`, `code = scripts/check.sh`,
+  `docs = *.md`, `docs = docs/*`. When every changed path matches a `docs` glob, `check` runs only
+  the `run` lines (the secret scan) and says what it skipped.
 
 ## Compared with Spec Kit
 

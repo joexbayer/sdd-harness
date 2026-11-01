@@ -25,6 +25,7 @@ assert_contains "$(log "$id")" 'CODE-RAN'
 rm notes.md.txt
 
 # FR-48.2: on the base, nothing changed: everything runs.
+git checkout -q README.md && rm -r docs
 git switch -q main
 sdd check >/dev/null 2>&1 || fail "check on main failed"
 assert_contains "$(log none)" 'CODE-RAN'

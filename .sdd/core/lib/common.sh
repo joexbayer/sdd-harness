@@ -662,6 +662,37 @@ code_changed() {
 	git ls-files --others --exclude-standard | grep -v "^$SPECS/" | grep -q .
 }
 
+# changed_paths: paths this branch changed outside specs/ since it left the base branch:
+# committed, uncommitted and untracked, relative to the repo root.
+changed_paths() {
+	_b=$(cfg sdd.base main)
+	{
+		git -C "$ROOT" diff --name-only --merge-base "$_b" 2>/dev/null || {
+			_mb=$(git -C "$ROOT" merge-base "$_b" HEAD 2>/dev/null) || _mb=HEAD
+			git -C "$ROOT" diff --name-only "$_mb"
+		}
+		git -C "$ROOT" ls-files --others --exclude-standard
+	} | grep -v "^$SPECS/" | sort -u
+}
+
+# docs_only: every changed path matches a [check] docs glob (a case pattern, so * also matches
+# /), and something changed. FR-48.1.
+docs_only() {
+	_globs=$(cfg_all check.docs) || return 1
+	_paths=$(changed_paths)
+	[ -n "$_paths" ] || return 1
+	printf '%s\n' "$_paths" | while IFS= read -r _p; do
+		_hit=
+		while IFS= read -r _g; do
+			# shellcheck disable=SC2254 # the glob is the pattern
+			case $_p in $_g) _hit=1 && break ;; esac
+		done <<EOF
+$_globs
+EOF
+		[ -n "$_hit" ] || exit 1
+	done
+}
+
 # next_id: allocate an item id, unique across all worktrees of this clone.
 next_id() {
 	_lock="$ST/lock"
@@ -926,7 +957,17 @@ masked() { grep -E '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)';
 # CHECK_ARTICLES to the constitution's problems (see check_articles), and CHECK_SECS to how long
 # the commands took (FR-35.1).
 run_check() {
-	_cmds=$(cfg_all check.run) || die "no check configured: add 'run = <command>' under [check] in $DIRNAME/config"
+	# [check] run always runs; [check] code is skipped when only docs changed (FR-48.1).
+	_cmds=$(cfg_all check.run)
+	_code=$(cfg_all check.code)
+	[ -n "$_cmds$_code" ] || die "no check configured: add 'run = <command>' under [check] in $DIRNAME/config"
+	CHECK_SKIPPED=
+	if [ -n "$_code" ] && docs_only; then
+		CHECK_SKIPPED=$(joinlist "$_code")
+	elif [ -n "$_code" ]; then
+		_cmds=${_cmds:+$_cmds
+}$_code
+	fi
 	_bad=$(printf '%s\n' "$_cmds" | masked)
 	[ -z "$_bad" ] || die "refusing a check that hides failures: $_bad"
 	_fp=$(fingerprint)

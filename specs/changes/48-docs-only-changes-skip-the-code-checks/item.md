@@ -75,7 +75,7 @@ sees it in check output and review. No new dependency.
 
 ## Tasks (optional)
 - [x] T-48.1 Docs-only skip in the check, FR-48.1, FR-48.2, FR-48.3 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/check.sh, tests/t_check_docs.sh; test: SRC=$PWD SH=dash dash tests/t_check_docs.sh; size: S; expect: fail "docs-only change")
-- [ ] T-48.2 Document code and docs, FR-48.4 (files: README.md, .sdd/core/config; size: S)
+- [x] T-48.2 Document code and docs, FR-48.4 (files: README.md, .sdd/core/config; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

@@ -13,7 +13,7 @@ run_check "$id"
 rc=$?
 case $rc in
 0)
-	echo "✓ check passed$([ -n "$id" ] && echo " for item $id") ($CHECK_SECS s)"
+	echo "✓ check passed$([ -n "$id" ] && echo " for item $id") ($CHECK_SECS s${CHECK_SKIPPED:+; docs-only change: skipped $CHECK_SKIPPED})"
 	if [ -n "$CHECK_DIRTIED" ]; then
 		echo "! the check itself created or changed files, so the tree now differs from what passed:"
 		printf '%s\n' "$CHECK_DIRTIED" | head -n 5 | sed 's/^/    /'
