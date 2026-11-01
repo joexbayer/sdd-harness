@@ -1,7 +1,10 @@
 # FR-1.5 phases plan → build → review, FR-1.6 next prompts (with local overrides),
-# FR-1.7 check, FR-1.13 approve pins the plan.
+# FR-1.7 check, FR-1.13 approve pins the plan. FR-47.1 review counts FR names only in the item's
+# changes; FR-47.2 says so when there are none.
 . "$SRC/tests/lib.sh"
 new_repo
+# FR-47.1: text from before the item (an adopted repo's old notes) that happens to say FR-1.2.
+echo 'notes from before sdd: FR-1.2' >old.md && git add old.md && git commit -qm "old notes"
 
 sdd new feature "Device login" >/dev/null 2>&1 || fail "new failed"
 f=specs/changes/1-device-login/item.md
@@ -56,14 +59,16 @@ assert_contains "$(sdd status)" 'no passing check for the current code'
 git checkout -q README.md
 
 # review: walkthrough with plan, check, FR → where it is named.
+echo '// FR-1.1' >in_item.txt && git add in_item.txt && git commit -qm "test names FR-1.1"
 echo 'x // FR-1.1' >code.txt
 sdd check >/dev/null 2>&1
 out=$(sdd review)
 assert_contains "$out" 'plan    approved'
 assert_contains "$out" 'check   ✓ passed'
 assert_contains "$out" 'untracked: code.txt'
-assert_contains "$out" 'FR-1.1     code.txt:1'
-assert_contains "$out" 'FR-1.2     ✗ not named anywhere'
+assert_contains "$out" 'FR-1.1     code.txt:1 in_item.txt:1' # FR-47.1: untracked and committed
+assert_contains "$out" "FR-1.2     ✗ not named in this item's changes" # FR-47.1, FR-47.2: not old.md
+assert_contains "$out" "Requirements → where this item's changes name them outside specs/ (tests should name the FR they prove)"
 assert_contains "$out" 'ship does not check it'
 assert_contains "$out" 'Filled in by the test (built).'
 rm code.txt
