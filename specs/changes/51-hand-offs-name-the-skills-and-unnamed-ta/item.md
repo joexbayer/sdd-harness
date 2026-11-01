@@ -100,7 +100,10 @@ none: text in prompts and AGENTS.md, and a read-only warning from git log and th
   it in the pr phase.
 - Process note: cbf2242 was committed while the check was failing (on the git-call budget); the
   next commit 3aaad48 fixed it and the check passed on it.
-- Check: `sdd check` passed (144 s).
+- Security pass (the fresh verifier, Sonnet, read the diff for it): no findings; no misfire with a
+  teammate's commits (`task_commit` reads every subject since the base).
+- Check: `sdd check` passed after the amendment.
+Verified by: claude-sonnet-5-5: 3 of 4 FRs proven; FR-51.3 differed from the plan (plan amended and re-approved), pr.md hand-off untested (test added)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
