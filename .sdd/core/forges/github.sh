@@ -32,11 +32,8 @@ forge_pr_list() { gh pr list --state all --limit 200 --json "$FORGE_FIELDS" --jq
 # forge_pr_state <branch>: the newest PR line for that branch, or nothing.
 forge_pr_state() { gh pr list --head "$1" --state all --limit 1 --json "$FORGE_FIELDS" --jq ".[] | $FORGE_JQ"; }
 
-# forge_pr_create <branch> <base> <title> <body file>: open a PR; prints its URL.
-forge_pr_create() { gh pr create --head "$1" --base "$2" --title "$3" --body-file "$4"; }
-
-# forge_pr_edit <number> <body file>: replace the PR's body.
-forge_pr_edit() { gh pr edit "$1" --body-file "$2" >/dev/null; }
+# forge_pr_create <branch> <base> <title> <body>: open a PR; prints its URL.
+forge_pr_create() { gh pr create --head "$1" --base "$2" --title "$3" --body "$4"; }
 
 # forge_pr_merge <number> <sha>: merge with a merge commit, only if the PR head is still <sha>.
 forge_pr_merge() { gh pr merge "$1" --merge --match-head-commit "$2"; }

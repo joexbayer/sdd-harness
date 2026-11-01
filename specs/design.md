@@ -342,7 +342,7 @@ the change keeps the id. The record is per clone: a teammate's review is the PR'
 Team mode adds:
 
 - remote-claimed IDs
-- `ship` opens a PR whose body is the brief
+- `ship` opens a PR whose body points at the item file
 - approval is a review by someone other than the author
 - CI runs the gates, and nobody can skip them
 

@@ -15,4 +15,6 @@ This repo tracks changes with sdd (`.sdd/`). Before changing code, run `.sdd/bin
 ## This repo
 `sdd` itself: POSIX sh in `.sdd/`, specs and research in `specs/`. Design: `specs/design.md`.
 Verify every change with `.sdd/bin/sdd check` (shellcheck + tests under /bin/sh and dash).
-Developer notes: `.claude/skills/sdd-dev/SKILL.md`.
+One test: `SRC=$PWD SH=dash dash tests/t_<name>.sh`. Developer notes: `.claude/skills/sdd-dev/SKILL.md`.
+Be brief, to cut tokens: short plain words, only what is needed, no filler, in chat and in files
+(items, prompts, kb). No huge markdown files.
