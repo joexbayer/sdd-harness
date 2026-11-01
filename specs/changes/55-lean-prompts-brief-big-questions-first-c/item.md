@@ -69,7 +69,7 @@ none: prompt text only; the security rules in build.md stay word for word.
 `tests/t_prompts_tests.sh` passes under sh and dash, and `sdd check` passes.
 
 ## Tasks (optional)
-- [ ] T-55.1 Plan prompt: the review shape, big questions first, test rules, cut to 600 words, FR-55.1, FR-55.2, FR-55.5, FR-55.7 (files: .sdd/core/prompts/plan.md, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
+- [x] T-55.1 Plan prompt: the review shape, big questions first, test rules, cut to 600 words, FR-55.1, FR-55.2, FR-55.5, FR-55.7 (files: .sdd/core/prompts/plan.md, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
 - [ ] T-55.2 Build, finish, review, verifier, review skill and AGENTS block, FR-55.3, FR-55.4, FR-55.5, FR-55.6, FR-55.7 (files: .sdd/core/prompts/build.md, .sdd/core/prompts/finish.md, .sdd/core/prompts/review.md, .sdd/core/prompts/role-verifier.md, .sdd/core/agents/skills/review.md, .sdd/core/cmd/init.sh, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
 
 ## Built

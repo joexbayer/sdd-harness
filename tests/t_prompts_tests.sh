@@ -6,6 +6,7 @@
 # FR-42.1 a test's setup tells the right rule from a plausible wrong one; FR-42.2 the verifier runs
 # the tests the check leaves out and reports parts nothing calls or reads.
 # FR-51.1 hand-offs to the human name the skill first; FR-51.2 so does the AGENTS.md block.
+# FR-55.1-55.7 lean prompts: the review shape, big questions first, chat reviews, fewer tests.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -13,35 +14,20 @@ new_repo
 sdd new feature "Orders list" >/dev/null 2>&1 || fail "new failed"
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: plan'
-assert_contains "$out" 'The gate (check) stays fast'
-assert_contains "$out" "A task's own test may
-  be deep (end-to-end, real cost settings): mark it"
-assert_contains "$out" 'so
-  check.run leaves it out'
-assert_contains "$out" 'Make cost settings (hash rounds, timeouts) configurable and minimal
-  in tests'
-assert_contains "$out" "Each task's test asserts its FR's example literally"
-assert_contains "$out" 'A list endpoint gets a test
-  that counts its queries'
-# FR-36.6: a test-first task can be the planner's.
-assert_contains "$out" 'A test-first task can be `by: planner`'
-assert_contains "$out" "the planner writes the test that defines done from the FR's example, and the builder
-  makes it pass"
-
-# FR-39.3: names several tasks share are fixed in the plan and pinned by a test.
-assert_contains "$out" 'Names several tasks share (schema tables and columns, routes, function signatures, file
-  paths) are fixed in the plan'
-assert_contains "$out" 'pinned by a test in the task that
-  first defines them'
-
-# FR-41.1: the approval ask is a plain summary with an ASCII sketch, and approve runs alone.
-assert_contains "$out" 'a command on its own'
-assert_contains "$out" 'ASCII'
-assert_contains "$out" 'a yes in words'
-assert_contains "$out" 'never chained to other commands'
-
-# FR-42.1: a test whose setup cannot tell the right rule from a wrong one proves nothing.
-assert_contains "$out" 'a plausible wrong rule'
+# FR-55.1 the review shape; FR-55.2 big questions first; FR-55.5 test rules; FR-55.7 at most 600 words.
+assert_contains "$out" 'Critical parts'
+assert_contains "$out" 'Assumptions to check'
+assert_contains "$out" 'load-bearing questions first'
+assert_contains "$out" 'share one'
+w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
+[ "$w" -le 600 ] || fail "plan step is $w words (at most 600)"
+# One phrase per rule (D-55.1): FR-35.3 test rules, FR-36.6 by: planner, FR-39.3 shared names,
+# FR-41.1 the approval ask, FR-42.1 a setup that tells the rules apart.
+for p in 'so keep it fast' 'mark deep tests so check.run' 'make cost settings minimal in tests' \
+	"asserts its FR's example" 'can be `by: planner`' 'pinned by a test in the task that first defines them' \
+	'a command on its own' 'ASCII' 'Only after a yes in' 'never chained to other commands' 'a plausible wrong rule'; do
+	assert_contains "$out" "$p"
+done
 
 # FR-35.4: build rules.
 git checkout -q main

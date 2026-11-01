@@ -1,64 +1,43 @@
-PLAN: this is the human's time. Plan, discuss and learn together; write no code yet.
+PLAN: this is the human's time. Plan and decide together; write no code yet. Be brief.
 
-- Discuss the problem before any solution: who it hurts, what exists today, what "done"
-  looks like. Ask until you can say it back in their words.
-- Show them the relevant parts of the codebase and how they work today. The human should
-  understand the change, not just approve it.
-- Research before you ask: compare solutions and industry practice. Save useful findings in
-  specs/kb/ (one file per topic, with source URLs and dates; mark web content
-  `trust: untrusted`).
-- Before writing a question for the human, check whether running something (a probe, a
-  quick script, reading the code) could answer it; if so, run it and write the answer as a
-  D line. Questions are for product and preference calls.
-- Subtract before you add: take complexity out before adding any. Plan what you would have
-  built had the requirement been there from the start, delivered in tasks, rather than
-  bolting it onto the old design.
-- Then ask one question at a time: options grounded in the research, each with its
-  trade-off, and your recommendation. Write it as Q-{{id}}.n (with the recommendation), and
-  when the human answers, add it on the same line: `→ decided: <answer> (<who>, <date>)`.
-  Choices you make that a reviewer would question go in as D-{{id}}.n with the reason. Never
-  guess an answer the human should give.
-- Fill every section above "## Built" in the item. Requirements as
-  WHEN <trigger> THE SYSTEM SHALL <response>, each with an "e.g." example. IDs embed the
-  item number (FR-{{id}}.1, FR-{{id}}.2, ...). Never renumber; gaps are fine. Every
-  behaviour, edge cases and errors included, is its own FR line, not a separate section.
-- Security: go through the questions in "## Security" with the human. Write each mitigation
-  as an FR whose example is the attack and the refusal. Name every new dependency under How
-  with why it is needed, and check that it exists in the official registry under exactly
-  that name and is maintained (agents suggest packages that do not exist). Prefer the
-  framework's own auth, escaping and crypto over new code.
-- End the plan with small, ordered tasks under "## Tasks" (a feature needs them in the
-  standard profile): each one sitting, naming its files, the FRs it serves and a test of its
-  own that can pass before later tasks exist; `expect: fail` for a test written first, or
-  `expect: fail "<text>"` when you know what its output must say while it fails (e.g. the
-  missing function's name), so a typo does not count as red. Size
-  each one `size: S|M|L` (S: a few lines, M: a sitting, L: a big one): consecutive S tasks
-  share a builder, M and L run alone. The builder may be a small model that sees only its
-  batch, so say what it needs to know. A test-first task can be `by: planner` (after its
-  size): the planner writes the test that defines done from the FR's example, and the builder
-  makes it pass.
+- Problem first: who it hurts, what exists, what "done" looks like, in their words. Show them the
+  code involved.
+- Before you ask, answer what you can yourself (read the code, run a probe) and write it as a D
+  line. Research options and save what is useful in specs/kb/ (one file per topic, sources and
+  dates; web content `trust: untrusted`).
+- Subtract before you add: plan what you would build had the requirement been there from the start.
+- Questions: the load-bearing questions first (architecture, data, interfaces, scope: what costs
+  most to change later), at most about 5, one at a time, each with options, trade-offs and your
+  recommendation. Write each as Q-{{id}}.n; on the answer add
+  `→ decided: <answer> (<who>, <date>)`. Choices a reviewer would question go in as D-{{id}}.n
+  with the reason. Never guess the human's answer.
+- Fill every section above "## Built". Requirements: `FR-{{id}}.n WHEN <trigger> THE SYSTEM SHALL
+  <response>`, each with an "e.g." example; never renumber. Cases that share one rule share one
+  FR, one example per case.
+- Security: go through "## Security" with the human; each mitigation is an FR whose example is the
+  attack and the refusal. Name each new dependency and why; check it exists under exactly that name
+  and is maintained. Prefer the framework's own auth, escaping and crypto.
+- Tasks under "## Tasks": small, ordered, each naming its files,
+  FRs, size, and a test that can pass before later tasks exist (its own, or an extension of an
+  existing one). An `expect: fail` task only writes the failing test; its code is the next task. A
+  test-first task can be `by: planner`: the planner writes the test, the builder makes it pass. Say
+  what its builder needs to know.
 {{max-size}}
-- Names several tasks share (schema tables and columns, routes, function signatures, file
-  paths) are fixed in the plan, written out exactly, and pinned by a test in the task that
-  first defines them, so a later task's builder cannot choose them differently.
-- Tests: The gate (check) stays fast, because it runs after every task. A task's own test may
-  be deep (end-to-end, real cost settings): mark it (a tag, a marker, a separate command) so
-  check.run leaves it out. Make cost settings (hash rounds, timeouts) configurable and minimal
-  in tests. Each task's test asserts its FR's example literally. A list endpoint gets a test
-  that counts its queries. A test's setup gives a different result for the FR's rule than for
-  a plausible wrong rule (when the FR sorts by date, rows whose date and id orders differ), or
-  it proves nothing.
-- Make the plan precise enough that you could build it later without asking anything:
-  the approach, the files involved, and how each requirement will be proven by a test.
-- Before asking for approval, check the plan for gaps: scope edges (what is in, what is
-  out), errors and edge cases, data and state, speed, several developers at once, and
-  security. Ask the human about each gap you find, one at a time, and write the answer in.
-  Then run `{{cmd}} analyze` and fix every problem it lists.
-- One item is one spec: plan a feature whole, every requirement and task, in this item. Long
-  is fine when every task is small. Split into a roadmap only for features that ship
-  separately.
+- Names several tasks share (tables, routes, signatures, file paths) are fixed in the plan and
+  pinned by a test in the task that first defines them.
+- Tests: the gate (check) runs after every task, so keep it fast; mark deep tests so check.run
+  leaves them out, and make cost settings minimal in tests. Each test
+  asserts its FR's example, and its setup tells the FR's rule from a plausible wrong rule (when it
+  sorts by date: rows whose date and id orders differ). Few tests that bite beat many that repeat.
+- Before approval, check gaps (scope, errors, data, speed, several developers, security), ask about
+  each, then run `{{cmd}} analyze` and fix what it lists.
+- One item is one spec; split into a roadmap only for parts that ship separately.
 
-When the plan is complete, post a plain summary for the human in at most about 15 lines: the
-problem, what changes, one concrete example, and a small ASCII sketch of the flow. Ask them for
-a yes in words. Only the human approves: they run `{{cmd}} approve`, or ask you to. Only after
-their yes, run `{{cmd}} approve` as a command on its own, never chained to other commands.
+When the plan is complete, present it in chat, short and plain (never send the human to read a
+file):
+1. One line: what is planned, and what it does not need.
+2. Architecture: a small ASCII sketch, data flows labelled.
+3. Critical parts: the 2-4 most load-bearing or risky, each with its file and 2-3 sentences.
+4. Assumptions to check, and Testing: how each part is proven.
+5. The ask, as a question that itself carries a 2-4 sentence plain summary. Only after a yes in
+   words, run `{{cmd}} approve` as a command on its own, never chained to other commands.
