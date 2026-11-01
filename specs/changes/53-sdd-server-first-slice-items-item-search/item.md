@@ -967,6 +967,88 @@ DOD-53.4 `sdd check` passes, `linux-check.sh` passes, and `npx sdd-server@0.1.0 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+All 13 tasks ticked. `sdd check` passes (171 s: over the 150 s budget, see follow-ups).
+`server/scripts/linux-check.sh` passed in node:26-trixie-slim on this machine (dash, mawk: sdd
+suite 37/37, server tests 52/52, smoke ok). Server tests: `cd server && npm test` (52 tests).
+
+Per requirement (code → test):
+- FR-53.1 `item_sources` keeps the first source of an id and adds `collides_with` (the first ref
+  of each other item folder with that id; local and remote of one folder are one item)
+  .sdd/core/lib/common.sh:1155-1203; row field 20, PR fields moved to 21-26 (common.sh:1149,
+  1285, 1369; ls.sh:53 prints `· id also on …`); show.sh:16-23 passes it to `item_row`.
+  → tests/t_query.sh (the FR-53.1 block: origin/feature/12-login + origin/fix/12-typo).
+- FR-53.2 show.sh:39-44: `files` from `task_row` (AWK_TASK), split and trimmed, `[]` without.
+  → tests/t_query.sh (`[[],["src/a.go","src/b.go"]]`), tests/t_serve_clone.sh.
+- FR-53.3 no code change needed: sdd already lists from refs. → tests/t_serve_clone.sh (same
+  `ls --json --all` as a full clone; a hostile base `.sdd/bin/sdd` + `.sdd/local/cmd/ls.sh` never run;
+  armed check: a full clone runs it).
+- FR-53.4, FR-53.5 server/src/config.ts:37 (`git config -f --null --list`, every rule) →
+  server/test/config.test.ts; exit 2 with `sdd-server: repo "api": missing url` → http.test.ts (FR-53.14 test).
+- FR-53.6 mirror.ts:24-53 (no-checkout clone, ssh `-F /dev/null -i key IdentitiesOnly
+  StrictHostKeyChecking=yes UserKnownHostsFile`) → mirror.test.ts (a throwaway user-mode sshd:
+  empty known_hosts → "Host key verification failed."; known key → "Permission denied (publickey…").
+- FR-53.7 mirror.ts:56-79 (fetch --prune, 60 s, local base moved), repo-index.ts:49 (one run per
+  repo), repo-index.ts:129 `poll` → mirror.test.ts (FR-53.7 ×3), http.test.ts (serve picks up a push).
+- FR-53.8 sdd.ts:14-37 (home `<data>/homes/<repo>/.sdd`, bundled bin/core/VERSION + base config,
+  `/bin/sh` argv), mirror.ts:16 `gitEnv` → index.test.ts (FR-53.8 ×2, hostile base + marker).
+- FR-53.9, FR-53.10 repo-index.ts:49-90 (swap whole, keep last good, `ok:false`, first error line
+  via run.ts:34 `errorLine`) → index.test.ts.
+- FR-53.11 mirror.ts:81 `projectConfig` → mirror.test.ts, index.test.ts.
+- FR-53.12, FR-53.14 auth.ts (timingSafeEqual, `sdd_` + 32 bytes base64url), http.ts:45-50, cli.ts
+  `token` → auth.test.ts, http.test.ts.
+- FR-53.13 http.ts:32 (`hostHeaderValidation`) → http.test.ts. FR-53.15 tools.ts:123-128 `audit`;
+  FR-53.16 http.ts:48 → http.test.ts. FR-53.17 http.ts:19,35-40, cli.ts `health` → http.test.ts.
+  FR-53.19 cli.ts:56-64 → http.test.ts (SIGTERM → exit 0).
+- FR-53.20 to FR-53.27 tools.ts (`items`, `item`, strict zod schemas, 1,000 cap, 120-char lines),
+  repo-index.ts `show` (cached per generation, raw markdown cut at 256 KB) → tools.test.ts.
+- FR-53.28, FR-53.29 versions.ts, repo-index.ts (rows get `sdd`, `sdd_vs_base`), tools.ts
+  `behindLine` → versions.test.ts, tools.test.ts (`sdd behind main: api 1 (merge main into it)`).
+- FR-53.30 to FR-53.32 search.ts, tools.ts `search` tool → search.test.ts.
+- FR-53.18, FR-53.33, FR-53.34 cli.ts `check`/`version`, scripts/bundle-sdd.sh → scripts/smoke.sh
+  (refusals off main and when dirty, tarball contents, version line, check line, the three tools
+  with curl, a refused token, audit lines without the token, SIGTERM).
+- FR-53.35 scripts/linux-check.sh (ran: passed). DOD-53.1 docs: server/README.md,
+  specs/design.md §11/§16, `.sdd/config` check line → scripts/docs-check.sh.
+
+Deviations:
+- Every `expect: fail` task lists its own code files and no later task does, so each test was
+  written first and ticked red, then that task's code was written and committed with it.
+- The sdd home is `<data>/homes/<repo>/.sdd/` (D-53.10 says `<repo>/`): sdd names its commands
+  after its folder (`$DIRNAME/bin/sdd`), so reasons read `.sdd/bin/sdd approve` as in a clone.
+- A clone's HEAD points at an unborn `sdd-server-no-checkout` branch (mirror.ts:35): sdd reads the
+  base from the work tree when HEAD is on it (`shipped_roadmaps`), and the work tree is empty.
+- `package.json` also lists `npm-shrinkwrap.json` in `files` (npm 10 did not pack it otherwise) and
+  has `postpack: rm -rf sdd`, so a pack in server/ leaves no stale bundle for `bundledSdd()`
+  (cli.ts:29: the package's `sdd/`, else this repo's `.sdd/` when run from source).
+- `buildServer(ix, log)` takes the audit logger (the plan's signature has `ix` only).
+- `errorLine` takes the line before git's first `fatal:` (ssh's own words) and drops ssh's
+  `git@host: ` prefix, to match the plan's examples; "Host key verification failed." is not ssh's first line.
+- `search`: a line on several refs is reported once, from the lowest-id item branch carrying it,
+  else the base; so base lines unchanged on an open branch are attributed to that item (FR-53.32's
+  letter). `search` and `items` also accept `repo: ""` (the plan's search example) as all repos.
+- Header for a failing repo reads `web: failing since 09:48 (<error>)` (the plan's sketch: `fetch failing`):
+  the error may come from indexing, not the fetch.
+- `check --offline` (named by T-53.13) validates the config only and prints `config ok: 2 repos, 2 tokens`.
+
+Not run here (and how):
+- DOD-53.1, DOD-53.2 with real clients: a fresh host with two real repos, then Claude Code and
+  Codex sessions (server/README.md walkthroughs). Real clients' connection through the SDK's
+  2025-era stateless fallback is tested only with JSON-RPC (http.test.ts, smoke.sh).
+- DOD-53.4's `npx sdd-server@0.1.0 version` from the registry: needs `npm publish` (human, from main).
+
+Open questions:
+- FR-53.34 allows `LICENSE`, but the repo has none, so the package ships without one (and no
+  `license` field). Which license?
+
+Follow-ups:
+- `sdd check` now takes ~171 s against `[check] budget = 150` (the server suite adds ~20 s).
+- A fresh clone needs `npm ci` in server/ before `sdd check`, or the npm test line fails.
+- Notes for .claude/skills/sdd-dev (not edited, agent config): asdf shims need the real HOME
+  (smoke.sh keeps it, isolates git/sdd config instead); user-mode `/usr/sbin/sshd` works for
+  host-key tests (fixtures.ts `sshd`); a no-checkout clone with HEAD on the base makes sdd read
+  the empty work tree.
+- Not changed, noted: `forge_load` sources `core/forges/<sdd.forge>.sh` from config; the server never
+  passes `--pr`, so a hostile `forge` value is inert there.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
