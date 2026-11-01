@@ -38,8 +38,29 @@ stay; names a user types or a program reads change.
 - `sdd check` passes; nothing outside the named files changes.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- Adapter: `git mv .sdd/core/agents/narrow.sh .sdd/core/agents/narrowbot.sh`, its messages say
+  narrowbot; `.sdd/core/cmd/run.sh:23` lists `<claude|narrowbot>`.
+- Experiment: `experiment/narrow/` → `experiment/narrowbot/`; `experiment/run.sh` uses
+  `narrowbot_bin` (from `EXPERIMENT_NARROWBOT_BIN`, else `narrowbot` on PATH), `NARROWBOT_CONFIG_DIR`
+  (`<run>/narrowbot-config`), `tier.xp-builder.agent narrowbot`, `agent.narrowbot.bin`; the `--dry`
+  fakes include `narrowbot`; `experiment/fake/fake_agent.py` dispatches on `narrowbot`;
+  `provider.lisp` reads the key from `~/.config/narrowbot/api.key`.
+- Deviation: dropped the old fallback to the newest `~/narrowbot-bench/bin/narrow-*` build (those are
+  pre-rename builds named `narrow-<version>`); the binary now comes from `EXPERIMENT_NARROWBOT_BIN`
+  or PATH.
+- Tests: agent, stub binary and `NARROWBOT_DO`/`NARROWBOT_RC` names in t_run, t_agent_usage,
+  t_batch, t_build_loop, t_role_guard, t_roles, t_usage (log rows too). `t_summary.sh` "Narrow
+  terminals" means width and stays.
+- Docs: README, specs/design.md, experiment/README.md, `.claude/skills/sdd-dev/SKILL.md`; kept:
+  `specs/kb/narrow-lessons.md` links, `~/narrowbot-bench/narrow-sdd.sh` (NarrowBot's own name).
+- Invariants: the renamed tests pass under sh and dash; `sh experiment/run.sh A --dry` and
+  `C --dry` ran to the end with the narrowbot builder; your own sdd config and this clone's had
+  no narrow agent to change.
+- Check: `sdd check` passed (132 s).
+- Security pass (the fresh verifier, Sonnet, read the diff for it): no findings. It found no
+  leftover name a user types or a program reads, and confirmed the experiment sets
+  `NARROWBOT_CONFIG_DIR`, so NarrowBot reads the experiment's config, not the developer's.
+Verified by: claude-sonnet-5-5: 3 of 3 invariants proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
