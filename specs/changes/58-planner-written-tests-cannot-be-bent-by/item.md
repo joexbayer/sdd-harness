@@ -47,8 +47,13 @@ ship passes the check (FR-58.2). An untouched planner task and a builder task ed
 (must not change). Fails now: ship ships.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-58.1: `bent_tests` in `.sdd/core/lib/common.sh` (after `unnamed_note`); `ship.sh` fails with
+  its lines next to the other task gates. Test: `tests/t_task.sh` (t1.sh bent → ship exit 1 with the
+  line).
+- FR-58.2: a file named in "## Built" is skipped. Test: same section (Built names t1.sh → no line).
+- FR-58.3: `review.sh` prints the lines with ⚠ under the verify line. Test: same section.
+- Must not change: the builder's own test (b.sh) edited later shows nothing (same section).
+- Check passed. Security: a stricter local gate; read-only git calls.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
