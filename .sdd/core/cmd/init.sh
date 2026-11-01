@@ -72,6 +72,26 @@ if [ ! -f "$config" ]; then
 	echo "wrote $DIRNAME/config (profile lite, base $(git config -f "$config" sdd.base))"
 fi
 
+
+# gitleaks dir scans ignored files too, and agents keep whole copies of the repo in
+# .claude/worktrees/: keep gitleaks' defaults, minus those copies (FR-46.1). A team's own file is
+# theirs: only a tip.
+if git config -f "$config" --get-all check.run | grep -q '^gitleaks '; then
+	if [ ! -f .gitleaks.toml ]; then
+		cat >.gitleaks.toml <<'EOF'
+# Written by sdd init. gitleaks' default rules, minus copies of the repo that git never commits.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "agent worktrees (Claude Code isolation: worktree): copies git does not commit"
+paths = ['''^\.claude/worktrees/''']
+EOF
+		echo "wrote .gitleaks.toml (gitleaks' default rules; skips .claude/worktrees/, agents' copies of the repo)"
+	elif ! grep -qF '.claude/worktrees' .gitleaks.toml; then
+		echo "tip     .gitleaks.toml: add '^\\.claude/worktrees/' to its allowlist paths, or gitleaks also scans agents' worktree copies of the repo"
+	fi
+fi
 # Items branch from the base, so an install committed only on another branch vanishes on new.
 base=$(git config -f "$config" sdd.base)
 cur=$(current_branch)

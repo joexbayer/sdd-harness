@@ -247,10 +247,11 @@ C-4 Only new, approve and ship create commits. No verb pushes, except two human-
   those two folders have uncommitted changes. Review the diff and commit it.
 - **Your gate.** `init` uses an executable `scripts/check.sh` or a `make check` target when the
   repo has one, and otherwise guesses `[check] run` from the language: point it at your own
-  check script if it lives elsewhere. If gitleaks flags fake keys in test fixtures, list their fingerprints
-  (`gitleaks dir . -v` prints them) in `.gitleaksignore`, or allowlist the paths in
-  `.gitleaks.toml`. Set `[check] budget` to the seconds your gate really takes (0 turns the
-  warning off).
+  check script if it lives elsewhere. With gitleaks, `init` writes a `.gitleaks.toml` that keeps
+  gitleaks' default rules and skips `.claude/worktrees/` (agents' copies of the repo). If gitleaks
+  flags fake keys in test fixtures, list their fingerprints (`gitleaks dir . -v` prints them) in
+  `.gitleaksignore`, or allowlist the paths in `.gitleaks.toml`. Set `[check] budget` to the
+  seconds your gate really takes (0 turns the warning off).
 
 ## Compared with Spec Kit
 
