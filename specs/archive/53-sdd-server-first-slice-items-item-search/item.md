@@ -2,10 +2,11 @@
 id: 53
 type: feature
 title: sdd-server first slice: `items`, `item`, `search` and sdd versions over HTTPS, on npm (core: id collisions and task files in `--json`)
-status: open
+status: shipped
 created: 2026-11-01
 roadmap: R-52.1
 approved: d9e44bd7d5f63b73337cd9abefdf778a1bdb9189 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 53 sdd-server first slice: `items`, `item`, `search` and sdd versions over HTTPS, on npm (core: id collisions and task files in `--json`)
 
