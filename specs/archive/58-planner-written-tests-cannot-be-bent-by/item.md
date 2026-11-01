@@ -2,9 +2,10 @@
 id: 58
 type: fix
 title: Planner-written tests cannot be bent by the builder
-status: open
+status: shipped
 created: 2026-11-01
 approved: 55425aaccc2dbb059c53dd96970f4ce860ea91ad 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 58 Planner-written tests cannot be bent by the builder
 
