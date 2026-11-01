@@ -125,7 +125,7 @@ Each phase is computed from facts:
 - **ship**: a check passed for exactly this tree.
 
 The fingerprint is the tree hash of the working tree including untracked files, taken with a
-temporary index. Any edit after a passing check makes it stale. This is narrow's finish gate,
+temporary index. Any edit after a passing check makes it stale. This is narrowbot's finish gate,
 built on git state instead of edit counters.
 
 | gate | lite | standard | strict |
@@ -141,7 +141,7 @@ built on git state instead of edit counters.
 | every `depends:` ref has shipped (`depends`; not hotfix) | warn | block | block |
 | trust gate, env allowlist, role profiles | – | – | on |
 
-"Block once" follows narrow: the first stop is refused with the reason. The second is allowed,
+"Block once" follows narrowbot: the first stop is refused with the reason. The second is allowed,
 and the report carries `unverified:`. Honest reporting, no deadlock.
 
 Exit codes for every verb: `0` ok, `1` failed or gate refused, `2` usage error, `3` ran but
@@ -282,8 +282,8 @@ own agent and model:
 Roles run as subagents where the agent has them: `sync claude` writes
 `.claude/agents/sdd-<role>.md` (the tier's model; "run `sdd next` and do that step") for every
 role on a Claude tier, and the `sdd-run` skill hands a role to its subagent. Other roles (a
-coder model through narrow) run through `sdd run <role> <id>`: `agents/<agent>.sh` builds the
-headless command (`claude -p`, `narrow --json` today; `codex exec`, `opencode run`, … later)
+coder model through narrowbot) run through `sdd run <role> <id>`: `agents/<agent>.sh` builds the
+headless command (`claude -p`, `narrowbot --json` today; `codex exec`, `opencode run`, … later)
 with only the tier's `args`. With usage tracking on (`[usage] track = true`; off by default), every run, either way, is one line in this clone's
 `.git/sdd/runs.tsv` (tokens from the agent's final JSON, or summed from a subagent's transcript
 by the SubagentStop hook), and `sdd usage` sums them per item, role and task.
@@ -295,7 +295,7 @@ an agent can spawn subagents (D-17.2): `sdd task next` prints the next batch, on
 loop. A role run's builder does tasks only (D-28.1): `sdd run builder` refuses an item with no
 open task, and the finish gate lets a builder under `SDD_RUN` stop once none is open, so the
 finishing (check, security pass, verifier, Built) is the orchestrating session's. An adapter
-may say an exit code is no failure (`agent_exit_note`): narrow's exit 3, "could not verify its
+may say an exit code is no failure (`agent_exit_note`): narrowbot's exit 3, "could not verify its
 own work", is logged as 3 and warned about, since sdd's task tests and check decide (D-28.2).
 After an accepted builder exit, `sdd run` runs `task done` for each batch task still open, in
 plan order, stopping at the first failure: the tool ticks, not the model (D-31.1). It commits
@@ -454,7 +454,7 @@ supported and needs more of the human's review.
 | 10 | GitHub adapter, PR on ship: with `forge = github`, `ship` pushes the item branch and opens a PR (the item is its body), shipping again merges it with a merge commit when CI passes and the head is the checked commit; PR and CI state in `status`/`ls --pr`/`review`, asked only in the pr phase or with `--pr` (C-4, items 11, 27) | teams review and merge in PRs; on the free plan sdd's gates are the only ones |
 | 12 | security in every phase: a `## Security` section (feature, fix, chore), plan and build rules, a security pass before Built, sensitive files in `review`, gitleaks in `init` (kb/security-practices.md) | agent-written code is often insecure; people decide the risks before agents build |
 | 15 | tasks: `- [ ] T-n.m … (files; test; expect: fail)`, `sdd task done` runs a task's test and ticks it, `next` hands the builder one task, ship proves ticks by commits, the `tasks` gate (standard+) | plan big, build small: a small model does one checked step at a time |
-| 16 | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrow, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
+| 16 | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrowbot, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
 | 17 | task batches: `size: S\|M\|L` on tasks, `sdd task next` groups consecutive small ones (`[build] batch`), `next` and `sdd run builder` show the batch, the `sdd-build` skill loops one builder per batch until no task is open; unknown task attributes are refused | "now let's build" works the whole item without a subagent per tiny task |
 | 24 | multi-item plans: a `roadmap` type whose `R-` entries open items (`new --from`), `depends:` in an item's frontmatter, ready entries in `next`, entry states in `show`, what an item waits for in `next`/`status`/`ls`, and the `depends` ship gate | a complex system is many items in an order |
 | later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
@@ -466,7 +466,7 @@ supported and needs more of the human's review.
 
 Dogfooding stages:
 1. **This repo, now.** Every change goes plan → approve → build → review → ship through sdd,
-   and narrow + qwen evaluate it (kb/narrow-lessons.md).
+   and narrowbot + qwen evaluate it (kb/narrow-lessons.md).
 2. **Pilot.** After items 2-3, tasks and plan lint: new work in one real repo runs on sdd next
    to Spec Kit. Old specs are not migrated.
 3. **Replace Spec Kit.** After the team layer: MCP server, team IDs, `ship` via PR, gates in CI.

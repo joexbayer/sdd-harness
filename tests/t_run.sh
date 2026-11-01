@@ -13,17 +13,17 @@ echo "$*" >"$STUB/claude.args"; cat >"$STUB/claude.prompt"
 echo '{"type":"result","subtype":"success","is_error":false,"total_cost_usd":0.25,"usage":{"input_tokens":1200,"cache_read_input_tokens":800,"output_tokens":300}}'
 exit "${CLAUDE_RC:-0}"
 EOF
-cat >"$T/bin/narrow" <<'EOF'
+cat >"$T/bin/narrowbot" <<'EOF'
 #!/bin/sh
-echo "$*" >"$STUB/narrow.args"
-while [ $# -gt 0 ]; do [ "$1" = -p ] && printf '%s\n' "$2" >"$STUB/narrow.prompt"; shift; done
-# A fake builder: does what NARROW_DO says (e.g. write a test and its code together), never ticks.
-[ -z "${NARROW_DO:-}" ] || sh -c "$NARROW_DO"
+echo "$*" >"$STUB/narrowbot.args"
+while [ $# -gt 0 ]; do [ "$1" = -p ] && printf '%s\n' "$2" >"$STUB/narrowbot.prompt"; shift; done
+# A fake builder: does what NARROWBOT_DO says (e.g. write a test and its code together), never ticks.
+[ -z "${NARROWBOT_DO:-}" ] || sh -c "$NARROWBOT_DO"
 echo '{"type":"start"}'
 echo '{"type":"finish","exit":0,"verdict":"passed","tokens":{"in":41000,"out":3000}}'
-exit "${NARROW_RC:-0}"
+exit "${NARROWBOT_RC:-0}"
 EOF
-chmod +x "$T/bin/claude" "$T/bin/narrow"
+chmod +x "$T/bin/claude" "$T/bin/narrowbot"
 mkdir -p "$T/stub"
 PATH="$T/bin:$PATH" STUB="$T/stub"
 export PATH STUB
@@ -42,28 +42,28 @@ out=$(sdd run builder 1 2>&1)
 assert_eq $? 2 "(no tier)"
 assert_contains "$out" '[tier "small"]'
 
-# The project says small = claude; the developer's own config says narrow, and wins.
+# The project says small = claude; the developer's own config says narrowbot, and wins.
 setcfg tier.small.agent claude && setcfg tier.small.model sonnet
 mkdir -p "$XDG_CONFIG_HOME/sdd"
-git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.agent narrow
+git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.agent narrowbot
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.model qwen3-coder-30b
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.args '--profile local'
-# The project's args for its claude tier never reach the developer's narrow mapping (D-16.1).
+# The project's args for its claude tier never reach the developer's narrowbot mapping (D-16.1).
 setcfg tier.small.args '--permission-mode acceptEdits'
 
 # FR-16.4, FR-16.5: one headless run with the item's next step; one log line.
 out=$(sdd run builder 1 2>&1) || fail "run failed: $out"
-assert_contains "$(cat "$T/stub/narrow.args")" '-m qwen3-coder-30b --json --profile local -p'
-assert_contains "$(cat "$T/stub/narrow.prompt")" 'Current task: T-1.1 Page the query'
+assert_contains "$(cat "$T/stub/narrowbot.args")" '-m qwen3-coder-30b --json --profile local -p'
+assert_contains "$(cat "$T/stub/narrowbot.prompt")" 'Current task: T-1.1 Page the query'
 # FR-36.5: a batch run's prompt says its job.
-assert_contains "$(cat "$T/stub/narrow.prompt")" 'sdd ticks these tasks for you'
-assert_contains "$(cat "$T/stub/narrow.prompt")" 'never commit'
-assert_not_contains "$(cat "$T/stub/narrow.args")" 'yolo'
-assert_not_contains "$(cat "$T/stub/narrow.args")" 'acceptEdits'
-assert_contains "$out" 'run 1 · builder · narrow qwen3-coder-30b · item 1 T-1.1 · 41k in / 3k out · '
+assert_contains "$(cat "$T/stub/narrowbot.prompt")" 'sdd ticks these tasks for you'
+assert_contains "$(cat "$T/stub/narrowbot.prompt")" 'never commit'
+assert_not_contains "$(cat "$T/stub/narrowbot.args")" 'yolo'
+assert_not_contains "$(cat "$T/stub/narrowbot.args")" 'acceptEdits'
+assert_contains "$out" 'run 1 · builder · narrowbot qwen3-coder-30b · item 1 T-1.1 · 41k in / 3k out · '
 assert_contains "$out" 'exit 0 · passed'
 log=$(git rev-parse --git-common-dir)/sdd/runs.tsv
-assert_eq "$(tail -n 1 "$log" | cut -f3-11,13,14)" "$(printf '1\tbuilder\tnarrow\tqwen3-coder-30b\tbuild\tT-1.1\t41000\t3000\t\t0\tpassed')"
+assert_eq "$(tail -n 1 "$log" | cut -f3-11,13,14)" "$(printf '1\tbuilder\tnarrowbot\tqwen3-coder-30b\tbuild\tT-1.1\t41000\t3000\t\t0\tpassed')"
 # FR-31.1: the stub never ticked; sdd ran task done for it, committed nothing (C-4) and says
 # what the orchestrator commits.
 assert_contains "$out" '✓ T-1.1 done (its test passed)'
@@ -90,11 +90,11 @@ assert_contains "$out" 'the agent exited 3'
 assert_eq "$(tail -n 1 "$log" | cut -f1,13)" "$(printf '2\t3')"
 grep -q '^- \[ \] T-1.2 ' "$ITEM" || fail "a failed planner run ticked T-1.2"
 # FR-36.4: the planner works its own batch: its edit of the item file is undone, its task ticked.
-git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.agent narrow
-git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.model opus-on-narrow
-out=$( (export NARROW_DO="echo scribble >>$ITEM"; sdd run planner 1) 2>&1) || fail "planner run failed: $out"
-assert_contains "$(cat "$T/stub/narrow.prompt")" 'sdd ticks these tasks for you'   # FR-36.5
-assert_contains "$(cat "$T/stub/narrow.prompt")" 'You are the planner for item 1.'
+git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.agent narrowbot
+git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.model opus-on-narrowbot
+out=$( (export NARROWBOT_DO="echo scribble >>$ITEM"; sdd run planner 1) 2>&1) || fail "planner run failed: $out"
+assert_contains "$(cat "$T/stub/narrowbot.prompt")" 'sdd ticks these tasks for you'   # FR-36.5
+assert_contains "$(cat "$T/stub/narrowbot.prompt")" 'You are the planner for item 1.'
 assert_contains "$out" "⚠ the planner edited $ITEM: restored"
 assert_not_contains "$(cat "$ITEM")" 'scribble'
 assert_contains "$out" '✓ T-1.2 done (its test passed)'
@@ -118,16 +118,16 @@ assert_eq $? 2 "(human's turn)"
 assert_contains "$out" 'is waiting for the human'
 git switch -q feature/1-paging
 
-# FR-28.3: narrow exits 3 when it could not verify its own work: logged as 3, a warning, exit 0
+# FR-28.3: narrowbot exits 3 when it could not verify its own work: logged as 3, a warning, exit 0
 # (sdd's task tests and check decide). Its other non-zero exits still fail the run.
-out=$( (export NARROW_RC=3; sdd run builder 1) 2>&1) || fail "a narrow exit 3 failed the run: $out"
-assert_contains "$out" "⚠ narrow could not verify its own work (exit 3); sdd's task tests and check decide"
+out=$( (export NARROWBOT_RC=3; sdd run builder 1) 2>&1) || fail "a narrowbot exit 3 failed the run: $out"
+assert_contains "$out" "⚠ narrowbot could not verify its own work (exit 3); sdd's task tests and check decide"
 assert_not_contains "$out" 'the agent exited'
 assert_eq "$(tail -n 1 "$log" | cut -f4,13)" "$(printf 'builder\t3')"
 assert_contains "$out" 'ticked 1 of 1 · commit with: feat(1): T-1.3 Sort it'   # FR-31.1, after exit 3
 git commit -qam "feat(1): T-1.3 Sort it"
-out=$( (export NARROW_RC=4; sdd run builder 1) 2>&1)
-assert_eq $? 1 "(narrow exit 4)"
+out=$( (export NARROWBOT_RC=4; sdd run builder 1) 2>&1)
+assert_eq $? 1 "(narrowbot exit 4)"
 assert_contains "$out" 'the agent exited 4'
 assert_not_contains "$out" 'could not verify'
 grep -q '^- \[ \] T-1.4 ' "$ITEM" || fail "a failed run ticked T-1.4"   # FR-31.1: exit not accepted
@@ -182,7 +182,7 @@ cat >"$T/scribble.sh" <<'SH'
 awk '{ print } /^## What changes$/ { print "Built by the builder, in the plan." }' "$1" >"$1.t" && mv "$1.t" "$1"
 printf '\n## Built\nAll done, trust me.\n' >>"$1"
 SH
-out=$( (export NARROW_DO="echo 'sh api.sh' >t31.sh; echo 'exit 0' >api.sh; sh '$T/scribble.sh' '$f'"; sdd run builder 3) 2>&1) ||
+out=$( (export NARROWBOT_DO="echo 'sh api.sh' >t31.sh; echo 'exit 0' >api.sh; sh '$T/scribble.sh' '$f'"; sdd run builder 3) 2>&1) ||
 	fail "builder run on item 3 failed: $out"
 assert_contains "$out" "⚠ the builder edited $f: restored"
 assert_not_contains "$(cat "$f")" 'Built by the builder'

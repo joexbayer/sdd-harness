@@ -8,9 +8,9 @@ mkdir -p "$(dirname "$log")"
 {
 	printf '# run\tstarted\titem\trole\tagent\tmodel\tphase\ttask\tin\tout\tcost\tseconds\texit\tverdict\n'
 	printf '1\tt\t4\tplanner\tclaude\topus\tplan\t\t40000\t2000\t0.40\t62\t0\tdone\n'
-	printf '2\tt\t4\tbuilder\tnarrow\tqwen\tbuild\tT-4.1\t30000\t3000\t\t90\t0\tpassed\n'
-	printf '3\tt\t4\tbuilder\tnarrow\tqwen\tbuild\tT-4.2\t11000\t1000\t\t30\t1\tfailing\n'
-	printf '4\tt\t5\tbuilder\tnarrow\tqwen\tbuild\tT-5.1\t5000\t500\t\t10\t0\tpassed\n'
+	printf '2\tt\t4\tbuilder\tnarrowbot\tqwen\tbuild\tT-4.1\t30000\t3000\t\t90\t0\tpassed\n'
+	printf '3\tt\t4\tbuilder\tnarrowbot\tqwen\tbuild\tT-4.2\t11000\t1000\t\t30\t1\tfailing\n'
+	printf '4\tt\t5\tbuilder\tnarrowbot\tqwen\tbuild\tT-5.1\t5000\t500\t\t10\t0\tpassed\n'
 } >"$log"
 
 # Per item and role: builder on item 4 is two runs, 41k in, 4k out, no cost, 2m 0s.

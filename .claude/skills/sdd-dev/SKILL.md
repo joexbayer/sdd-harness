@@ -111,7 +111,7 @@ refuses a dirty tree), and `fill`.
   in prompts/finish.md, which `next` skips while a task is open. Item 28: a role-run builder does
   tasks only. `run.sh` refuses `run builder` when WHYCODE is not `task`, and hook stop lets a
   builder with `SDD_RUN` stop once no task is open (interactive builders are still held). An
-  adapter's optional `agent_exit_note <rc>` turns an exit code into a warning (narrow: 3);
+  adapter's optional `agent_exit_note <rc>` turns an exit code into a warning (narrowbot: 3);
   run_log keeps the real rc. Item 31: after an accepted builder exit, run.sh runs `task done`
   (as a subprocess) for each batch task still open and prints `ticked n of m · commit with: …`;
   since item 36 that (and the item-file restore, item 34) is for whatever role owns the batch
@@ -120,7 +120,7 @@ refuses a dirty tree), and `fill`.
   verifier runs once no task is open. Batch runs get prompts/role-batch.md appended.
   run.sh never commits (C-4, enforced by tests/constitution/c4-commits.sh, which fails on any
   `git commit` outside new/approve/ship). Tests with a builder run therefore tick: give the
-  item enough tasks for later runs (t_run.sh), and use the narrow stub's `NARROW_DO` for a fake
+  item enough tasks for later runs (t_run.sh), and use the narrowbot stub's `NARROWBOT_DO` for a fake
   builder that writes files.
 - Red check (item 31, `red_without_code` in cmd/task.sh): an `expect: fail` test that passes,
   with uncommitted changes outside its `files:` (and the item file), is rerun in a detached
@@ -223,11 +223,11 @@ A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git c
   copy of a repo and diff; mark `.sdd` files `git update-index --assume-unchanged` first, or the
   swapped copy itself shows up as a code change (hook stop, review).
 
-## Evaluating sdd with a real agent (narrow + qwen)
-Unit tests don't show whether a mid-size model can follow sdd. To find out, run narrow headless:
+## Evaluating sdd with a real agent (narrowbot + qwen)
+Unit tests don't show whether a mid-size model can follow sdd. To find out, run narrowbot headless:
 `~/narrowbot-bench/narrow-sdd.sh REPO OUT PROMPT_FILE`. It runs qwen3-coder-30b with
 `project-check-command = .sdd/bin/sdd check`, isolated config, and the key from env or
-`~/.config/narrow/api.key`. OUT gets `events.jsonl` (spec: narrow repo
+`~/.config/narrowbot/api.key`. OUT gets `events.jsonl` (spec: narrowbot repo
 `docs/design/json-events.md`), `rc` and `diff.patch`. diff.patch leaves out untracked files,
 so inspect the repo itself.
 - Use a fresh scratch repo per run (`git init`, `sdd init`, an item with an approved brief).
@@ -237,18 +237,18 @@ so inspect the repo itself.
   whether the plan above Built was edited.
 - Lessons so far (2026-10-26): qwen never runs `sdd next` by itself. It follows the
   AGENTS.md block and the item's guidance comments, so essentials must live there or in a
-  gate. In the human-role run (narrow's Claude session as the human), every prose-only rule
+  gate. In the human-role run (narrowbot's Claude session as the human), every prose-only rule
   (no code while planning, write Built, commit, name FRs in tests) was ignored. What worked
   was a gate, or a human note at review. Single runs lie (k≈5 per app to see ~10 pp). Judge results against design.md §1
   (learning, simple, pragmatic, no bloat), not just pass/fail.
 - Role runs (`sdd run builder|verifier <id>`) in a scratch repo: set `[role "builder"] tier =
-  small` (narrow, qwen3-coder-30b, `args = --profile local --yolo`) and `[role
+  small` (narrowbot, qwen3-coder-30b, `args = --profile local --yolo`) and `[role
   "verifier"] tier = big` (claude, claude-sonnet-5-5, `args = --allowedTools
   Bash(sh:*),Bash(.sdd/bin/sdd:*),Read,Grep,Glob`). Claude Code's auto-mode classifier refuses
   to start these runs ("Create Unsafe Agents"): the human runs them with `! cd <repo> && ...`.
-  Each `sdd run builder` does one batch. narrow exits 3 ("unverified") after a red batch though
+  Each `sdd run builder` does one batch. narrowbot exits 3 ("unverified") after a red batch though
   sdd's tick passed; since item 28 `sdd run` warns and exits 0 for it (runs.tsv still says 3). Outputs: `.git/sdd/runs/<n>/`
-  (`out` is narrow's JSON events: `jq -r 'select(.type=="tool_call") | .title'`).
+  (`out` is narrowbot's JSON events: `jq -r 'select(.type=="tool_call") | .title'`).
 - Lessons (2026-10-28, item 22 trial): qwen ignores the finish steps (security pass, verifier,
   Built) even when its prompt has them, so the orchestrator runs them; a red task batched with
   its code made qwen write both (fixed: a red task ends its batch); the Sonnet verifier found
@@ -260,7 +260,7 @@ so inspect the repo itself.
 ## The experiment harness (experiment/, item 30)
 - `experiment/run.sh <A|B> [dir] [--dry]` drives one arm of roadmap 29 in a fresh repo; only the
   human starts a real run (`! sh experiment/run.sh B`). Test the driver for free with `--dry`
-  (fake claude/narrow from `experiment/fake/`; `XP_FAKE_COST`, `XP_FAKE_REVISE`, `XP_FAKE_FAIL`
+  (fake claude/narrowbot from `experiment/fake/`; `XP_FAKE_COST`, `XP_FAKE_REVISE`, `XP_FAKE_FAIL`
   exercise the caps, `XP_FAKE_LIMIT=<role>` a subscription usage-limit wait). Arm C (item 37) differs from A only in
   the planner's by: rule (`experiment/prompts/by-planner.md` vs `by-none.md`); the driver reads a
   batch's owner from `sdd task next` (`; by: <role>)` on the first `[ ]` line) and runs that role. Since item 32 an
@@ -275,11 +275,11 @@ so inspect the repo itself.
 - A run repo needs `.sdd/` committed on main before `sdd new`, or the item branch has no sdd.
 - Tier names in a run repo are `xp-*`: a developer's own `[tier]` in ~/.config/sdd/config wins
   over the project's (tier_file), so common names like `small` could be silently replaced.
-- narrow headless without `--yolo` denies every non-read-only shell command (`:exec` is `:ask`,
-  and headless asks are refused: narrow lisp/security.lisp `permission-for`, runtime.go
-  `AskPermission`). experiment/narrow/allow.lisp fixes it with `advice-add 'permission-for
+- narrowbot headless without `--yolo` denies every non-read-only shell command (`:exec` is `:ask`,
+  and headless asks are refused: narrowbot lisp/security.lisp `permission-for`, runtime.go
+  `AskPermission`). experiment/narrowbot/allow.lisp fixes it with `advice-add 'permission-for
   :around` from an init file (user-origin changes to sealed policy are allowed and survive
   `seal-verify`). Check without spending: put only allow.lisp in an empty dir as init.lisp, then
-  `NARROW_CONFIG_DIR=<dir> narrow --eval '(permission-for nil (command "bash") (hash :command
+  `NARROWBOT_CONFIG_DIR=<dir> narrowbot --eval '(permission-for nil (command "bash") (hash :command
   "python3 -m pytest -q"))'` → `:allow` (`curl x` → `:ask`). Never --eval a config with the
-  provider block: loading it makes narrow read the gateway key.
+  provider block: loading it makes narrowbot read the gateway key.

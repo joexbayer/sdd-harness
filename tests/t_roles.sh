@@ -6,11 +6,11 @@ new_repo
 setcfg usage.track true   # off by default (FR-16.5); t_usage_off.sh covers that
 sdd new feature "Roles" >/dev/null 2>&1
 
-# Roles: planner on a Claude tier (project), builder on a tier the developer maps to narrow.
+# Roles: planner on a Claude tier (project), builder on a tier the developer maps to narrowbot.
 setcfg role.planner.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
 setcfg role.builder.tier small && setcfg tier.small.agent claude && setcfg tier.small.model haiku
 mkdir -p "$XDG_CONFIG_HOME/sdd"
-git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.agent narrow
+git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.agent narrowbot
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.small.model qwen3-coder-30b
 mkdir -p .claude/agents && printf -- '---\nname: sdd-reviewer\n---\nMine.\n' >.claude/agents/sdd-reviewer.md
 mkdir -p .sdd/local/prompts && echo "Plan {{id}} carefully." >.sdd/local/prompts/role-planner.md
@@ -39,7 +39,7 @@ assert_file "$k"
 assert_contains "$(cat "$k")" 'hand the step to it'
 assert_contains "$(cat "$k")" 'run `.sdd/bin/sdd run <role> <id>`'
 # A role moved off Claude loses its subagent at the next sync; a second sync adds no duplicate hooks.
-git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.agent narrow
+git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.agent narrowbot
 git config -f "$XDG_CONFIG_HOME/sdd/config" tier.big.model m
 sdd sync claude >/dev/null 2>&1
 assert_no_file "$a"
@@ -61,8 +61,8 @@ assert_eq "$(tail -n 1 "$log" | cut -f3-10,13,14)" "$(printf '1\tplanner\tclaude
 hook subagent-start "{\"cwd\":\"$R\",\"agent_id\":\"a2\",\"agent_type\":\"Explore\"}"
 hook subagent-stop "{\"cwd\":\"$R\",\"agent_id\":\"a2\",\"agent_type\":\"Explore\",\"agent_transcript_path\":\"$T/agent.jsonl\"}"
 assert_eq "$(grep -vc '^#' "$log")" 1
-# Narrow has no reply format of its own: its stop hook still blocks the plain way (exit 2).
+# NarrowBot has no reply format of its own: its stop hook still blocks the plain way (exit 2).
 echo code >code.txt
-sdd hook stop --agent narrow </dev/null >/dev/null 2>&1
-assert_eq $? 2 "(narrow stop hook)"
+sdd hook stop --agent narrowbot </dev/null >/dev/null 2>&1
+assert_eq $? 2 "(narrowbot stop hook)"
 exit 0
