@@ -1,7 +1,8 @@
 # FR-3.1 articles parsed and well formed, FR-3.2 check articles run, FR-3.3 budget,
 # FR-3.4 rules in next, FR-3.5 review articles to confirm, FR-3.6 guard, FR-3.7 amendment
 # gates, FR-3.8 amendment diff in review. FR-44.1 a constitution with no C-<n> articles is named in
-# check, next and review; FR-44.2 one with articles is not.
+# check, next and review; FR-44.2 one with articles is not. FR-49.5 a rule's indented lines before
+# Why: are part of it.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -139,4 +140,12 @@ assert_contains "$(sdd next 2>&1)" "$line"
 out=$(sdd check 2>&1) || fail "check should still pass: $out"
 assert_contains "$out" "$line"
 assert_contains "$(sdd review 2>&1)" "$line"
+
+# FR-49.5: a rule written over two lines is shown whole.
+new_repo twoline
+mkdir -p specs && printf '# Constitution\nC-1 Every edit goes through the buffer,\n  validated against the snapshot.\n  Why: a test rule.\n  Enforced: review\n' >specs/constitution.md
+git add -A && git commit -qm "two-line rule"
+planned_item feature "Two lines"
+assert_contains "$(sdd next 2>&1)" 'C-1 Every edit goes through the buffer, validated against the snapshot.'
+assert_contains "$(sdd review 2>&1)" '[ ] C-1 Every edit goes through the buffer, validated against the snapshot.'
 exit 0

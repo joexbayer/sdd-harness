@@ -3,7 +3,8 @@
 # FR-44.3 init warns when git ignores the launcher; FR-44.4/FR-44.5 a repo's own gate
 # (scripts/check.sh, make check) wins over the language guesses.
 # FR-45.1 rerunning init from another sdd updates bin/ and core/; FR-45.2 says up to date when they
-# match; FR-45.3 refuses on uncommitted changes there.
+# match; FR-45.3 refuses on uncommitted changes there. FR-49.1 VERSION names the source commit;
+# FR-49.2/FR-49.3 a dirty source or one off its base warns; FR-49.4 a source outside git does not.
 . "$SRC/tests/lib.sh"
 
 mkdir -p "$T/go" && cd "$T/go" || exit 1
@@ -102,4 +103,37 @@ out=$(sdd init 2>&1)
 assert_eq $? 1 "(init should refuse)"
 assert_contains "$out" 'sdd: .sdd/bin or .sdd/core has uncommitted changes: commit or discard them first (overrides belong in .sdd/local/)'
 assert_eq "$(tail -n 1 .sdd/core/cmd/help.sh)" '# mine'
+
+# FR-49.1: a source sdd in its own checkout, clean, on main.
+mkdir -p "$T/src" && cp -R "$SRC/.sdd" "$T/src/" && cd "$T/src" || exit 1
+git init -q && git add -A && git commit -qm src
+c=$(git rev-parse --short=12 HEAD) && v=$(cat .sdd/VERSION) && home=$(cd .sdd && pwd -P)
+fresh() { mkdir -p "$T/$1" && cd "$T/$1" && git init -q && echo x >x && git add x && git commit -qm init; }
+fresh a
+out=$("$SH" "$T/src/.sdd/bin/sdd" init 2>&1) || fail "init from the source failed: $out"
+assert_eq "$(cat .sdd/VERSION)" "$v ($c)"
+assert_contains "$out" "installed sdd $v ($c) into .sdd/"
+assert_not_contains "$out" 'the sdd you install from'
+
+# FR-49.2: uncommitted changes in the source are copied, said, and stamped.
+echo '# wip' >>"$T/src/.sdd/core/cmd/help.sh"
+fresh b
+out=$("$SH" "$T/src/.sdd/bin/sdd" init 2>&1)
+assert_contains "$out" "sdd: warning: the sdd you install from ($home) has uncommitted changes, and they are copied too: install from a clean checkout of its base branch"
+assert_eq "$(cat .sdd/VERSION)" "$v ($c, uncommitted changes)"
+git -C "$T/src" checkout -q -- .
+
+# FR-49.3: a source on another branch than its base.
+git -C "$T/src" switch -q -c feature/x
+fresh c
+out=$("$SH" "$T/src/.sdd/bin/sdd" init 2>&1)
+assert_contains "$out" "sdd: warning: the sdd you install from ($home) is on feature/x, not main: unshipped work is copied too"
+assert_not_contains "$out" 'has uncommitted changes'
+
+# FR-49.4: a source outside any checkout: the plain version, no warning.
+mkdir -p "$T/plain" && cp -R "$SRC/.sdd" "$T/plain/"
+fresh d
+out=$("$SH" "$T/plain/.sdd/bin/sdd" init 2>&1)
+assert_eq "$(cat .sdd/VERSION)" "$v"
+assert_not_contains "$out" 'the sdd you install from'
 exit 0

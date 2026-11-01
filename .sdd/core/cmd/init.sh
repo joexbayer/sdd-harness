@@ -5,18 +5,38 @@
 need_repo
 
 target="$ROOT/$DIRNAME"
+# source_stamp: STAMP is this sdd's version plus the commit it is copied from (FR-49.1), and
+# says when that copy carries uncommitted or unshipped work (FR-49.2, FR-49.3).
+source_stamp() {
+	STAMP=$(cat "$SDD_HOME/VERSION")
+	_c=$(git -C "$SDD_HOME" rev-parse --short=12 HEAD 2>/dev/null) || return 0
+	if [ -n "$(git -C "$SDD_HOME" status --porcelain -- . 2>/dev/null)" ]; then
+		warn "the sdd you install from ($SDD_HOME) has uncommitted changes, and they are copied too: install from a clean checkout of its base branch"
+		STAMP="$STAMP ($_c, uncommitted changes)"
+	else
+		STAMP="$STAMP ($_c)"
+	fi
+	_sb=$(git config -f "$SDD_HOME/config" sdd.base 2>/dev/null) || _sb=main
+	_br=$(git -C "$SDD_HOME" symbolic-ref --quiet --short HEAD 2>/dev/null) && [ "$_br" != "$_sb" ] &&
+		warn "the sdd you install from ($SDD_HOME) is on $_br, not $_sb: unshipped work is copied too"
+	return 0
+}
 if [ "$(cd "$target" 2>/dev/null && pwd -P)" != "$SDD_HOME" ]; then
 	if [ ! -d "$target/core" ]; then
 		mkdir -p "$target"
+		source_stamp
 		cp -R "$SDD_HOME/bin" "$SDD_HOME/core" "$SDD_HOME/VERSION" "$target/" || die "copy failed"
+		printf '%s\n' "$STAMP" >"$target/VERSION"
 		echo "installed $NAME $(cat "$target/VERSION") into $DIRNAME/"
 	elif diff -r "$SDD_HOME/bin" "$target/bin" >/dev/null 2>&1 && diff -r "$SDD_HOME/core" "$target/core" >/dev/null 2>&1; then
 		echo "$NAME already installed in $DIRNAME/ and up to date"
 	elif [ -n "$(git status --porcelain -- "$target/bin" "$target/core")" ]; then
 		die "$DIRNAME/bin or $DIRNAME/core has uncommitted changes: commit or discard them first (overrides belong in $DIRNAME/local/)"
 	else
+		source_stamp
 		rm -rf "${target:?}/bin" "${target:?}/core"
 		cp -R "$SDD_HOME/bin" "$SDD_HOME/core" "$SDD_HOME/VERSION" "$target/" || die "copy failed"
+		printf '%s\n' "$STAMP" >"$target/VERSION"
 		echo "updated $NAME in $DIRNAME/ from $SDD_HOME: commit $DIRNAME/bin and $DIRNAME/core (and run $NAME sync <agent> again if you use it)"
 	fi
 fi

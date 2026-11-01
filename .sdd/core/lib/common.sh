@@ -1610,6 +1610,8 @@ articles() {
 	/^C-[0-9]+ / { flush(); id = $1; rule = substr($0, length($1) + 2); why = 0; enf = ""; next }
 	id != "" && /^[ ]+Why:/ { why = 1; next }
 	id != "" && /^[ ]+Enforced:/ { enf = $0; sub(/^[ ]+Enforced:[ ]*/, "", enf); sub(/[ ]+$/, "", enf); next }
+	# A rule written over several lines: its indented lines before Why: are part of it (FR-49.5).
+	id != "" && !why && enf == "" && /^[ ]+[^ ]/ { l = $0; sub(/^[ ]+/, "", l); rule = rule " " l; next }
 	/^[^ ]/ { flush() }
 	END { flush() }'
 }
