@@ -1,7 +1,8 @@
 # FR-12.1 a required Security section in feature, fix and chore; FR-12.2 and FR-12.3 the plan
 # and build rules; FR-12.4 the security pass before finishing; FR-12.5 review lists sensitive
 # files (also by unusual names; project globs add up), the Security section and a checklist;
-# FR-12.6 init adds gitleaks when installed.
+# FR-12.6 init adds gitleaks when installed. FR-46.1 init writes a .gitleaks.toml that skips agent
+# worktrees; FR-46.2 a repo's own one is kept, with a tip; FR-46.3 otherwise nothing.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -66,13 +67,36 @@ git switch -q main
 mkdir -p "$T/withgl"
 printf '#!/bin/sh\nexit 0\n' >"$T/withgl/gitleaks" && chmod +x "$T/withgl/gitleaks"
 new_repo gl1
-rm -rf .sdd && git commit -qam "remove sdd" >/dev/null 2>&1
+rm -rf .sdd .gitleaks.toml && git commit -qam "remove sdd" >/dev/null 2>&1
 out=$(PATH="$T/withgl:$PATH" sdd init 2>&1)
 assert_contains "$out" 'checks: + gitleaks dir . (secret scanning)'
 assert_contains "$(git config -f .sdd/config --get-all check.run)" 'gitleaks dir . --no-banner'
+# FR-46.1: gitleaks' defaults, minus Claude Code's worktree copies of the repo.
+assert_contains "$out" "wrote .gitleaks.toml (gitleaks' default rules; skips .claude/worktrees/, agents' copies of the repo)"
+cat >"$T/gl.toml" <<'EOF'
+# Written by sdd init. gitleaks' default rules, minus copies of the repo that git never commits.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "agent worktrees (Claude Code isolation: worktree): copies git does not commit"
+paths = ['''^\.claude/worktrees/''']
+EOF
+assert_eq "$(cat .gitleaks.toml)" "$(cat "$T/gl.toml")"
+# FR-46.3: a second run leaves it alone and says nothing about it.
+out=$(PATH="$T/withgl:$PATH" sdd init 2>&1)
+assert_not_contains "$out" 'wrote .gitleaks.toml'
+assert_not_contains "$out" 'tip     .gitleaks.toml'
+# FR-46.2: a repo's own .gitleaks.toml is never changed, only pointed at.
+new_repo gl3
+rm -rf .sdd && printf '[extend]\nuseDefault = true\n' >.gitleaks.toml && git add -A && git commit -qm "own gitleaks config" >/dev/null 2>&1
+out=$(PATH="$T/withgl:$PATH" sdd init 2>&1)
+assert_eq "$(cat .gitleaks.toml)" "$(printf '[extend]\nuseDefault = true')"
+assert_contains "$out" "tip     .gitleaks.toml: add '^\\.claude/worktrees/' to its allowlist paths, or gitleaks also scans agents' worktree copies of the repo"
 new_repo gl2
-rm -rf .sdd && git commit -qam "remove sdd" >/dev/null 2>&1
+rm -rf .sdd .gitleaks.toml && git commit -qam "remove sdd" >/dev/null 2>&1
 out=$(PATH=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gitleaks" ] || printf '%s:' "$d"; done) sdd init 2>&1)
 assert_contains "$out" "tip     install gitleaks"
 assert_not_contains "$(git config -f .sdd/config --get-all check.run)" gitleaks
+[ ! -e .gitleaks.toml ] || fail "no gitleaks in the check, yet .gitleaks.toml was written" # FR-46.3
 exit 0
