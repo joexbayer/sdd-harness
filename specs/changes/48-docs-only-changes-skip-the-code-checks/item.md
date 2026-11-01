@@ -78,8 +78,34 @@ sees it in check output and review. No new dependency.
 - [x] T-48.2 Document code and docs, FR-48.4 (files: README.md, .sdd/core/config; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-48.1: `changed_paths` and `docs_only` at `.sdd/core/lib/common.sh:665-694`; `run_check`
+  reads `check.code` and sets `CHECK_SKIPPED` (`:960-970`); the pass line at
+  `.sdd/core/cmd/check.sh:16`. Proven by `tests/t_check_docs.sh` (README.md plus `docs/guide.txt`
+  changed → the pass line names `echo CODE-RAN` as skipped, the log has `$ echo ok` and no
+  `CODE-RAN`).
+- FR-48.2: same functions; `tests/t_check_docs.sh` (`notes.md.txt` changed → code runs; no
+  `docs` glob → code runs; on main with nothing changed → code runs).
+- FR-48.3: `run_check` dies only when `run` and `code` are both empty, and the masked check
+  covers both lists. `tests/t_check_docs.sh` (code-only passes; `code = false || true` refused).
+- FR-48.4: `.sdd/core/config` `[check]` comment and the README "Your gate." bullet (docs).
+- Deviation: T-48.1 had `expect: fail`, which sdd reads as "write the failing test": `sdd task
+  done T-48.1` recorded the red run (failing on "docs-only change") and ticked it, so the code
+  went in after it as a second commit under T-48.1's files (eb94e11). Plan T-48.1 as two tasks
+  next time (test by planner, then code).
+- Deviation in the test: the "on the base" case runs last, after reverting README.md and
+  removing docs/, because uncommitted and untracked files follow a branch switch (so main
+  really did have a docs-only change).
+- Follow-up (narrow, problem 10): narrow's sdd upgrade (narrow eb16d34) copied this branch's work
+  in progress, because init copies the source's working tree. Plan it as its own item.
+- Security pass (fresh Sonnet reviewer, given only the diff): one finding, fixed. `git diff
+  --name-only` lists only a rename's new path, so `git mv src/a.go docs/a.md` looked docs-only
+  and skipped the code checks. `changed_paths` now passes `--no-renames` (both diff calls);
+  `tests/t_check_docs.sh` moves `app.sh` to `docs/app.md` and expects the code checks to run
+  (it fails without the flag). Quoted paths (newlines, non-ASCII) fail safe: they match no glob.
+- Check: `sdd check` passed after the fix.
+- The verifier ran on eb94e11, before the `--no-renames` fix (8213897); the fix's own test case was
+  shown red without the flag (scratch copy) and green with it.
+Verified by: claude-sonnet-5-5: 4 of 4 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
