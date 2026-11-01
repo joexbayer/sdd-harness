@@ -5,8 +5,12 @@ import { join } from "node:path";
 import type { Repo } from "./config.ts";
 import { baseBranch, ensureClone, fetchRepo, git, projectConfig } from "./mirror.ts";
 import { sddHome, sddJson } from "./sdd.ts";
+import { branchVersions, type VsBase } from "./versions.ts";
+import { readFileSync } from "node:fs";
 
-export type Row = Record<string, unknown> & { id: number; status: string; branch: string; source: string };
+// Row: the keys of `sdd ls --json`, plus the branch's sdd version and how it stands (FR-53.28).
+export type Row = Record<string, unknown> & { id: number; status: string; branch: string; source: string;
+  sdd: string; sdd_vs_base: VsBase };
 export interface Snapshot { repo: string; base: string; ok: boolean; error: string; fetched: string;
   gen: number; sdd: string; rows: Row[]; home: string; clone: string }
 
@@ -18,6 +22,7 @@ export class RepoIndex {
   readonly knownHosts: string;
   readonly bundled: string;
   readonly repos: Repo[];
+  readonly serverSdd: string; // the bundled sdd's VERSION, which reads every repo
   private snaps = new Map<string, Snapshot>();
   private busy = new Map<string, Promise<void>>();
   private shows = new Map<string, Record<string, unknown>>();
@@ -28,6 +33,7 @@ export class RepoIndex {
     this.knownHosts = o.knownHosts;
     this.bundled = o.bundled;
     this.repos = o.repos;
+    this.serverSdd = readFileSync(join(o.bundled, "VERSION"), "utf8").split("\n")[0].trim();
   }
 
   names(): string[] {
@@ -62,7 +68,15 @@ export class RepoIndex {
       const base = await baseBranch(clone);
       const home = await sddHome(this.data, repo.name, this.bundled, await projectConfig(clone, base));
       const rows = (await sddJson(home, clone, ["ls", "--json", "--all"])) as Row[];
-      this.swap({ repo: repo.name, base, ok: true, error: "", fetched, gen: ++this.gen, sdd: "", rows, home, clone });
+      // An item on a branch gets that branch's version; on the base or in the archive, the base's.
+      const onBranch = (r: Row) => r.branch !== "" && (r.source === "remote" || r.source === "local");
+      const v = await branchVersions(clone, base, [...new Set(rows.filter(onBranch).map((r) => r.branch))]);
+      for (const r of rows) {
+        const b = onBranch(r) ? v.branches[r.branch] : undefined;
+        r.sdd = b ? b.sdd : v.base;
+        r.sdd_vs_base = b ? b.vs : "same";
+      }
+      this.swap({ repo: repo.name, base, ok: true, error: "", fetched, gen: ++this.gen, sdd: v.base, rows, home, clone });
     } catch (e) {
       const error = (e as Error).message;
       this.snaps.set(repo.name, last && last.gen > 0
@@ -80,9 +94,9 @@ export class RepoIndex {
   // with raw, the item file at the ref the index read it from (FR-53.24).
   async show(name: string, id: number, raw: boolean): Promise<Record<string, unknown>> {
     const s = this.snaps.get(name);
-    if (!s || !this.repos.some((r) => r.name === name)) throw new Error(`no repo ${name} (repos: ${this.names().join(", ")})`);
+    if (!s || !this.repos.some((r) => r.name === name)) throw new Error(`no repo ${name} (repos: ${[...this.names()].sort().join(", ")})`);
     const row = s.rows.find((r) => r.id === id);
-    if (!row) throw new Error(`no item ${id} in ${name} (repos: ${this.names().join(", ")})`);
+    if (!row) throw new Error(`no item ${id} in ${name} (repos: ${[...this.names()].sort().join(", ")})`);
     const key = `${name}\0${s.gen}\0${id}`;
     let shown = this.shows.get(key);
     if (!shown) {
