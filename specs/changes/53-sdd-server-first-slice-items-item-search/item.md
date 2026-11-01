@@ -5,6 +5,7 @@ title: sdd-server first slice: `items`, `item`, `search` and sdd versions over H
 status: open
 created: 2026-11-01
 roadmap: R-52.1
+approved: 30bca7b16abe8c02ed8ba1a9b86a47d58090f4a5 2026-11-01 joexbayer
 ---
 # 53 sdd-server first slice: `items`, `item`, `search` and sdd versions over HTTPS, on npm (core: id collisions and task files in `--json`)
 
