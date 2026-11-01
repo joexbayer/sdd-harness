@@ -20,4 +20,4 @@ or, when no verifier could run, `Verified by: none` and why.
 
 You are done when the check passes and "## Built" is written: per requirement what changed
 (file:line) and which test proves it, deviations, follow-ups, and the "Verified by:" line. Then
-tell the human it is ready for review: `{{cmd}} review`.
+tell the human it is ready for review: `/{{name}}-review` (or `{{cmd}} review`).

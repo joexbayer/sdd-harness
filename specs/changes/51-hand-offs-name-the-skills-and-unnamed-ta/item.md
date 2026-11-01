@@ -73,7 +73,7 @@ none: text in prompts and AGENTS.md, and a read-only warning from git log and th
 `tests/t_task.sh` and `tests/t_prompts_tests.sh` pass under sh and dash, and `sdd check` passes.
 
 ## Tasks (optional)
-- [ ] T-51.1 Hand-offs name the skills, FR-51.1, FR-51.2 (files: .sdd/core/prompts/finish.md, .sdd/core/prompts/review.md, .sdd/core/prompts/pr.md, .sdd/core/agents/skills/build.md, .sdd/core/cmd/init.sh, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
+- [x] T-51.1 Hand-offs name the skills, FR-51.1, FR-51.2 (files: .sdd/core/prompts/finish.md, .sdd/core/prompts/review.md, .sdd/core/prompts/pr.md, .sdd/core/agents/skills/build.md, .sdd/core/cmd/init.sh, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
 - [ ] T-51.2 Unnamed task commits show early, FR-51.3, FR-51.4 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh, .sdd/core/cmd/review.sh, tests/t_task.sh; test: SRC=$PWD SH=dash dash tests/t_task.sh; size: S)
 
 ## Built
