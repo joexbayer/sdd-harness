@@ -2,9 +2,10 @@
 id: 54
 type: fix
 title: Pull requests reference the item file instead of copying it
-status: open
+status: shipped
 created: 2026-11-01
 approved: b36066837b14c90c4674c5600db1378ba7944768 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 54 Pull requests reference the item file instead of copying it
 
