@@ -46,7 +46,7 @@ Nothing else. Start with `/sdd-new` (or `.sdd/bin/sdd new feature "title"`).
      Why: a missed check leaked tenant data (incident 2026-03).
      Enforced: review
    ```
-   `Enforced: check <command>` makes `sdd check` run it. Keep it under 30 articles.
+   `Enforced: check <command>` makes `sdd check` run it. At most 30 articles (`[constitution] max-articles`).
 3. Don't backfill items for old work. sdd tracks changes from now on.
 
 ## Spec Kit repo
@@ -55,7 +55,7 @@ Nothing else. Start with `/sdd-new` (or `.sdd/bin/sdd new feature "title"`).
 2. Remove Spec Kit: `.specify/`, its skills or commands (`.claude/skills/speckit-*`,
    `.claude/commands/speckit.*`) and its block in AGENTS.md or CLAUDE.md.
 3. Move `.specify/memory/constitution.md` to `specs/constitution.md` and rewrite it as `C-n`
-   articles (above) in an amendment item. Until then `check` warns that it has none.
+   articles (above) in an amendment item. While it is still prose, `check` warns that it has none.
 4. Old `specs/NNN-*` folders stay as history. sdd's items go to `specs/changes/` and
    `specs/archive/`, numbered from 1; an old `FR-1.3` in those folders is not item 1's (review only
    counts the item's own changes).
