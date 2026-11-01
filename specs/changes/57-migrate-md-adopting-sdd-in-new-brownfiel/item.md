@@ -17,8 +17,11 @@ paragraph becomes a link to it. For the beta: the user tries sdd on new projects
 none: docs only.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- `MIGRATE.md` (75 lines): every case (install on main, sync, commit; then gate, budget, launcher,
+  secret scan), new project, existing repo (constitution from rules you live by, no backfill),
+  Spec Kit repo (remove, convert the constitution, old folders stay), upgrading, overrides.
+- `README.md`: the Spec Kit paragraph is now a link to MIGRATE.md.
+- Check passed. Security: docs only; the guide says to check each gitleaks fingerprint is fake.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

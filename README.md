@@ -272,10 +272,7 @@ C-4 Only new, approve and ship create commits. No verb pushes, except two human-
 Kept from Spec Kit: greppable requirement IDs, a constitution, a clarify discussion while
 planning, and one skill per step. Research and contracts are on the roadmap.
 
-Moving from Spec Kit: run `init`, then remove `.specify/`, its skills and its block in AGENTS.md.
-Move the constitution (`.specify/memory/constitution.md`) to `specs/constitution.md` and rewrite
-its rules as `C-<n>` articles (a rule line, then `Why:` and `Enforced:`) in an amendment item;
-until then `check` warns that it has none. Old `specs/NNN-*` folders can stay.
+Adopting sdd in a new project, an existing repo or a Spec Kit repo: [MIGRATE.md](MIGRATE.md).
 
 ## Learn more
 
