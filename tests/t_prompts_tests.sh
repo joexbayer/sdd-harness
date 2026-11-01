@@ -5,6 +5,7 @@
 # FR-41.1 the approval ask is plain, and approve is a command on its own.
 # FR-42.1 a test's setup tells the right rule from a plausible wrong one; FR-42.2 the verifier runs
 # the tests the check leaves out and reports parts nothing calls or reads.
+# FR-51.1 hand-offs to the human name the skill first; FR-51.2 so does the AGENTS.md block.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -50,6 +51,8 @@ assert_contains "$out" 'Phase: build'
 # FR-42.2: the finish step's hand-off to a fresh verifier.
 assert_contains "$out" 'tests the check leaves out'
 assert_contains "$out" 'nothing calls or reads'
+# FR-51.1: the hand-off names the skill, with the command as fallback.
+assert_contains "$out" 'tell the human it is ready for review: `/sdd-review` (or `.sdd/bin/sdd review`)'
 assert_contains "$out" 'still pass if every function returned nothing'
 assert_contains "$out" 'never from the code under
   test'
@@ -68,4 +71,16 @@ assert_contains "$v" 'or that
 # FR-42.2: the verifier's own rules.
 assert_contains "$v" 'tests the check leaves out'
 assert_contains "$v" 'nothing calls or reads'
+# FR-51.1: the build skill's hand-off, and the review step's ship hand-off.
+assert_contains "$(cat .claude/skills/sdd-build/SKILL.md)" 'Then tell the user it is ready
+for review: `/sdd-review` (or `.sdd/bin/sdd review`)'
+fill "$ITEM" built
+awk '/^## Review/ { print "Verified by: test: 1 of 1 FRs proven; no findings" } { print }' "$ITEM" >"$T/v" && cp "$T/v" "$ITEM"
+git add -A && git commit -qm "docs: built" && sdd check >/dev/null 2>&1
+out=$(sdd next 2>&1)
+assert_contains "$out" 'Phase: review'
+assert_contains "$out" 'they run `/sdd-ship` (or `.sdd/bin/sdd ship`)'
+# FR-51.2: the AGENTS.md block init writes.
+assert_contains "$(cat AGENTS.md)" '- Handing the human a step: name its skill (`/sdd-new`, `/sdd-review`, `/sdd-ship`) when this
+  agent has them (`.sdd/bin/sdd sync <agent>`), with the command as fallback.'
 echo ok

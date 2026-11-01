@@ -7,4 +7,4 @@ understand it and can judge it.
 - Answer questions. Teach. The human should be able to explain this change to a teammate.
 - If they want changes, they note them under "## Review". Make them, say under "## Built"
   what you changed for each, run `{{cmd}} check` again, and come back to review.
-- Only the human ships: when they are satisfied, they run `{{cmd}} ship`.
+- Only the human ships: when they are satisfied, they run `/{{name}}-ship` (or `{{cmd}} ship`).

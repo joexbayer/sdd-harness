@@ -1,7 +1,8 @@
 # FR-15.1 task attributes, FR-15.2 task done runs the task's test and ticks it, FR-15.3 refusals,
 # FR-15.4 ticks do not void approval, FR-15.5 the current task in the phase and next, FR-15.6
 # sdd task lists tasks and their commits, FR-15.7 ship's drift check and tasks gate, FR-15.8 the
-# template and plan prompt ask for tasks.
+# template and plan prompt ask for tasks. FR-51.3 task done and review show a committed tick no
+# commit names; FR-51.4 not before the commit, nor for a named one.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -70,6 +71,10 @@ assert_contains "$(sdd status)" 'task T-1.3 of 3: Docs'
 
 # FR-15.7: a tick no commit names is refused at ship, in lite too.
 fill "$f" built && git add -A && git commit -qm "docs(1): built"
+# FR-51.3: committed under a subject that does not name it: said in review, before ship.
+# FR-51.4: T-1.1, named in its own commit, is not listed.
+line='⚠ ticked and committed, but no commit subject names them: T-1.2. Ship refuses this: name each task ID in a commit subject (amend that commit while it is the last one).'
+assert_contains "$(sdd review 2>&1)" "$line"
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(ticked, unnamed)"
 assert_contains "$out" 'ticked, but no commit names them: T-1.2'
@@ -151,4 +156,18 @@ sed 's/^- \[ \] T-3.1 /- [x] T-3.1 /' "$f" >"$T/f" && cp "$T/f" "$f"
 out=$(sdd task next)
 assert_contains "$out" '[ ] T-3.2 Login (size: S)
 '
+
+# FR-51.3: the next task done says when the last batch's commit did not name its task;
+# FR-51.4: the tick just made (not committed yet) is not listed.
+new_repo unnamed
+sdd new feature "Batch" >/dev/null 2>&1
+f=specs/changes/1-batch/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print; print "- [ ] T-1.1 One (test: true)"; print "- [ ] T-1.2 Two (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
+out=$(sdd task 'done' T-1.1 2>&1) || fail "T-1.1 failed: $out"
+assert_not_contains "$out" 'no commit subject names them'
+git add -A && git commit -qm "feat(1): the batch"
+out=$(sdd task 'done' T-1.2 2>&1) || fail "T-1.2 failed: $out"
+assert_contains "$out" '⚠ ticked and committed, but no commit subject names them: T-1.1. Ship refuses this'
 exit 0

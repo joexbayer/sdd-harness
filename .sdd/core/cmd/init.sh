@@ -130,6 +130,8 @@ This repo tracks changes with $NAME (\`$DIRNAME/\`). Before changing code, run \
   (\`$CMD approve\`), then build hands-off until \`$CMD check\` passes and \`## Built\` is written,
   then walk the human through \`$CMD review\`. Only the human approves, ships and deletes
   remote branches: run \`$CMD approve\`, \`$CMD ship\` or \`$CMD tidy --remote\` only when they ask.
+- Handing the human a step: name its skill (\`/$NAME-new\`, \`/$NAME-review\`, \`/$NAME-ship\`) when this
+  agent has them (\`$CMD sync <agent>\`), with the command as fallback.
 - Start: \`$CMD new <$(types | paste -sd '|' -)> "title"\`
 - Small changes (under ~20 lines, no behaviour change) need no item.
 - Talking to the human: give every ID its name ("item 3 (constitution)", "FR-3.6 (feature

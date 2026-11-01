@@ -21,4 +21,4 @@ You run the build; builders do the tasks. Loop until no task is open:
 Then run `{{cmd}} next` and follow it until `{{cmd}} check` passes and "## Built" is written.
 Do not edit the plan (everything above "## Built"), and do not stop to ask: record unclear
 choices under "## Built". Approve and ship stay the human's. Then tell the user it is ready
-for review.
+for review: `/{{name}}-review` (or `{{cmd}} review`).
