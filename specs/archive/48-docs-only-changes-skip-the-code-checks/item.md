@@ -2,9 +2,10 @@
 id: 48
 type: feature
 title: Docs-only changes skip the code checks
-status: open
+status: shipped
 created: 2026-11-01
 approved: 5228f864afab91944aad69a92e06b7ef97e2a8bc 2026-11-01 joexbayer
+shipped: 2026-11-01
 ---
 # 48 Docs-only changes skip the code checks
 
