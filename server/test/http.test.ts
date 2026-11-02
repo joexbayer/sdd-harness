@@ -6,7 +6,7 @@ import http from "node:http";
 import { join } from "node:path";
 import { newToken } from "../src/auth.ts";
 import type { Config } from "../src/config.ts";
-import { listen } from "../src/http.ts";
+import { failingRepos, listen } from "../src/http.ts";
 import { RepoIndex } from "../src/repo-index.ts";
 import { BUNDLED, freePort, makeRepo, type Fixture } from "./fixtures.ts";
 import { rpcResult } from "./mcp.ts";
@@ -142,9 +142,9 @@ test("FR-53.17 healthz says ok or how many repos fail, naming none; health exits
   assert.deepEqual(await r.json(), { ok: true });
   assert.equal((await run(["health", "--config", await configFile(cfg)])).code, 0);
 
-  // Two repos, one of which never indexed; then, 3 s on with a 1 s interval, both indexes too old.
+  // Two repos, one of which never indexed; a long interval, so a busy machine cannot age the good one.
   const port = await freePort();
-  const c2: Config = { ...cfg, listen: `127.0.0.1:${port}`, fetchInterval: 1,
+  const c2: Config = { ...cfg, listen: `127.0.0.1:${port}`, fetchInterval: 600,
     repos: [...cfg.repos, { name: "web", url: join(f.root, "no-such.git"), key: "k" }] };
   const ix2 = new RepoIndex({ data: join(f.root, "data2"), knownHosts: "", bundled: BUNDLED, repos: c2.repos });
   for (const repo of c2.repos) await ix2.rebuild(repo);
@@ -155,8 +155,9 @@ test("FR-53.17 healthz says ok or how many repos fail, naming none; health exits
     assert.equal(bad.status, 503);
     assert.equal(await bad.text(), '{"ok":false,"failing":1}');
     assert.equal((await run(["health", "--config", await configFile(c2)])).code, 1);
-    await new Promise((res) => setTimeout(res, 3100));
-    assert.equal(await (await fetch(`http://127.0.0.1:${port}/healthz`)).text(), '{"ok":false,"failing":2}');
+    // An index older than three intervals counts as failing too.
+    await new Promise((res) => setTimeout(res, 50));
+    assert.equal(failingRepos({ ...c2, fetchInterval: 0.001 }, ix2), 2);
   } finally {
     s2.close();
   }

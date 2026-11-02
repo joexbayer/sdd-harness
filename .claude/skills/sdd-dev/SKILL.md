@@ -37,6 +37,11 @@ Each `tests/t_*.sh` sources `tests/lib.sh`. That gives you a temporary dir `$T`,
 vendored copy via `SDD_SH`), `new_repo`, `setcfg` (changes the config *and commits it*: ship
 refuses a dirty tree), and `fill`.
 
+## Release
+Bump `.sdd/VERSION` and the default in `install.sh`, run `.sdd/bin/sdd check`, commit on main, push,
+`git tag -a vX.Y.Z -m …`, push the tag, `gh release create vX.Y.Z --prerelease --notes-file …`, then
+run the real `curl … | sh` in a throwaway HOME.
+
 ## Where things go
 - **A new verb:** `.sdd/core/cmd/<verb>.sh`. It is sourced by `bin/sdd`, and `"$@"` holds the
   args. Add it to `cmd/help.sh`.
