@@ -29,9 +29,9 @@ for d in "$tmp"/x/*/.sdd; do [ -x "$d/bin/sdd" ] && src=$d; done
 
 # Swap in the new folder, then repoint the link (FR-59.3); other versions stay.
 mkdir -p "$data" "$bin"
-rm -rf "$data/$version.new"
+rm -rf "${data:?}/$version.new"
 mkdir "$data/$version.new" && mv "$src" "$data/$version.new/.sdd"
-rm -rf "$data/$version" && mv "$data/$version.new" "$data/$version"
+rm -rf "${data:?}/${version:?}" && mv "$data/$version.new" "$data/$version"
 ln -sf "$data/$version/.sdd/bin/sdd" "$bin/sdd"
 
 echo "installed sdd $version in $data/$version"
