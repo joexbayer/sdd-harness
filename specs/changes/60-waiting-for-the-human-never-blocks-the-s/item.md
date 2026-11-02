@@ -48,8 +48,13 @@ next` and `sdd approve` show `Plan changes since the last approval:` with the -/
 approve shows none (FR-60.2, FR-60.3). Fails now: blocks, and no diff.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-60.1: `.sdd/core/cmd/hook.sh`: the plan-phase message says the next step is the human's, and
+  a block level becomes warn (a finish level of off stays off). Tests: `tests/t_agents.sh`
+  (systemMessage, no decision), `tests/t_roles.sh` (narrowbot: exit 0 waiting, exit 2 building).
+- FR-60.2, FR-60.3: `plan_changes` in `.sdd/core/lib/common.sh`, called in `next.sh` (WHYCODE
+  changed) and `approve.sh`. Test: `tests/t_phase.sh` (-/+ lines after a plan edit, none on a first
+  approve).
+- Check passed. Security: read-only git calls; ship still refuses unapproved plans.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
