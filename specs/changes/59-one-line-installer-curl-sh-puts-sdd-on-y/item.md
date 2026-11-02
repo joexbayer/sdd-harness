@@ -56,7 +56,7 @@ under the data and bin folders, and never uses sudo. No new dependency (curl/wge
 
 ## Tasks (optional)
 - [x] T-59.1 install.sh, FR-59.1, FR-59.2, FR-59.3, FR-59.4 (files: install.sh, tests/t_install.sh; test: SRC=$PWD SH=dash dash tests/t_install.sh; size: M)
-- [ ] T-59.2 README and MIGRATE install, upgrade, uninstall, FR-59.5 (files: README.md, MIGRATE.md; size: S)
+- [x] T-59.2 README and MIGRATE install, upgrade, uninstall, FR-59.5 (files: README.md, MIGRATE.md; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

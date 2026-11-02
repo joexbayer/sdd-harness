@@ -15,16 +15,16 @@ for the exact code it ran on, and the agent can't stop with unfinished work.
 ## Quick start
 
 ```sh
-git clone --branch v0.1.0 --depth 1 https://github.com/joexbayer/sdd-harness ~/sdd-harness
+curl -fsSL https://raw.githubusercontent.com/joexbayer/sdd-harness/main/install.sh | sh   # once
 cd your-repo && git switch main
-~/sdd-harness/.sdd/bin/sdd init          # copies .sdd/, writes .sdd/config, adds a block to AGENTS.md
-.sdd/bin/sdd sync claude                 # skills and hooks for Claude Code (or: codex)
+sdd init                    # copies .sdd/ into the repo, writes .sdd/config, adds a block to AGENTS.md
+sdd sync claude             # skills and hooks for Claude Code (or: codex)
 git add -A && git commit -m "chore: adopt sdd"
 ```
 
 Then tell your agent what you want, or type `/sdd-new add CSV export`. Existing project or Spec
-Kit repo: see [MIGRATE.md](MIGRATE.md). Upgrade: check out a newer tag in `~/sdd-harness`
-(`git fetch --tags && git checkout v0.2.0`), then run its `init` in your repo again.
+Kit repo: see [MIGRATE.md](MIGRATE.md). Upgrade: rerun the installer (`… | sh -s -- v0.2.0` for a
+version), then `sdd init` in each repo. Uninstall: `rm ~/.local/bin/sdd ~/.local/share/sdd -r`.
 
 ## How a change moves
 
