@@ -67,7 +67,11 @@ under the data and bin folders, and never uses sudo. No new dependency (curl/wge
   uninstall is one line.
 - Not tested here: the wget branch and the real GitHub download (needs the v0.1.0 tag, which is
   pushed after this ships). Follow-up: add `install.sh` to this repo's shellcheck line.
-- Check passed (153 s).
+- Verifier findings fixed: README's uninstall was `rm … -r` (fails on macOS) → `rm -r …`, and
+  MIGRATE now has it; tests added for a same-version rerun (replaces the folder; the mutant that
+  skips the replace now fails) and for no curl and no wget (exit 1, nothing linked).
+- Check passed.
+Verified by: claude-sonnet-5-5: 4 of 5 FRs proven; FR-59.3 replace half untested, README uninstall broken on macOS, MIGRATE lacked uninstall (all fixed)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

@@ -66,7 +66,8 @@ Nothing else. Start with `/sdd-new` (or `.sdd/bin/sdd new feature "title"`).
 ## Upgrading later
 
 Rerun the installer (`… | sh -s -- v0.2.0` for a version), then in your repo on `main`, between
-items, with a clean tree: `sdd init`. It replaces `.sdd/bin` and
+items, with a clean tree: `sdd init`. Uninstall the command: `rm -r ~/.local/bin/sdd ~/.local/share/sdd`
+(each repo keeps its own `.sdd/`). It replaces `.sdd/bin` and
 `.sdd/core`, keeps your config and `.sdd/local/`, and stamps `.sdd/VERSION` with the source
 commit. Review the diff, commit, then `sync` again. Never copy `.sdd/` by hand.
 

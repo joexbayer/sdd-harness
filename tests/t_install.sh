@@ -25,6 +25,18 @@ assert_eq "$(readlink "$T/bin/sdd")" "$T/data/sdd/v0.2.0/.sdd/bin/sdd"
 [ -d "$T/data/sdd/v0.1.0/.sdd" ] || fail "v0.1.0 should stay"
 assert_not_contains "$out" 'to your PATH'
 
+# FR-59.3: the same version again replaces its folder.
+touch "$T/data/sdd/v0.2.0/marker"
+inst v0.2.0 >/dev/null 2>&1 || fail "reinstall failed"
+[ ! -e "$T/data/sdd/v0.2.0/marker" ] || fail "a rerun should replace the version folder"
+
+# FR-59.4: no curl and no wget: says so and writes nothing.
+mkdir -p "$T/nonet" && for c in mktemp rm; do ln -s "$(command -v "$c")" "$T/nonet/$c"; done
+out=$(PATH="$T/nonet" XDG_DATA_HOME="$T/data2" SDD_BIN="$T/bin2" "$(command -v "$SH")" "$SRC/install.sh" v0.1.0 2>&1)
+assert_eq $? 1 "(no curl or wget)"
+assert_contains "$out" 'sdd install: needs curl or wget'
+[ ! -e "$T/bin2/sdd" ] || fail "nothing should be linked without a download tool"
+
 # FR-59.4: a missing version fails and touches nothing.
 out=$(inst v9.9.9 2>&1)
 assert_eq $? 1 "(missing version)"

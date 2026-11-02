@@ -24,7 +24,7 @@ git add -A && git commit -m "chore: adopt sdd"
 
 Then tell your agent what you want, or type `/sdd-new add CSV export`. Existing project or Spec
 Kit repo: see [MIGRATE.md](MIGRATE.md). Upgrade: rerun the installer (`… | sh -s -- v0.2.0` for a
-version), then `sdd init` in each repo. Uninstall: `rm ~/.local/bin/sdd ~/.local/share/sdd -r`.
+version), then `sdd init` in each repo. Uninstall: `rm -r ~/.local/bin/sdd ~/.local/share/sdd`.
 
 ## How a change moves
 
