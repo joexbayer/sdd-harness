@@ -65,7 +65,7 @@ red_without_code() {
 		{ for (i = 1; i <= n; i++) if ($0 == f[i] || index($0, f[i] "/") == 1) next; print }')
 	if [ -z "$red_other" ]; then
 		tail -n 20 "$log"
-		echo "✗ $tid expected its test to fail, but it passed: the code is already committed (or there is none), so $NAME cannot see the test fail; write the test before its code (log: $log)"
+		echo "✗ $tid expected its test to fail, but it passed: the code is already committed (or there is none), so $NAME cannot see the test fail; write the test before its code. Already committed? git revert the code commit, run task done while the test fails, commit, then revert the revert (log: $log)"
 		exit 1
 	fi
 	red_dir=$(mktemp -d "${TMPDIR:-/tmp}/$NAME-red.XXXXXX") || die "could not make a temporary folder"

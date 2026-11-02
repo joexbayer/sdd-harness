@@ -155,6 +155,7 @@ echo 'sh api.sh' >t33.sh
 out=$(red T-3.3)
 assert_eq $? 1 "(code already committed)"
 assert_contains "$out" '✗ T-3.3 expected its test to fail, but it passed: the code is already committed'
+assert_contains "$out" 'git revert the code commit, run task done while the test fails, commit, then revert the revert'
 grep -q '^- \[ \] T-3.3 ' "$f" || fail "T-3.3 ticked"
 clean_after "(committed)"
 echo ok
