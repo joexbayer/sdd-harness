@@ -82,13 +82,11 @@ f=specs/changes/1-hooked/item.md
 out=$(hook "$stop_cmd")
 assert_eq "$out" '' "(planning talk with no code changes never trips the gate)"
 
-# Code before the plan is approved: blocked once, then allowed with "unverified:".
+# FR-60.1: code while the plan waits for the human: warned, never blocked (the next step is theirs).
 echo code >code.txt
 out=$(hook "$stop_cmd")
-assert_eq "$(printf '%s' "$out" | jq -r .decision)" block
-assert_contains "$(printf '%s' "$out" | jq -r .reason)" 'the plan is not ready'
-out=$(hook "$stop_cmd" true)
-assert_contains "$(printf '%s' "$out" | jq -r .systemMessage)" 'unverified:'
+assert_eq "$(printf '%s' "$out" | jq -r .decision)" null
+assert_contains "$(printf '%s' "$out" | jq -r .systemMessage)" "The next step is the human's"
 
 # Building: blocked until the check passes and "## Built" is written.
 fill "$f" plan

@@ -61,8 +61,14 @@ assert_eq "$(tail -n 1 "$log" | cut -f3-10,13,14)" "$(printf '1\tplanner\tclaude
 hook subagent-start "{\"cwd\":\"$R\",\"agent_id\":\"a2\",\"agent_type\":\"Explore\"}"
 hook subagent-stop "{\"cwd\":\"$R\",\"agent_id\":\"a2\",\"agent_type\":\"Explore\",\"agent_transcript_path\":\"$T/agent.jsonl\"}"
 assert_eq "$(grep -vc '^#' "$log")" 1
-# NarrowBot has no reply format of its own: its stop hook still blocks the plain way (exit 2).
+# FR-60.1: NarrowBot has no block-once. While the plan waits for the human its stop hook warns and
+# lets go; in build it blocks the plain way (exit 2).
 echo code >code.txt
+out=$(sdd hook stop --agent narrowbot </dev/null 2>&1)
+assert_eq $? 0 "(narrowbot stop hook, waiting for the human)"
+assert_contains "$out" "The next step is the human's"
+f=$(ls specs/changes/*/item.md | head -n 1)
+fill "$f" plan && git add "$f" && git commit -qm "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
 sdd hook stop --agent narrowbot </dev/null >/dev/null 2>&1
-assert_eq $? 2 "(narrowbot stop hook)"
+assert_eq $? 2 "(narrowbot stop hook, building)"
 exit 0

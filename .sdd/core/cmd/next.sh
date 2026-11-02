@@ -146,6 +146,11 @@ approval | changed | contract)
 	fi
 	;;
 esac
+# FR-60.2: a plan changed after approval: what changed, for the human to judge.
+if [ "$WHYCODE" = changed ]; then
+	echo
+	plan_changes
+fi
 case $PHASE in
 plan | build)
 	rules=$(articles | awk -F '\t' '$1 != "!" { print $1 " " $4 }')

@@ -1,6 +1,7 @@
 # FR-1.5 phases plan → build → review, FR-1.6 next prompts (with local overrides),
 # FR-1.7 check, FR-1.13 approve pins the plan. FR-47.1 review counts FR names only in the item's
-# changes; FR-47.2 says so when there are none.
+# changes; FR-47.2 says so when there are none. FR-60.2 a plan changed after approval shows its
+# diff in next and approve; FR-60.3 a first approve shows none.
 . "$SRC/tests/lib.sh"
 new_repo
 # FR-47.1: text from before the item (an adopted repo's old notes) that happens to say FR-1.2.
@@ -120,4 +121,20 @@ echo "Replaced." >.sdd/local/prompts/build.md
 out=$(sdd next)
 assert_contains "$out" 'Replaced.'
 assert_not_contains "$out" 'BUILD: this is your time'
+# FR-60.3: a first approve has nothing to compare; FR-60.2: a changed plan shows what changed.
+new_repo replan
+sdd new fix "Replan" >/dev/null 2>&1
+f=specs/changes/1-replan/item.md
+fill "$f" plan
+awk '{ print } /^## Expected behaviour$/ { print "The task names a.sh." }' "$f" >"$T/p" && cp "$T/p" "$f"
+git commit -qam "docs(1): plan"
+out=$(sdd approve 2>&1) || fail "approve failed: $out"
+assert_not_contains "$out" 'Plan changes since the last approval'
+sed 's/The task names a.sh./The task names b.sh./' "$f" >"$T/p" && cp "$T/p" "$f"
+out=$(sdd next 2>&1)
+assert_contains "$out" 'Plan changes since the last approval:'
+assert_contains "$out" '-The task names a.sh.'
+assert_contains "$out" '+The task names b.sh.'
+out=$(sdd approve 2>&1) || fail "re-approve failed: $out"
+assert_contains "$out" '+The task names b.sh.'
 exit 0
