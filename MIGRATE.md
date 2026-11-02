@@ -1,14 +1,14 @@
 # Adopting sdd
 
-One page. Pick your case, run the steps in order. `<sdd>` is a checkout of a release tag, e.g.
-`git clone --branch v0.1.0 --depth 1 https://github.com/joexbayer/sdd-harness ~/sdd-harness`.
+One page. Pick your case, run the steps in order. Install the `sdd` command once:
+`curl -fsSL https://raw.githubusercontent.com/joexbayer/sdd-harness/main/install.sh | sh`.
 
 ## Every case
 
 ```sh
 cd your-repo && git switch main          # install on the base branch: items branch from it
-<sdd>/.sdd/bin/sdd init                  # copies .sdd/, writes .sdd/config, adds a block to AGENTS.md
-.sdd/bin/sdd sync claude                 # skills (/sdd-new, /sdd-review, /sdd-ship …) and the stop hook
+sdd init                                 # copies .sdd/, writes .sdd/config, adds a block to AGENTS.md
+sdd sync claude                          # skills (/sdd-new, /sdd-review, /sdd-ship …) and the stop hook
 git add -A && git commit -m "chore: adopt sdd"
 ```
 
@@ -65,8 +65,9 @@ Nothing else. Start with `/sdd-new` (or `.sdd/bin/sdd new feature "title"`).
 
 ## Upgrading later
 
-Check out the newer tag in `<sdd>`, then in your repo on `main`, between items, with a clean
-tree: `<sdd>/.sdd/bin/sdd init`. It replaces `.sdd/bin` and
+Rerun the installer (`… | sh -s -- v0.2.0` for a version), then in your repo on `main`, between
+items, with a clean tree: `sdd init`. Uninstall the command: `rm -r ~/.local/bin/sdd ~/.local/share/sdd`
+(each repo keeps its own `.sdd/`). It replaces `.sdd/bin` and
 `.sdd/core`, keeps your config and `.sdd/local/`, and stamps `.sdd/VERSION` with the source
 commit. Review the diff, commit, then `sync` again. Never copy `.sdd/` by hand.
 
