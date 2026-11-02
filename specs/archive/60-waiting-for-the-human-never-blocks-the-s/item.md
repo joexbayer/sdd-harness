@@ -2,9 +2,10 @@
 id: 60
 type: fix
 title: Waiting for the human never blocks the stop hook; approve shows the plan diff
-status: open
+status: shipped
 created: 2026-11-02
 approved: a68c1123f7b7124db3bc16bf52671736fa627ff2 2026-11-02 joexbayer
+shipped: 2026-11-02
 ---
 # 60 Waiting for the human never blocks the stop hook; approve shows the plan diff
 
