@@ -59,8 +59,15 @@ under the data and bin folders, and never uses sudo. No new dependency (curl/wge
 - [x] T-59.2 README and MIGRATE install, upgrade, uninstall, FR-59.5 (files: README.md, MIGRATE.md; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-59.1-59.4: `install.sh` (repo root): download with curl or wget, keep only `.sdd/`, swap the
+  version folder, `ln -sf` the link, PATH hint, next steps; deletes guarded with `${var:?}`
+  (shellcheck SC2115). Test: `tests/t_install.sh` (local tarballs via `SDD_INSTALL_URL=file://…`:
+  install, link, `sdd init` through the link, switch to v0.2.0, a missing v9.9.9 leaves the link).
+- FR-59.5: README Quick start and MIGRATE "Every case" and "Upgrading" use the installer;
+  uninstall is one line.
+- Not tested here: the wget branch and the real GitHub download (needs the v0.1.0 tag, which is
+  pushed after this ships). Follow-up: add `install.sh` to this repo's shellcheck line.
+- Check passed (153 s).
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
