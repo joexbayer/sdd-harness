@@ -1,289 +1,81 @@
 # sdd
 
-Spec-driven changes for people working with coding agents. Humans plan and review; agents
-build. One short file per change, plain shell scripts, and any agent.
-
-sdd checks its workflow instead of asking the agent to follow rules: the build waits for the
-human's approval and editing the plan cancels it, a test written first must fail before its
-task can be ticked, a check result counts only for the exact code it ran on, and the agent
-cannot stop with unfinished work (a finish gate on its stop hook).
-
-You talk to your agent; the agent runs sdd. In Claude Code:
+Spec-driven changes for people who work with coding agents. **You plan and review; the agent
+builds.** One short file per change, plain POSIX shell, works with any agent.
 
 ```
-you    /sdd-new pagination for the orders page
-agent  That's a feature: "Pagination for the orders page". Start it?
-you    yes
-agent  Opened item 1 on branch feature/1-pagination-for-the-orders-page. Before any code:
-       who uses the orders page today, and how many orders does a big customer have?
+you + agent ──plan──▶ you approve ──▶ agent builds (hands-off) ──▶ verifier ──▶ you review ──▶ you ship
+               item.md        sdd approve          tests, sdd check       fresh model     /sdd-review   /sdd-ship
 ```
 
-Underneath, the agent ran `.sdd/bin/sdd new feature "Pagination for the orders page"`; every
-step is a plain shell command (see [Commands](#commands)), so any agent, or a person, can do
-the same by hand.
+sdd enforces the workflow with commands, not prompts: building waits for your approval, editing
+the plan cancels it, a test written first must fail before its task counts, a check passes only
+for the exact code it ran on, and the agent can't stop with unfinished work.
+
+## Quick start
+
+```sh
+git clone https://github.com/joexbayer/sdd-harness ~/sdd-harness
+cd your-repo && git switch main
+~/sdd-harness/.sdd/bin/sdd init          # copies .sdd/, writes .sdd/config, adds a block to AGENTS.md
+.sdd/bin/sdd sync claude                 # skills and hooks for Claude Code (or: codex)
+git add -A && git commit -m "chore: adopt sdd"
+```
+
+Then tell your agent what you want, or type `/sdd-new add CSV export`. Existing project or Spec
+Kit repo: see [MIGRATE.md](MIGRATE.md).
 
 ## How a change moves
 
-Every change is an **item**: one markdown file, `specs/changes/<id>-<slug>/item.md`, on its
-own branch. Its phase is worked out from the file and git each time you ask, never stored.
-
-```mermaid
-flowchart LR
-    new(["sdd new"]) --> plan
-    subgraph human1 [" with the human "]
-        plan["plan<br/>fill the item: why, FRs,<br/>questions, done-when<br/>no code yet"]
-    end
-    plan -- "sdd approve<br/>(human only)" --> build
-    subgraph agent [" hands-off "]
-        build["build<br/>code + tests<br/>sdd check passes<br/>Built section written"]
-    end
-    build --> review
-    subgraph human2 [" with the human "]
-        review["review<br/>sdd review:<br/>commits, diff, FRs, check"]
-    end
-    review -- "review notes" --> build
-    review -- "sdd ship<br/>(human only)" --> archived(["specs/archive/"])
-    build -. "plan edited after approval" .-> plan
-```
-
-- **plan.** The agent and the human fill in the item together: the problem first, then
-  requirements (`FR-1.1 WHEN … THE SYSTEM SHALL …`) and open questions (`Q-1.1`), one at a
-  time. No code.
-- **approve.** The human hands the plan to the agent. Approval pins the plan's hash, so
-  editing the plan afterwards sends the item back to planning.
-- **build.** The agent writes code and tests until `sdd check` passes for exactly this
-  code, then writes `## Built`: what changed per FR and which test proves it.
-- **review.** `sdd review` walks the human through the commits, diff, FRs and check. Notes
-  go under `## Review`, and the agent works through them.
-- **ship.** Runs the gates again, archives the item, and fast-forwards `main` locally.
-  Pushing stays with you. `sdd tidy` then removes the branches and worktrees shipped items left.
-  With `forge = github` in `.sdd/config`, `ship` pushes the branch and opens a pull request
-  (the item is its description) instead, and shipping again merges it once CI passes.
-
-`sdd next` always says what to do in the current phase. That is the one command an agent
-needs to know.
-
-Not every change takes the full path:
-
-| type | use when | approval |
-|---|---|---|
-| feature | new behaviour | yes |
-| fix | behaviour is wrong; reproduce it with a failing test first | yes |
-| refactor | structure only; behaviour and tests stay the same | yes |
-| spike | answer a question; only the findings land, never the code | yes |
-| chore | dependencies, config, CI, docs | no |
-| hotfix | production is broken; write it up after | no |
-| amendment | a constitution article must change; every gate blocks | yes |
-| roadmap | a system in several items: plan their order once; only the plan lands | yes |
-| contract | change an interface items build against (specs/contracts/); lands no code | yes |
-
-Changes under about 20 lines with no behaviour change need no item: commit them as
-`chore: …`.
-
-## Install into a repo
-
-```sh
-/path/to/swe-harness/.sdd/bin/sdd init    # copies .sdd/, writes .sdd/config, adds an AGENTS.md block
-.sdd/bin/sdd sync claude                  # each developer, once: skills (/sdd-new …), hooks, confirmations
-```
-
-`sync` writes per-developer files kept out of git: the step skills, the hooks, and the rules
-that make Claude Code ask before `approve`, `ship` and `tidy --remote`. Use `sync codex` for Codex.
-
-Requirements: POSIX `sh`, `git` ≥ 2.31, awk, grep and sed. `jq` is needed only for `sync`
-and the hooks. Windows works through WSL or Git Bash.
+1. **Plan** (`/sdd-plan`): the agent asks the load-bearing questions first, then writes
+   `specs/changes/<id>-<slug>/item.md`: requirements as `FR-n.1 WHEN … THE SYSTEM SHALL …` with an
+   example, small tasks, decisions. It shows you a short review: sketch, critical parts,
+   assumptions, testing.
+2. **Approve**: you say yes; `sdd approve` pins the plan.
+3. **Build** (`/sdd-build`): hands-off, task by task, each with its own test; a fresh verifier on
+   a different model proves each requirement by breaking it.
+4. **Review** (`/sdd-review`): in chat, one line per requirement. You never have to open a file.
+5. **Ship** (`/sdd-ship`): gates, then merge (locally, or through a GitHub PR with
+   `forge = github`).
 
 ## Commands
 
-| command | what it does |
+| | |
 |---|---|
-| `sdd new <type> "title" [--worktree]` | start a change: a branch plus its item file |
-| `sdd new --from R-<id>.<n> [--worktree]` | open the item a shipped roadmap's entry describes |
-| `sdd next` | instructions for the current phase (agents call this) |
-| `sdd status` | the current item and its phase, or open items on local branches |
-| `sdd approve` | the human hands the plan to the agent |
-| `sdd check` | run your tests and linters (exit 0 pass, 1 fail, 3 no tests ran), with how long it took; warns past `[check] budget` seconds (default 30, 0 off) |
-| `sdd review` | walk through what was built (and remember the code you saw) |
-| `sdd ship` | gates, archive the item, fast-forward the base branch |
-| `sdd open <id> [--worktree]` | switch to an item's branch (a teammate's too), or open it in `../<repo>.<id>` |
-| `sdd tidy [--remote] [--dry-run]` | remove what shipped items left; `--remote` deletes their remote branches |
-| `sdd ls [--all] [--json] [--pr]` | every item and its progress, across all branches; `--pr` adds each PR (one GitHub call) |
-| `sdd show <id> [--json]` | one item's stories, requirements, tasks, decisions, questions |
-| `sdd summary [--since <when>] [--last <n>] [--mine] [--md]` | recent work as a table |
-| `sdd task [next \| done <T-id>]` | the item's tasks; `next` is the batch to build now, `done` runs a task's test and ticks it |
-| `sdd run <role> <id>` | one step of an item on the role's agent and model, logged |
-| `sdd usage [<id>] [--md]` | tokens, cost and time of the logged runs |
-| `sdd sync <agent>` | per-developer hooks and skills for an agent, never committed |
+| `sdd new <type> "title"` | start a change (feature, fix, hotfix, refactor, chore, spike, amendment, contract, roadmap) |
+| `sdd next` | what to do now (agents call this) |
+| `sdd approve` · `sdd ship` | the human's two steps |
+| `sdd check` | your tests and linters, plus secret scanning with gitleaks |
+| `sdd review` | what was built, requirement by requirement |
+| `sdd task [next \| done <T-id>]` | the tasks; `done` runs a task's test before ticking it |
+| `sdd ls` · `sdd show <id>` · `sdd status` | items across all branches (`--json` for tools) |
+| `sdd run <role> <id>` · `sdd usage` | run a role on its own model; tokens, cost, time |
+| `sdd sync <agent>` · `sdd tidy` | per-developer glue; clean up shipped branches |
 
-Every verb exits `0` ok, `1` failed or refused, `2` usage error, `3` ran but proved nothing.
+## Why it's small
 
-## Working as a team
+Per feature, an agent reads about 1,800 words of sdd instructions and one ~700-word item file.
+A typical Spec Kit setup is ~13,000 words of instructions and ~19,000 words of spec files.
 
-- **Teammates' work is visible.** `ls`, `show` and `summary` read every local and remote
-  branch, so an item on a teammate's pushed branch shows up without merging it.
-- **Who did what.** `summary` says who opened each item and who approved it:
+## Make it yours
 
-  ```
-  ┌──────────────────────────┬───────────────────────────────────────┬────────────────────────┬───────────┐
-  │ item                     │ state                                 │ who                    │ when      │
-  ├──────────────────────────┼───────────────────────────────────────┼────────────────────────┼───────────┤
-  │ 3 (Kari's thing)         │ building: no passing check yet        │ kari, approved by lead │ today     │
-  ├──────────────────────────┼───────────────────────────────────────┼────────────────────────┼───────────┤
-  │ 4 (Faster search)        │ planning: 2 open questions; then      │ joexbayer              │ yesterday │
-  │                          │ approval                              │                        │           │
-  └──────────────────────────┴───────────────────────────────────────┴────────────────────────┴───────────┘
-  ```
+Everything is config (`.sdd/config`) or an override (`.sdd/local/<path>`, or
+`<prompt>.append.md` to extend a prompt). Rules your project must keep go in
+`specs/constitution.md`, each enforced by a check or by you at review. See [MIGRATE.md](MIGRATE.md).
 
-  `--md` prints the same rows as a Markdown table for a PR or chat.
-- **Nothing to drift.** Phases come from files and git, not a shared state file, so two
-  people never see different answers to "where is item 3?".
-- **Machine data stays local.** Check results and the ID counter live in `.git/sdd/`, shared
-  by all worktrees of a clone and never committed.
+## Teams
 
-- **Pull requests.** With `forge = github`, `ship` opens a PR whose description is the item,
-  `status`, `ls` and `review` show its review and CI, and shipping again merges it (only if CI
-  passes and GitHub still has exactly the checked commit). Merges are merge commits.
+Items live on their own branches; `sdd ls` shows teammates' work in flight, `forge = github` ships
+through pull requests, and [server/](server/) is a small self-hosted MCP server that shows every
+open item across repos and branches (first version).
 
-Planned (see the roadmap): unique IDs across clones, PR review as approval, and a read-only
-MCP server that shows open items across branches and repos.
+## More
 
-## An AI drives, the human decides
+- [specs/design.md](specs/design.md): the design and the reasons behind it.
+- [specs/archive/](specs/archive/): every change to sdd itself, made with sdd.
+- [specs/kb/](specs/kb/): the research behind the choices.
 
-An agent reads the `AGENTS.md` block, runs `.sdd/bin/sdd next` and follows it. With
-`sdd sync claude` (or `codex`) each developer also gets:
+Develop: `.sdd/bin/sdd check` (shellcheck + the suite under sh and dash). One test:
+`SRC=$PWD SH=dash dash tests/t_<name>.sh`. Notes: [.claude/skills/sdd-dev/SKILL.md](.claude/skills/sdd-dev/SKILL.md).
 
-- **one skill per step:** `/sdd-new <what you want>` picks the change type and a title and
-  confirms them with you; `sdd-plan`, `sdd-build`, `sdd-review` and `sdd-ship` then trigger
-  on plain requests ("build it", "walk me through it", "ship it");
-- **hooks:** the session starts with the current status; an agent that tries to stop with
-  unverified code changes is refused once, then told to report it;
-- **ask rules (Claude Code):** `approve`, `ship` and `tidy --remote` always need the human's
-  click, however the agent spells the command.
-
-**Roles and models.** The team names roles in `.sdd/config` (`[role "builder"] tier = small`);
-each developer says which agent and model a tier means for them (`[tier "small"] agent = narrowbot,
-model = qwen3-coder-30b` in `~/.config/sdd/config`). Ask your agent to "run the builder on
-item 16": a role on a Claude model runs as a subagent (`sync claude` writes them), any other
-through `sdd run builder 16`. A builder run does tasks only: with no task open it is refused,
-and its stop hook lets it stop once its batch is ticked; the session orchestrating the build
-does the finishing (check, security pass, verifier, Built). When the builder exits, `sdd run`
-runs `task done` itself for every task of the batch still open, in order, stopping at the first
-that fails, so a model that forgets to tick costs nothing. It commits nothing: it prints
-`ticked n of m · commit with: <message>` for the orchestrator. With `[usage] track = true` every run is logged with its tokens, and
-`sdd usage` sums them (off by default).
-
-**Now let's build.** Say it once the plan is approved: the `sdd-build` skill loops over the
-tasks, giving each batch to one builder and committing it, and stops at the first failure.
-The planner sizes each task (`size: S|M|L`); consecutive small ones share a builder
-(`sdd task next` shows the next batch, up to `[build] batch = 3`), bigger ones get one each. A
-test written first (`expect: fail`) ends its batch, so it is ticked while still red.
-A small builder stalls on a task that bundles many behaviours: set `[build] max-size = S` (or
-`M`; default `L`) and the plan rules tell the planner to size every task for it (for S: one module
-or behaviour group, at most about 3 FRs, a test it can run alone), and `sdd analyze` flags each
-task above it. The plan rules also say to fix names several tasks share (tables and columns,
-routes, signatures, paths) in the plan and pin them by a test in the task that first defines them.
-A task can name the role that builds it, `by: planner`: the planner writes the failing test that
-defines done, the builder makes it pass. A batch belongs to one role, and `sdd run builder 7` on
-the planner's batch is refused with the command to run instead (`sdd run planner 7`). Any batch
-run gets a short prompt saying sdd ticks and the orchestrator commits, and its item file back.
-A test written first says `expect: fail "<text>"` to count only when it fails for that reason.
-A small model often writes the test and its code at once, so the test already passes. When there
-are other uncommitted changes, `task done` then runs the test again in a throwaway checkout of
-HEAD with only the task's `files:` copied in, and counts it red when it fails there; your tree is
-not touched. If it passes there too, or the code is already committed, it is refused.
-
-**Roadmaps.** A system is many items in an order. `sdd new roadmap "Shop"` plans them as
-entries under `## Items`, `- R-30.2 feature: Login page (after: R-30.1)`; `after:` names earlier
-entries only. Once the roadmap ships, `sdd next` (with no item) offers the entries that are ready,
-and `sdd new --from R-30.2` opens one with `roadmap: R-30.2` and `depends: R-30.1` in its
-frontmatter. Any item may list `depends: 31, R-30.1` by hand. Planning and building go on in
-parallel; `next`, `status` and `ls` say what an item waits for, and the `depends` gate makes
-`ship` warn (lite) or refuse (standard, strict) until those items have shipped.
-
-**Contracts.** Frontend and backend items built in parallel agree on one interface first:
-`sdd new contract "Orders API"` plans a change to files under `specs/contracts/` (any format, a
-file or a folder; the project's check validates it), and only a contract item may change them
-(ship refuses anything else, and a contract item lands no code). An item builds against one by
-naming it in its frontmatter, `contracts: orders-api` (the file `specs/contracts/orders-api.yaml`
-on the base branch). `approve` pins each contract's git id with the plan, refusing one that is not
-on the base branch yet or that the branch has an old copy of. When a contract changes on the base
-branch, every item using it goes back to planning, naming it: merge the base, check the plan
-still fits, and approve again. In build, `next` lists the contracts as read-only input.
-
-**Verified, then reviewed.** Before writing Built, the agent hands the item to a `verifier`
-role (ideally another model) that proves each FR by running it and reports only findings; the
-result is a `Verified by:` line under Built. `sdd review` remembers the code it showed you, so
-`ship` warns (blocks in strict) when the code changed after your review; a rebase does not count.
-
-Gates are scripts, not prose. In testing with a small local model (qwen3-coder 30B), the
-model ignored written rules but obeyed the gates (see `specs/kb/narrow-lessons.md`).
-
-## Constitution
-
-`specs/constitution.md` holds a project's ground truths, one article each (`C-1`, `C-2`, …).
-Each article says why it exists and how it is enforced: by a command inside `sdd check`, or
-by the human at every review. Articles change only through an `amendment` item, and a
-branch that edits the constitution any other way fails `check` and `ship`.
-
-```
-C-4 Only new, approve and ship create commits. No verb pushes, except two human-only ones:
-  `tidy --remote` deletes remote branches of items already shipped or dropped on the base, and
-  `ship` with `forge = github` pushes its own item branch and merges that branch's PR. No verb
-  pushes the base branch.
-  Why: the human decides what lands and what leaves the machine; both run behind an ask rule,
-  and the base changes only through a merge the human started.
-  Enforced: check sh tests/constitution/c4-commits.sh
-```
-
-## Customise
-
-- **Profiles.** `lite` (default), `standard` or `strict` in `.sdd/config` decide how hard
-  each gate is.
-- **Types.** Types live in config, so a team can add `migration` or `security-fix`.
-- **Overrides.** Put a file at the same path under `.sdd/local/` to override a core file, or
-  add `<prompt>.append.md` to extend a prompt. E.g. a web app's `.sdd/local/prompts/plan.append.md`:
-  `- A list endpoint gets a test that counts its queries.`
-- **Upgrades.** In your repo, run the newer sdd's init (`<newer sdd>/.sdd/bin/sdd init`). It
-  replaces `.sdd/bin` and `.sdd/core`, keeps your config and `.sdd/local/`, and refuses while
-  those two folders have uncommitted changes. Review the diff and commit it.
-- **Your gate.** `init` uses an executable `scripts/check.sh` or a `make check` target when the
-  repo has one, and otherwise guesses `[check] run` from the language: point it at your own
-  check script if it lives elsewhere. With gitleaks, `init` writes a `.gitleaks.toml` that keeps
-  gitleaks' default rules and skips `.claude/worktrees/` (agents' copies of the repo). If gitleaks
-  flags fake keys in test fixtures, list their fingerprints (`gitleaks dir . -v` prints them) in
-  `.gitleaksignore`, or allowlist the paths in `.gitleaks.toml`. Set `[check] budget` to the
-  seconds your gate really takes (0 turns the warning off). For a slow gate, move it from `run`
-  to `code` and list your docs: `run = gitleaks dir . --no-banner`, `code = scripts/check.sh`,
-  `docs = *.md`, `docs = docs/*`. When every changed path matches a `docs` glob, `check` runs only
-  the `run` lines (the secret scan) and says what it skipped.
-
-## Compared with Spec Kit
-
-| | Spec Kit | sdd |
-|---|---|---|
-| per change | several files (spec, plan, tasks, …) | one `item.md` |
-| current feature | a stored pointer file, which can go stale | the branch name |
-| progress | read from files | derived from files and git; `ls --json` for tools |
-| procedures | agent prompts | POSIX sh scripts; prompts only where judgment is needed |
-| gates | written instructions | commands that refuse (`check`, `ship`, the stop hook) |
-| approval | none | `sdd approve`, pinned to the plan's hash |
-| teams | IDs collide, branches invisible | teammates' branches shown; team IDs planned |
-
-Kept from Spec Kit: greppable requirement IDs, a constitution, a clarify discussion while
-planning, and one skill per step. Research and contracts are on the roadmap.
-
-Adopting sdd in a new project, an existing repo or a Spec Kit repo: [MIGRATE.md](MIGRATE.md).
-
-## Learn more
-
-- [specs/design.md](specs/design.md): the design, the roadmap and the reasons behind each choice.
-- [specs/kb/](specs/kb/): the research behind them.
-- [specs/archive/](specs/archive/): every change to sdd itself, made through sdd.
-
-## Develop
-
-```sh
-.sdd/bin/sdd check      # shellcheck + the test suite under sh and dash (this repo uses sdd)
-```
-
-Developer notes: [.claude/skills/sdd-dev/SKILL.md](.claude/skills/sdd-dev/SKILL.md).
+MIT licensed.

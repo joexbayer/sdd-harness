@@ -33,8 +33,7 @@ repo's sdd version flagged per branch, published as `npx sdd-server@0.1.0`. Late
 on npm. Your answers are recorded as Q-53.1 to Q-53.6.
 
 **Who it hurts: people (and their agents) who plan and build in parallel and cannot see each
-other's unmerged work until it lands.** private-project is the case. It had four regular committers
-(joexbayer 4,378 commits, colleague A 1,469, colleague B 319, colleague C 94) and
+other's unmerged work until it lands.** private-project is the case. It had four regular committers and
 6,267 commits between 2026-09-04 and 10-30, with no coordination tool:
 
 | # | what went wrong | evidence | what would have surfaced it |
@@ -840,7 +839,7 @@ D-53.18 HTTPS with clones first and stdio later (Q-53.3 decided), because:
   - a solo developer gets nothing from stdio that `sdd ls` does not already give;
   - every failure in Why is between people;
   - private-project paid about 380 commits retrofitting one-host and one-tenant shortcuts that the
-    design had already ruled out (kb/private-project-lessons.md §5).
+    design had already ruled out (a private study (not published) §5).
 D-53.19 Slice 1 ships `search` with `items` and `item`, because the headline failure (W1, a spec
   written blind to one in flight) is found by searching plans, and `search` is one `git grep`
   over refs the index already knows. The version fields (FR-53.28, N.29) are two git calls per

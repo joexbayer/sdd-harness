@@ -35,7 +35,7 @@ Docs and housekeeping (no behaviour change):
   items, no gate is bypassed, reviews take minutes, and the human finds the problems at review
   rather than after ship. Small models are supported and supervised. The experiment row is done.
 - specs/kb/experiment-results.md: the three-arm result of 2026-10-30, and what it means.
-- Commit specs/kb/private-project-lessons.md, and the experiment's claude runs using the claude-experiment
+- Commit a private study (not published), and the experiment's claude runs using the claude-experiment
   config (experiment/run.sh, experiment/README.md).
 
 ## Not in scope (optional)
@@ -92,7 +92,7 @@ and to report a new part that nothing calls or reads. Proven by tests/t_prompts_
 Docs and housekeeping: specs/design.md:441 (the mindset says a human reviews; a smaller builder
 needs more review), :462 (the experiment row is done), :473 (done means a real repo ships about
 10 reviewed items); specs/kb/experiment-results.md (the three arms, and what a human review
-found); specs/kb/private-project-lessons.md and the experiment's claude-experiment config committed.
+found); a private study (not published) and the experiment's claude-experiment config committed.
 
 Deviations:
 - finish.md's hand-off sentence was rewrapped so an existing assertion in tests/t_verified.sh,

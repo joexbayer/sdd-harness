@@ -1,0 +1,2 @@
+# smoke.sh sends a deliberately wrong token (sdd_wrong) to prove it is refused
+b193b18f87504c18a85f65d8c1c727bee5a9e232:server/scripts/smoke.sh:curl-auth-header:110

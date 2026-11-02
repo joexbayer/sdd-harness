@@ -43,7 +43,7 @@ Nothing else. Start with `/sdd-new` (or `.sdd/bin/sdd new feature "title"`).
 
    ```
    C-1 Every HTTP handler checks the caller's role.
-     Why: a missed check leaked tenant data (incident 2026-03).
+     Why: one missed check is enough to expose another user's data.
      Enforced: review
    ```
    `Enforced: check <command>` makes `sdd check` run it. At most 30 articles (`[constitution] max-articles`).
