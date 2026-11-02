@@ -44,6 +44,7 @@ if [ "$level" != off ]; then
 	fi
 fi
 
+plan_changes # FR-60.2
 who=$(git config user.name || echo unknown)
 fm_set "$IFILE" approved "$APIN $(date +%F) $who"
 git add -- "$IFILE" || die "could not add $IFILE"

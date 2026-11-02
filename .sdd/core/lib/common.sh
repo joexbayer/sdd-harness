@@ -324,6 +324,19 @@ plan_part() {
 	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit } { print }' "$1"
 }
 
+# plan_changes: what the plan part changed since the last approval, as a unified diff under a
+# heading; nothing when it was never approved or did not change (FR-60.2). Ticks do not count.
+plan_changes() {
+	_c=$(git log -1 --format=%H --fixed-strings --grep="docs($ID): approve plan" 2>/dev/null)
+	[ -n "$_c" ] || return 0
+	git show "$_c:$IFILE" >"$ST/plan-was.$$" 2>/dev/null || { rm -f "$ST/plan-was.$$"; return 0; }
+	plan_part "$ST/plan-was.$$" | sed 's/^- \[[xX]\] T-/- [ ] T-/' >"$ST/plan-a.$$"
+	plan_part "$IFILE" | sed 's/^- \[[xX]\] T-/- [ ] T-/' >"$ST/plan-b.$$"
+	_d=$(diff -u "$ST/plan-a.$$" "$ST/plan-b.$$" | tail -n +3)
+	rm -f "$ST/plan-was.$$" "$ST/plan-a.$$" "$ST/plan-b.$$"
+	[ -z "$_d" ] || printf 'Plan changes since the last approval:\n%s\n' "$_d"
+}
+
 # plan_hash <file>: what approval pins. Task boxes count as unticked: sdd ticks them as tasks pass
 # (task done), which must not void the approval; every other plan edit does. Cached for one file
 # in <git dir>/sdd-plan ("<file> <hash>"), used while strictly newer than the file.
