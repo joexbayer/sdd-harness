@@ -2,9 +2,10 @@
 id: 59
 type: feature
 title: One-line installer: curl | sh puts sdd on your PATH
-status: open
+status: shipped
 created: 2026-11-02
 approved: 59b708d0cfa650097cbe390ea7c8540e0c19eeb2 2026-11-02 joexbayer
+shipped: 2026-11-02
 ---
 # 59 One-line installer: curl | sh puts sdd on your PATH
 
