@@ -8,23 +8,43 @@ created: 2026-11-02
 # 60 Waiting for the human never blocks the stop hook; approve shows the plan diff
 
 ## Current behaviour
-<!-- What happens now, and how to reproduce it. -->
+NarrowBot pilot, problem 12 (2026-11-02). A one-word fix in a task's `files:` voided the approval, so
+the agent had to wait for the human, but `hook stop` (plan phase with code changes,
+`.sdd/core/cmd/hook.sh:57`) kept blocking: "Do not build before the human approves". NarrowBot has
+no block-once, so it could not end its turn: a deadlock. Claude Code blocks once, then lets go.
+And re-approving gives the human nothing to judge: what changed in the plan is not shown.
 
 ## Expected behaviour
-<!-- FR-60.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-  e.g. <input> → <output> -->
+FR-60.1 WHEN the agent stops in the plan phase with code changes THE SYSTEM SHALL warn and let it stop
+(exit 0): the next step is the human's. It still blocks in the build phase.
+  e.g. plan changed after approval → stderr `sdd: item 1 has code changes but the plan is not ready (…). The next step is the human's: stop and ask them.`, exit 0; `--agent claude` gets a systemMessage, no `decision: block`
+FR-60.2 WHEN the plan changed after an approval THE SYSTEM SHALL print what changed since that approval
+(a unified diff of the plan part), in `sdd next` while waiting and in `sdd approve`.
+  e.g. `files: a.sh` → `files: b.sh` in a task → lines `-… (files: a.sh…` and `+… (files: b.sh…` under `Plan changes since the last approval:`
+FR-60.3 WHEN the plan was never approved THE SYSTEM SHALL print no such diff.
+  e.g. a first `sdd approve` → no "Plan changes" line
+
+How: `hook.sh` plan case: new message, `level=warn` (not the type's finish level).
+`common.sh`: new `plan_changes`: the last commit whose subject is `docs(<id>): approve plan`, its item
+file's `plan_part` against the current one, `diff -u` minus its two header lines, ticks normalised
+as `plan_hash` does; prints the heading and diff, or nothing. Called in `next.sh` when WHYCODE is
+`changed`, and in `approve.sh` before it pins.
+D-60.1 Task details stay part of the approval (no metadata exemption): they are the contract; the
+diff makes a one-word re-approval quick.
 
 ## Must not change
-<!-- Behaviour that has to stay exactly as it is (so the fix breaks nothing else). -->
+- The build-phase block (t_agents.sh, t_verified.sh); ship's refusal of code committed before approval.
+- `next`'s git-call budget mid-build: `plan_changes` runs only while the plan changed.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-60.4 rejects non-images and files over 5 MB -->
+none: a softer message in the plan phase (ship still refuses unapproved plans) and a read-only diff.
 
 ## Test
-<!-- The regression test (name and file) that fails now and passes after the fix. -->
+`tests/t_agents.sh`: code before approval → systemMessage with "The next step is the human's", no
+`decision` (FR-60.1). `tests/t_roles.sh`: narrowbot plan phase exits 0; after approval with code
+changed, exits 2 (build still blocks). `tests/t_phase.sh`: approve, change a word in the plan → `sdd
+next` and `sdd approve` show `Plan changes since the last approval:` with the -/+ lines; the first
+approve shows none (FR-60.2, FR-60.3). Fails now: blocks, and no diff.
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
