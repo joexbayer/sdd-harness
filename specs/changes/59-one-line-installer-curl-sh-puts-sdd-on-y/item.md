@@ -8,43 +8,54 @@ created: 2026-11-02
 # 59 One-line installer: curl | sh puts sdd on your PATH
 
 ## Why
-<!-- The problem in plain words: who hurts, and how. 2-4 lines. -->
+Installing means cloning sdd and running `~/sdd-harness/.sdd/bin/sdd init`; the user wants it
+like Spec Kit's `specify`: install a command once, then `sdd init` (2026-11-02).
 
 ## What changes
-<!-- User-visible behaviour. One requirement per entry, each with a concrete example:
-    US-59.1 As a <role> I <action>, so that <outcome>.
-    FR-59.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-      e.g. <input> → <output>
-Start each entry at the beginning of its line, ID first. IDs never change; leave gaps. -->
+FR-59.1 WHEN `install.sh` runs (e.g. `curl -fsSL …/main/install.sh | sh`) THE SYSTEM SHALL download the
+release tarball (default: the version in the script; `sh -s -- v0.2.0` picks another) with curl, or
+wget if curl is missing, keep only its `.sdd/` in `${XDG_DATA_HOME:-~/.local/share}/sdd/<version>/`,
+link `${SDD_BIN:-~/.local/bin}/sdd` to it, and print the next steps.
+  e.g. → `installed sdd v0.1.0 in ~/.local/share/sdd/v0.1.0` and `next: cd your-repo && sdd init && sdd sync claude`
+FR-59.2 WHEN the bin folder is not on PATH THE SYSTEM SHALL say how to add it.
+  e.g. → `add ~/.local/bin to your PATH: export PATH="$HOME/.local/bin:$PATH"`
+FR-59.3 WHEN it runs again, for the same or another version THE SYSTEM SHALL replace that version's
+folder and repoint the link; other versions' folders stay.
+  e.g. v0.1.0 then v0.2.0 → the link points at v0.2.0
+FR-59.4 WHEN the download fails, or neither curl nor wget exists THE SYSTEM SHALL exit 1 with the
+reason and leave the link and any installed version untouched.
+  e.g. a missing tag → `sdd install: could not download v9.9.9 from <url>` and exit 1
+FR-59.5 WHEN a user reads README and MIGRATE THE SYSTEM SHALL show the two-line install, the upgrade
+(rerun install, then `sdd init` per repo) and uninstall (remove the link and the folder).
+  e.g. README Quick start starts with the curl line
 
 ## Not in scope (optional)
-<!-- What this deliberately leaves out, and where it went. -->
+- npm (`npx`), Homebrew, Windows. Checksums: the tarball comes from a fixed tag over HTTPS.
 
 ## How
-<!-- What a reviewer needs: an ASCII sketch of the moving parts, key types or signatures,
-and the decisions they would question, each at the start of its line:
-    D-59.1 <decision>, because <reason>. -->
+`install.sh` at the repo root (POSIX sh, outside the core: C-1 is about `.sdd/`). Tarball:
+`${SDD_INSTALL_URL:-https://github.com/joexbayer/sdd-harness/archive/refs/tags}/<version>.tar.gz`
+(the override is for tests: a `file://` URL). Extract into a temp dir, move `*/.sdd` into place,
+then swap the link (`ln -sfn`). The launcher already follows symlinks and hands off to a repo's own
+`.sdd/` (`.sdd/bin/sdd:22-28`), so a global `sdd` runs each repo's pinned copy.
+D-59.1 A symlink to a versioned folder, not a copy in bin: upgrades are one repoint, and `sdd init`
+copies from the real folder.
+D-59.2 The default version is written in the script and bumped at each release (the release
+checklist in README says so): no network call to find "latest".
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-59.4 rejects non-images and files over 5 MB -->
+`curl | sh` runs our script → it is short and readable, fetches a fixed tag over HTTPS, writes only
+under the data and bin folders, and never uses sudo. No new dependency (curl/wget and tar).
 
 ## Questions (optional)
 <!-- Q-59.1 <question> → recommend: <answer>. Resolve before building. -->
 
 ## Done when
-<!-- DOD-59.1 <observable outcome>, e.g. "works against staging". -->
+`tests/t_install.sh` passes under sh and dash; `sdd check` passes.
 
 ## Tasks (optional)
-<!-- Small, ordered steps the builder does one at a time, each in one sitting, each with a test
-of its own (so it can pass before the next task exists):
-    - [ ] T-59.1 Page the orders query, FR-59.1 (files: src/orders.js; test: npm test -- orders; size: S)
-Size each task `S`, `M` or `L` (none is M): consecutive S tasks go to one builder together, M and
-L ones alone. Add `; expect: fail` for a test written first (it must fail), or
-`; expect: fail "<text>"` (it must fail with that text in its output); without `test:` the
-full check runs. `.sdd/bin/sdd task done T-59.1` ticks a task when its test passes. -->
+- [ ] T-59.1 install.sh, FR-59.1, FR-59.2, FR-59.3, FR-59.4 (files: install.sh, tests/t_install.sh; test: SRC=$PWD SH=dash dash tests/t_install.sh; size: M)
+- [ ] T-59.2 README and MIGRATE install, upgrade, uninstall, FR-59.5 (files: README.md, MIGRATE.md; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
