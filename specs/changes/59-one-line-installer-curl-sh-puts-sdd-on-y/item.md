@@ -55,7 +55,7 @@ under the data and bin folders, and never uses sudo. No new dependency (curl/wge
 `tests/t_install.sh` passes under sh and dash; `sdd check` passes.
 
 ## Tasks (optional)
-- [ ] T-59.1 install.sh, FR-59.1, FR-59.2, FR-59.3, FR-59.4 (files: install.sh, tests/t_install.sh; test: SRC=$PWD SH=dash dash tests/t_install.sh; size: M)
+- [x] T-59.1 install.sh, FR-59.1, FR-59.2, FR-59.3, FR-59.4 (files: install.sh, tests/t_install.sh; test: SRC=$PWD SH=dash dash tests/t_install.sh; size: M)
 - [ ] T-59.2 README and MIGRATE install, upgrade, uninstall, FR-59.5 (files: README.md, MIGRATE.md; size: S)
 
 ## Built
