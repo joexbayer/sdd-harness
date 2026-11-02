@@ -1,6 +1,7 @@
 # Adopting sdd
 
-One page. Pick your case, run the steps in order. `<sdd>` is a clean checkout of sdd on `main`.
+One page. Pick your case, run the steps in order. `<sdd>` is a checkout of a release tag, e.g.
+`git clone --branch v0.1.0 --depth 1 https://github.com/joexbayer/sdd-harness ~/sdd-harness`.
 
 ## Every case
 
@@ -64,7 +65,8 @@ Nothing else. Start with `/sdd-new` (or `.sdd/bin/sdd new feature "title"`).
 
 ## Upgrading later
 
-On `main`, between items, with a clean tree: `<sdd>/.sdd/bin/sdd init`. It replaces `.sdd/bin` and
+Check out the newer tag in `<sdd>`, then in your repo on `main`, between items, with a clean
+tree: `<sdd>/.sdd/bin/sdd init`. It replaces `.sdd/bin` and
 `.sdd/core`, keeps your config and `.sdd/local/`, and stamps `.sdd/VERSION` with the source
 commit. Review the diff, commit, then `sync` again. Never copy `.sdd/` by hand.
 
