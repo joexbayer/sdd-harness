@@ -55,6 +55,7 @@ approve shows none (FR-60.2, FR-60.3). Fails now: blocks, and no diff.
   changed) and `approve.sh`. Test: `tests/t_phase.sh` (-/+ lines after a plan edit, none on a first
   approve).
 - Check passed. Security: read-only git calls; ship still refuses unapproved plans.
+Verified by: claude-sonnet-5-5: 3 of 3 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
