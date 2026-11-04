@@ -4,7 +4,7 @@ type: feature
 title: Extensions: optional text-only add-ons, with Hunk and Plannotator
 status: open
 created: 2026-11-04
-approved: 198805b49e0c2c9c9891000e6c8dece8850a7835 2026-11-04 joexbayer
+approved: c79c7650b60403bd64a0d6b5395abc15931e8bc8 2026-11-04 joexbayer
 ---
 # 61 Extensions: optional text-only add-ons, with Hunk and Plannotator
 
@@ -82,8 +82,9 @@ dependency in the core.
 <!-- Q-61.1 <question> → recommend: <answer>. Resolve before building. -->
 
 ## Done when
-`tests/t_extension.sh` passes under sh and dash, and `sdd check` passes. Tried by hand at review, with the
-tools installed: one Hunk review and one Plannotator annotate.
+`tests/t_extension.sh` passes under sh and dash, and `sdd check` passes. Tried by hand at review, with Hunk
+installed: one real review. Plannotator is not installed: the human tries it on the beta (amended
+2026-11-04, the human's choice: it adds a Claude Code plugin to the machine).
 
 ## Tasks (optional)
 - [x] T-61.1 Extension text in the steps, FR-61.3, FR-61.4, FR-61.5, FR-61.6 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh, .sdd/core/cmd/review.sh, tests/t_extension.sh; test: SRC=$PWD SH=dash dash tests/t_extension.sh; size: M)
@@ -97,7 +98,8 @@ tools installed: one Hunk review and one Plannotator annotate.
 - FR-61.1, FR-61.2: `.sdd/core/cmd/extension.sh`, one line in `help.sh`. Same test.
 - FR-61.7: `.sdd/core/extensions/{hunk,plannotator}`; README section. Same test, with fake tools on PATH.
 - Check passed, 37 of 37 under sh and dash.
-- Not tried yet (Done when): the real tools; neither is installed here. Needs the human's OK to install.
+- Done when: real Hunk 0.24.1 (npm `hunkdiff`, installed with the human's OK) ran the extension's exact command
+  on this item in a terminal: the note and its rationale show beside the code, no errors. Plannotator: untried.
 - Security pass (the fresh verifier, Sonnet, read the diff for it): no findings; names are checked before any
   path or git config use, manifest values are only printed or quoted to `command -v`.
 Verified by: claude-sonnet-5-5: 7 of 7 FRs proven; no findings (a test added for an extension on in both configs)
