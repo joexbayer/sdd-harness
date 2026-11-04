@@ -64,6 +64,17 @@ Everything is config (`.sdd/config`) or an override (`.sdd/local/<path>`, or
 `<prompt>.append.md` to extend a prompt). Rules your project must keep go in
 `specs/constitution.md`, each enforced by a check or by you at review. See [MIGRATE.md](MIGRATE.md).
 
+## Extensions
+
+Optional add-ons: text added to a step's instructions, never run. `sdd extension add <name>` for the
+team (commit `.sdd/config`), or `--me` for just you. A tool that isn't installed is skipped.
+
+- `hunk`: [Hunk](https://www.hunk.dev) shows each requirement's note beside its code, in the terminal.
+- `plannotator`: [Plannotator](https://plannotator.ai) lets you comment on plans and diffs in a local UI.
+
+Your own: `.sdd/local/extensions/<name>/` with an `extension` file (`description`, `url`, `needs`) and
+`plan.md`, `build.md` or `review.md`. `sdd extension list` shows them all.
+
 ## Teams
 
 Items live on their own branches; `sdd ls` shows teammates' work in flight, `forge = github` ships

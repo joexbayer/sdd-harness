@@ -1,6 +1,7 @@
 # FR-61.3 an extension that is on adds its text after the step's own, in next and review; FR-61.4 a
 # missing tool skips it; FR-61.5 none on changes nothing; FR-61.6 local folders count, and nothing in
-# one is ever run. FR-61.1 add, remove; FR-61.2 list.
+# one is ever run. FR-61.1 add, remove; FR-61.2 list. FR-61.7 hunk
+# and plannotator ship with sdd, off.
 . "$SRC/tests/lib.sh"
 new_repo
 d=.sdd/local/extensions/mine
@@ -64,7 +65,7 @@ git add -A && git commit -qm "a local extension"
 assert_contains "$(sdd extension list 2>&1)" 'A test add-on'
 assert_contains "$(sdd extension list 2>&1)" 'off'
 assert_contains "$(sdd extension list 2>&1)" 'needs faketool, not installed'
-assert_not_contains "$(withtool sdd extension list 2>&1)" 'not installed'
+assert_not_contains "$(withtool sdd extension list 2>&1)" 'needs faketool'
 # Unknown names and names that are not plain words are refused.
 out=$(sdd extension add nope 2>&1)
 assert_eq $? 1 "(unknown extension)"
@@ -90,4 +91,31 @@ sdd extension remove mine >/dev/null 2>&1 || fail "remove failed"
 assert_eq "$(git config -f .sdd/config --get-all sdd.extension)" ''
 sdd extension remove mine >/dev/null 2>&1
 assert_eq $? 1 "(removing one that is not on)"
+
+# FR-61.7: bundled and off; their text reaches the steps; a local folder of the same name wins.
+out=$(sdd extension list 2>&1)
+assert_contains "$out" 'hunk'
+assert_contains "$out" 'plannotator'
+assert_not_contains "$out" 'on ('
+printf '#!/bin/sh\n' >"$T/tools/hunk" && printf '#!/bin/sh\n' >"$T/tools/plannotator" && chmod +x "$T/tools/hunk" "$T/tools/plannotator"
+withtool sdd extension add hunk --me >/dev/null 2>&1 || fail "add hunk failed"
+withtool sdd extension add plannotator --me >/dev/null 2>&1 || fail "add plannotator failed"
+sdd new feature "Bundled" >/dev/null 2>&1
+out=$(withtool sdd next 2>&1)
+assert_contains "$out" '/plannotator-annotate <the item file>'
+assert_not_contains "$out" 'hunk diff'
+f=$(ls specs/changes/*/item.md | head -n 1)
+fill "$f" plan
+awk '/^## What changes$/ { print; print "FR-2.1 WHEN asked THE SYSTEM SHALL page."; print "  e.g. page 2"; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs: plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
+fill "$f" built
+awk '/^## Review/ { print "Verified by: test: 1 of 1 FRs proven; no findings" } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs: built" && sdd check >/dev/null 2>&1
+out=$(withtool sdd review 2>&1)
+assert_contains "$out" 'hunk diff main HEAD --agent-context /tmp/hunk-'
+assert_contains "$out" '/plannotator-review'
+mkdir -p .sdd/local/extensions/hunk && echo 'MY-HUNK' >.sdd/local/extensions/hunk/review.md
+out=$(withtool sdd review 2>&1)
+assert_contains "$out" 'MY-HUNK'
+assert_not_contains "$out" 'hunk diff main HEAD'
 exit 0

@@ -1,0 +1,4 @@
+[extension]
+	description = Comment on plans and diffs in a local browser UI
+	url = https://plannotator.ai
+	needs = plannotator
