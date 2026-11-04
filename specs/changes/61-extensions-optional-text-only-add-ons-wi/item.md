@@ -91,8 +91,13 @@ tools installed: one Hunk review and one Plannotator annotate.
 - [x] T-61.3 Bundled hunk and plannotator, README, FR-61.7 (files: .sdd/core/extensions/hunk/extension, .sdd/core/extensions/hunk/review.md, .sdd/core/extensions/plannotator/extension, .sdd/core/extensions/plannotator/plan.md, .sdd/core/extensions/plannotator/review.md, README.md, tests/t_extension.sh; test: SRC=$PWD SH=dash dash tests/t_extension.sh; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-61.3, FR-61.4, FR-61.5, FR-61.6: `extensions_on`, `ext_prompt` in `.sdd/core/lib/common.sh`; called
+  from `prompt()` in `next.sh` for plan, build, review, and at the end of `review.sh`. Only `<step>.md` and
+  `extension` are read. Test: `tests/t_extension.sh`.
+- FR-61.1, FR-61.2: `.sdd/core/cmd/extension.sh`, one line in `help.sh`. Same test.
+- FR-61.7: `.sdd/core/extensions/{hunk,plannotator}`; README section. Same test, with fake tools on PATH.
+- Check passed, 37 of 37 under sh and dash.
+- Not tried yet (Done when): the real tools; neither is installed here. Needs the human's OK to install.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
