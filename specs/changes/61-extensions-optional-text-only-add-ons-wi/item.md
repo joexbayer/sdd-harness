@@ -4,6 +4,7 @@ type: feature
 title: Extensions: optional text-only add-ons, with Hunk and Plannotator
 status: open
 created: 2026-11-04
+approved: 198805b49e0c2c9c9891000e6c8dece8850a7835 2026-11-04 joexbayer
 ---
 # 61 Extensions: optional text-only add-ons, with Hunk and Plannotator
 
