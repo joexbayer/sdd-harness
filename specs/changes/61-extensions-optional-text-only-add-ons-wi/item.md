@@ -98,6 +98,9 @@ tools installed: one Hunk review and one Plannotator annotate.
 - FR-61.7: `.sdd/core/extensions/{hunk,plannotator}`; README section. Same test, with fake tools on PATH.
 - Check passed, 37 of 37 under sh and dash.
 - Not tried yet (Done when): the real tools; neither is installed here. Needs the human's OK to install.
+- Security pass (the fresh verifier, Sonnet, read the diff for it): no findings; names are checked before any
+  path or git config use, manifest values are only printed or quoted to `command -v`.
+Verified by: claude-sonnet-5-5: 7 of 7 FRs proven; no findings (a test added for an extension on in both configs)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

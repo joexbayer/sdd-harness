@@ -102,7 +102,11 @@ printf '#!/bin/sh\n' >"$T/tools/hunk" && printf '#!/bin/sh\n' >"$T/tools/plannot
 withtool sdd extension add hunk --me >/dev/null 2>&1 || fail "add hunk failed"
 withtool sdd extension add plannotator --me >/dev/null 2>&1 || fail "add plannotator failed"
 sdd new feature "Bundled" >/dev/null 2>&1
+# FR-61.3: on for the team and for you: the text once.
+git config -f .sdd/config --add sdd.extension plannotator
 out=$(withtool sdd next 2>&1)
+assert_eq "$(printf '%s\n' "$out" | grep -c '/plannotator-annotate')" 1
+git config -f .sdd/config --unset-all sdd.extension
 assert_contains "$out" '/plannotator-annotate <the item file>'
 assert_not_contains "$out" 'hunk diff'
 f=$(ls specs/changes/*/item.md | head -n 1)
