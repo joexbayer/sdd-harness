@@ -1,6 +1,6 @@
 # FR-61.3 an extension that is on adds its text after the step's own, in next and review; FR-61.4 a
 # missing tool skips it; FR-61.5 none on changes nothing; FR-61.6 local folders count, and nothing in
-# one is ever run.
+# one is ever run. FR-61.1 add, remove; FR-61.2 list.
 . "$SRC/tests/lib.sh"
 new_repo
 d=.sdd/local/extensions/mine
@@ -53,4 +53,41 @@ assert_not_contains "$(sdd review 2>&1)" 'EXT-review'
 [ ! -e "$d/run.sh.ran" ] || fail "an extension's script ran"
 git config -f "$XDG_CONFIG_HOME/sdd/config" --add sdd.extension '../../evil'
 withtool sdd next >/dev/null 2>&1 || fail "a bad extension name must not break next"
+
+# FR-61.1, FR-61.2: the command, on a fresh repo: team and personal lists, off by default.
+new_repo cmd
+rm -f "$XDG_CONFIG_HOME/sdd/config"
+d=.sdd/local/extensions/mine
+mkdir -p "$d" && git config -f "$d/extension" extension.description 'A test add-on'
+git config -f "$d/extension" extension.needs faketool && git config -f "$d/extension" extension.url https://example.test
+git add -A && git commit -qm "a local extension"
+assert_contains "$(sdd extension list 2>&1)" 'A test add-on'
+assert_contains "$(sdd extension list 2>&1)" 'off'
+assert_contains "$(sdd extension list 2>&1)" 'needs faketool, not installed'
+assert_not_contains "$(withtool sdd extension list 2>&1)" 'not installed'
+# Unknown names and names that are not plain words are refused.
+out=$(sdd extension add nope 2>&1)
+assert_eq $? 1 "(unknown extension)"
+assert_contains "$out" 'unknown extension: nope'
+sdd extension add '../x' >/dev/null 2>&1
+assert_eq $? 1 "(a name that is not a word)"
+# Just you: the user config; the tool's url when it is missing.
+out=$(sdd extension add mine --me 2>&1) || fail "add --me failed: $out"
+assert_contains "$out" 'faketool is not installed: https://example.test'
+assert_eq "$(git config -f "$XDG_CONFIG_HOME/sdd/config" --get-all sdd.extension)" mine
+assert_eq "$(git config -f .sdd/config --get-all sdd.extension)" ''
+assert_contains "$(withtool sdd extension list 2>&1)" 'on (you)'
+out=$(sdd extension remove mine --me 2>&1) || fail "remove --me failed: $out"
+assert_eq "$(git config -f "$XDG_CONFIG_HOME/sdd/config" --get-all sdd.extension)" ''
+# The team: .sdd/config, uncommitted; adding twice does not repeat it.
+head=$(git rev-parse HEAD)
+withtool sdd extension add mine >/dev/null 2>&1 || fail "add failed"
+withtool sdd extension add mine >/dev/null 2>&1 || fail "second add failed"
+assert_eq "$(git config -f .sdd/config --get-all sdd.extension)" mine
+assert_eq "$(git rev-parse HEAD)" "$head" "(add commits nothing)"
+assert_contains "$(withtool sdd extension list 2>&1)" 'on (team)'
+sdd extension remove mine >/dev/null 2>&1 || fail "remove failed"
+assert_eq "$(git config -f .sdd/config --get-all sdd.extension)" ''
+sdd extension remove mine >/dev/null 2>&1
+assert_eq $? 1 "(removing one that is not on)"
 exit 0

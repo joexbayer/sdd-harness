@@ -87,7 +87,7 @@ tools installed: one Hunk review and one Plannotator annotate.
 
 ## Tasks (optional)
 - [x] T-61.1 Extension text in the steps, FR-61.3, FR-61.4, FR-61.5, FR-61.6 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh, .sdd/core/cmd/review.sh, tests/t_extension.sh; test: SRC=$PWD SH=dash dash tests/t_extension.sh; size: M)
-- [ ] T-61.2 `sdd extension add|remove|list`, FR-61.1, FR-61.2 (files: .sdd/core/cmd/extension.sh, .sdd/core/cmd/help.sh, tests/t_extension.sh; test: SRC=$PWD SH=dash dash tests/t_extension.sh; size: S)
+- [x] T-61.2 `sdd extension add|remove|list`, FR-61.1, FR-61.2 (files: .sdd/core/cmd/extension.sh, .sdd/core/cmd/help.sh, tests/t_extension.sh; test: SRC=$PWD SH=dash dash tests/t_extension.sh; size: S)
 - [ ] T-61.3 Bundled hunk and plannotator, README, FR-61.7 (files: .sdd/core/extensions/hunk/extension, .sdd/core/extensions/hunk/review.md, .sdd/core/extensions/plannotator/extension, .sdd/core/extensions/plannotator/plan.md, .sdd/core/extensions/plannotator/review.md, README.md, tests/t_extension.sh; test: SRC=$PWD SH=dash dash tests/t_extension.sh; size: S)
 
 ## Built
