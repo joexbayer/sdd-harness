@@ -118,6 +118,7 @@ awk '/^## Review/ { print "Verified by: test: 1 of 1 FRs proven; no findings" } 
 git commit -qam "docs: built" && sdd check >/dev/null 2>&1
 out=$(withtool sdd review 2>&1)
 assert_contains "$out" 'hunk diff main HEAD --agent-context /tmp/hunk-'
+assert_contains "$out" "--agent-notes -- . ':(exclude)specs'"
 assert_contains "$out" '/plannotator-review'
 mkdir -p .sdd/local/extensions/hunk && echo 'MY-HUNK' >.sdd/local/extensions/hunk/review.md
 out=$(withtool sdd review 2>&1)
