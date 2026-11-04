@@ -15,6 +15,8 @@ prompt() {
 	fi
 	_x="$SDD_HOME/local/prompts/$1.append.md"
 	[ -f "$_x" ] && render "$_x" "$2" "$3" "$4"
+	# FR-61.3: the plain steps only, so a feature's plan.feature does not repeat them.
+	case $1 in plan | build | review) ext_prompt "$1" "$2" "$3" "$4" ;; esac
 	return 0
 }
 

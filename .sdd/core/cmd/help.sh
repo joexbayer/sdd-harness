@@ -33,6 +33,7 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME tidy [--remote] [--dry-run]
                                    clean up after shipped items: branches, worktrees, remotes
   $NAME sync <agent>                hooks for your agent ($(agents | paste -sd ' ' -)), never committed
+  $NAME extension [add|remove <n>]  optional add-ons (text for a step, never run); --me: just you
   $NAME hook <event> --agent <a>    called by agent hooks
 
 types: $(types | paste -sd ' ' -)

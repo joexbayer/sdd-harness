@@ -1,0 +1,4 @@
+[extension]
+	description = See each requirement's note beside its code, in the terminal
+	url = https://www.hunk.dev
+	needs = hunk

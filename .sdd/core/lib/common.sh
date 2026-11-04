@@ -324,6 +324,22 @@ plan_part() {
 	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit } { print }' "$1"
 }
 
+# extensions_on: the extensions turned on: team and user config add up (FR-61.3).
+extensions_on() { cfg_every sdd.extension | awk '!seen[$0]++'; }
+
+# ext_prompt <step> <id> <title> <type>: each on extension's text for that step, when the tool it
+# needs is installed (FR-61.4). Text only: nothing in an extension folder is ever run (FR-61.6).
+ext_prompt() {
+	for _e in $(extensions_on); do
+		case $_e in *[!a-z0-9-]*) continue ;; esac
+		_ed=$(sdd_path "extensions/$_e") && [ -f "$_ed/$1.md" ] || continue
+		_en=$(git config -f "$_ed/extension" extension.needs 2>/dev/null)
+		[ -z "$_en" ] || command -v "$_en" >/dev/null 2>&1 || continue
+		echo
+		render "$_ed/$1.md" "$2" "$3" "$4"
+	done
+}
+
 # plan_changes: what the plan part changed since the last approval, as a unified diff under a
 # heading; nothing when it was never approved or did not change (FR-60.2). Ticks do not count.
 plan_changes() {

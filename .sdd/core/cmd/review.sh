@@ -134,6 +134,7 @@ echo "Built (written by the agent)"
 section "Built" | sed '/^[[:space:]]*$/d; s/^/  /'
 notes=$(section "Review (optional)" | sed '/^[[:space:]]*$/d; s/^/  /')
 [ -z "$notes" ] || printf '\nReview notes (yours)\n%s\n' "$notes"
+ext_prompt review "$ID" "$title" "$ITYPE" # FR-61.3
 echo
 echo "next    go through it together; changes → note them under \"## Review\" and the agent continues ($CMD next)"
 echo "        satisfied → $CMD ship"
