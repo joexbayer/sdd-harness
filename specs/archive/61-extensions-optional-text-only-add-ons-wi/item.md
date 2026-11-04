@@ -2,9 +2,10 @@
 id: 61
 type: feature
 title: Extensions: optional text-only add-ons, with Hunk and Plannotator
-status: open
+status: shipped
 created: 2026-11-04
 approved: c79c7650b60403bd64a0d6b5395abc15931e8bc8 2026-11-04 joexbayer
+shipped: 2026-11-04
 ---
 # 61 Extensions: optional text-only add-ons, with Hunk and Plannotator
 
