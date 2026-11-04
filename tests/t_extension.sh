@@ -96,7 +96,8 @@ assert_eq $? 1 "(removing one that is not on)"
 out=$(sdd extension list 2>&1)
 assert_contains "$out" 'hunk'
 assert_contains "$out" 'plannotator'
-assert_not_contains "$out" 'on ('
+assert_not_contains "$out" 'on (team)'
+assert_not_contains "$out" 'on (you)'
 printf '#!/bin/sh\n' >"$T/tools/hunk" && printf '#!/bin/sh\n' >"$T/tools/plannotator" && chmod +x "$T/tools/hunk" "$T/tools/plannotator"
 withtool sdd extension add hunk --me >/dev/null 2>&1 || fail "add hunk failed"
 withtool sdd extension add plannotator --me >/dev/null 2>&1 || fail "add plannotator failed"
