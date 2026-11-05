@@ -2,9 +2,10 @@
 id: 62
 type: fix
 title: sdd next says verified only when it was
-status: open
+status: shipped
 created: 2026-11-05
 approved: 20dd02cb51bc9152faf24c90f552b52be2ec9978 2026-11-05 joexbayer
+shipped: 2026-11-05
 ---
 # 62 sdd next says verified only when it was
 
