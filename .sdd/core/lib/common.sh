@@ -789,7 +789,7 @@ phase_check_passed() {
 # MISSING (the empty required sections it judged, joined) and the IR_* facts of item_read.
 #   plan    the human's time: header not closed, plan empty, or not (or no longer) approved
 #   build   the agent's time: no passing check for this code, or "## Built" empty
-#   review  the human's time: verified and written up
+#   review  the human's time: written up, and says whether it was verified
 item_phase() {
 	WHY=
 	TASK=
@@ -859,7 +859,17 @@ item_phase() {
 			WHYCODE=built
 		else
 			PHASE=review
-			WHY="verified and written up; walk through it with: $CMD review"
+			# FR-62.1, FR-62.2: "verified" only when a verifier's line says so.
+			if [ "$(gate_level verified "$ITYPE")" = off ]; then
+				WHY="written up"
+			elif verified; then
+				WHY="verified and written up"
+			elif [ -n "$(verified_by)" ]; then
+				WHY="written up, NOT verified (Verified by: none)"
+			else
+				WHY='written up, NOT verified (no "Verified by:" line)'
+			fi
+			WHY="$WHY; walk through it with: $CMD review"
 			WHYCODE=ready
 		fi
 	fi
