@@ -6,7 +6,7 @@
 # ${SDD_BIN:-~/.local/bin}/sdd to it. No sudo; nothing else is written. Inside a repo with its own
 # .sdd/, the linked command runs that repo's copy. Uninstall: rm ~/.local/bin/sdd and the folder.
 set -eu
-version=${1:-v0.1.2}
+version=${1:-v0.1.3}
 case $version in v*) ;; *) version=v$version ;; esac
 url=${SDD_INSTALL_URL:-https://github.com/joexbayer/sdd-harness/archive/refs/tags}/$version.tar.gz
 data=${XDG_DATA_HOME:-$HOME/.local/share}/sdd
