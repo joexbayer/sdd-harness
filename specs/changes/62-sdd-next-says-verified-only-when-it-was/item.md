@@ -48,6 +48,7 @@ always "verified and written up", no warning.
 - Deviation: the older FR-22.3 check in that test pinned "lite does not ask", which FR-62.3 changes on purpose, so it now
   expects the warning.
 - Check passed under sh and dash. Security: a message and a warning; no new input.
+Verified by: claude-sonnet-5-5: 3 of 3 FRs proven; no findings
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
