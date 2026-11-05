@@ -28,10 +28,15 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
 {{max-size}}
 - Names several tasks share (tables, routes, signatures, file paths) are fixed in the plan and
   pinned by a test in the task that first defines them.
+- Scale: for each table, list and loop, write its size in a year (orders: 1M rows). Then: every list
+  has a limit and pagination; every query on growing data has an index; no query in a loop (N+1);
+  filter, sort and aggregate in the database, not in app code; long work goes to a background job; a
+  table that grows forever gets a retention rule. No cache, queue or new service until a number asks
+  for it. A shortcut names its ceiling and what triggers the upgrade.
 - Tests: the gate (check) runs after every task, so keep it fast; mark deep tests so check.run
   leaves them out, and make cost settings minimal in tests. Each test
   asserts its FR's example, and its setup tells the FR's rule from a plausible wrong rule (when the
-  FR sorts by date: rows whose date and id orders differ, so sorting by id fails the test). Few tests that bite beat many that repeat.
+  FR sorts by date: rows whose date and id orders differ, so sorting by id fails the test). A list endpoint gets a test that counts its queries. Few tests that bite beat many that repeat.
 - Before approval, check the plan for gaps: scope edges, errors and edge cases, data and state,
   speed, several developers at once, and security. Ask the human about each gap you find, then run
   `{{cmd}} analyze` and fix what it lists.

@@ -10,7 +10,7 @@ and do not hand the item to another verifier. Instead:
    (never in the repo), run its test, and report the FR unproven if the test still passes. Also run
    the tests the check leaves out (the plan marks them). A new function, file, table or stored
    value that nothing calls or reads is a finding, and so is a test that only repeats another
-   test's case.
+   test's case, a list with no limit, or a query inside a loop.
 3. Report only findings: an FR that does not do what it says, that you could not prove, or that
    no test would fail if it were dropped, each
    with the command you ran and its output (trimmed to what shows the problem). No praise, no

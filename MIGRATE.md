@@ -75,4 +75,4 @@ commit. Review the diff, commit, then `sync` again. Never copy `.sdd/` by hand.
 
 Override any core file at the same path under `.sdd/local/`, or extend a prompt with
 `<prompt>.append.md`, e.g. `.sdd/local/prompts/plan.append.md`:
-`- A list endpoint gets a test that counts its queries.`
+`- Every new endpoint goes in openapi.yml.`

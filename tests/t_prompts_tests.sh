@@ -20,7 +20,7 @@ assert_contains "$out" 'Assumptions to check'
 assert_contains "$out" 'load-bearing questions first'
 assert_contains "$out" 'Cases that share one rule share one FR'
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
-[ "$w" -le 750 ] || fail "plan step is $w words (ceiling 750)"
+[ "$w" -le 800 ] || fail "plan step is $w words (ceiling 800)"
 # One phrase per rule (D-55.1): FR-35.3 test rules, FR-36.6 by: planner, FR-39.3 shared names,
 # FR-41.1 the approval ask, FR-42.1 a setup that tells the rules apart; FR-20.3 subtract before
 # adding, FR-20.5 probe before asking (were t_discipline.sh).
@@ -28,7 +28,9 @@ for p in 'so keep it fast' 'mark deep tests so check.run' 'make cost settings mi
 	"asserts its FR's example" 'can be `by: planner`' 'pinned by a test in the task that first defines them' \
 	'a command on its own' 'ASCII' 'Only after a yes in' 'never chained to other commands' 'a plausible wrong rule' \
 	'Subtract before you add' 'had the requirement been there from the start' \
-	'Before writing a question for the human, check whether running something'; do
+	'Before writing a question for the human, check whether running something' \
+	'write its size in a year' 'no query in a loop (N+1)' 'No cache, queue or new service until a number asks' \
+	'A list endpoint gets a test that counts its queries'; do
 	assert_contains "$out" "$p"
 done
 
@@ -45,13 +47,13 @@ for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review
 	'After two fixes resting on the same assumption fail' \
 	'Write just enough code to pass the test' 'extend an existing test' \
 	'a bare ID marks where a requirement lives' 'never repeat one that passed for this code' \
-	'Report only commands you ran' 'the control crossed'; do
+	'Report only commands you ran' 'the control crossed' 'No unbounded list or query'; do
 	assert_contains "$out" "$p"
 done
 assert_contains "$out" "A test that only repeats another's case may be deleted"
 assert_not_contains "$out" 'so keep it fast'
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
-[ "$w" -le 700 ] || fail "build step is $w words (ceiling 700)"
+[ "$w" -le 750 ] || fail "build step is $w words (ceiling 750)"
 
 # FR-35.5: the verifier's prompt.
 setcfg role.verifier.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
@@ -60,7 +62,7 @@ v=$(cat .claude/agents/sdd-verifier.md)
 # FR-35.5, FR-55.6: the verifier proves an FR by undoing its code; FR-42.2 its other rules.
 for p in "undo that FR's code in a scratch copy" 'report the FR unproven if the test still passes' \
 	'no test would fail if it were dropped' 'tests the check leaves out' 'nothing calls or reads' \
-	"only repeats another"; do
+	"only repeats another" 'a list with no limit, or a query inside a loop'; do
 	assert_contains "$v" "$p"
 done
 # FR-51.1: the build skill's hand-off, and the review step's ship hand-off.

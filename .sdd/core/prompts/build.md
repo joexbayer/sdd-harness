@@ -23,6 +23,8 @@ done, without questions. Be brief.
   the FR's example, never from the code under test.
 - Write just enough code to pass the test: no abstractions, options or defensive code nothing
   asked for.
+- No unbounded list or query, no query in a loop, no filtering database rows in app code. If the plan
+  missed one, fix it and say so under "## Built".
 - After two fixes resting on the same assumption fail, stop and write that assumption under
   "## Built".
 - Comments: a bare ID marks where a requirement lives (`// FR-{{id}}.1` on the function and on the test
