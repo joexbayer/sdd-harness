@@ -1,6 +1,7 @@
 # FR-22.2 the finish steps hand the item to the verifier role (subagent, sdd run, or a fresh
-# subagent), whose prompt says what a verifier does; FR-22.3 the verified gate at ship (off in
-# lite, warn in standard, block in strict) and the "Verified by:" line in review.
+# subagent), whose prompt says what a verifier does; FR-22.3 the verified gate at ship (warn in
+# lite and standard, block in strict) and the "Verified by:" line in review.
+# FR-62.1, FR-62.2 next says verified only when it was; FR-62.3 lite warns at ship.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -69,7 +70,7 @@ assert_contains "$(sdd review)" 'verify  Verified by: claude-opus-5-5: 1 of 1 FR
 out=$(sdd ship 2>&1) || fail "strict ship with a verifier line failed: $out"
 assert_not_contains "$out" 'not verified'
 
-# FR-22.3: standard warns and ships; lite does not ask.
+# FR-22.3: standard warns and ships; lite too (FR-62.3).
 setcfg sdd.profile standard
 planned_item fix "Backoff"
 echo backoff >backoff.txt && git add backoff.txt && git commit -qm "fix(2): backoff"
@@ -83,7 +84,7 @@ planned_item fix "Jitter"
 echo jitter >jitter.txt && git add jitter.txt && git commit -qm "fix(3): jitter"
 built_with ''
 out=$(sdd ship 2>&1) || fail "lite ship failed: $out"
-assert_not_contains "$out" 'not verified'
+assert_contains "$out" 'not verified (gate verified)'
 
 # FR-22.2: the finish gate holds the builder, not a verifier run (sdd run exports its role).
 planned_item fix "Cap"
@@ -92,3 +93,29 @@ sdd hook stop </dev/null >/dev/null 2>&1
 assert_eq $? 2 "(an unfinished build blocks the builder)"
 SDD_ROLE=verifier sdd hook stop </dev/null >/dev/null 2>&1 || fail "the finish gate held a verifier run"
 echo ok
+
+# FR-62.1, FR-62.2: the phase line says verified only when it was; FR-62.3: lite warns at ship.
+new_repo honest
+planned_item fix "Honest"
+f=$ITEM
+echo code >code.txt && git add -A && git commit -qm "fix(1): code"
+fill "$f" built && git commit -qam "docs(1): built" && sdd check >/dev/null 2>&1 || fail "check failed"
+assert_contains "$(sdd next 2>&1)" 'Phase: review (written up, NOT verified (no "Verified by:" line); walk through it with:'
+awk '/^## Review/ { print "Verified by: none (no second model here)" } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+assert_contains "$(sdd next 2>&1)" 'written up, NOT verified (Verified by: none); walk through it with:'
+sed 's/^Verified by: none (no second model here)$/Verified by: sonnet: 1 of 1 FRs proven; no findings/' "$f" >"$T/f" && cp "$T/f" "$f"
+assert_contains "$(sdd next 2>&1)" 'Phase: review (verified and written up; walk through it with:'
+# A type whose gate is off is not told it lacks a verifier.
+git checkout -q -- "$f" && git switch -q main
+sdd new roadmap "Plan" >/dev/null 2>&1
+r=$(ls specs/changes/*-plan/item.md)
+fill "$r" plan && git add -A && git commit -qm "docs(2): plan" && sdd approve >/dev/null 2>&1
+fill "$r" built && git commit -qam "docs(2): built" && sdd check >/dev/null 2>&1
+out=$(sdd next 2>&1)
+assert_contains "$out" 'Phase: review (written up; walk through it with:'
+assert_not_contains "$out" 'NOT verified'
+# FR-62.3: unverified in the default profile: a warning, and it still ships.
+git switch -q fix/1-honest
+out=$(sdd ship 2>&1) || fail "lite must still ship: $out"
+assert_contains "$out" 'warning: item 1: not verified (gate verified)'
+exit 0

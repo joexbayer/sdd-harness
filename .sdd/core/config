@@ -33,7 +33,7 @@
 	check = block
 	built = warn
 	tasks = warn
-	verified = off
+	verified = warn
 	reviewed = warn
 	depends = warn
 	finish = block
