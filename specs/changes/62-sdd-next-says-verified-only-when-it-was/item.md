@@ -42,8 +42,12 @@ none: an honest message and a warning; no input or dependency.
 always "verified and written up", no warning.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-62.1, FR-62.2: `item_phase` in `.sdd/core/lib/common.sh` picks the wording from `gate_level`, `verified`, `verified_by`.
+  Test: `tests/t_verified.sh` (no line, none, a real line, a roadmap).
+- FR-62.3: `.sdd/core/config`: `[profile "lite"] verified = warn`. Same test.
+- Deviation: the older FR-22.3 check in that test pinned "lite does not ask", which FR-62.3 changes on purpose, so it now
+  expects the warning.
+- Check passed under sh and dash. Security: a message and a warning; no new input.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
