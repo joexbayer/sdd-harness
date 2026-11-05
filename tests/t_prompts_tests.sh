@@ -43,7 +43,9 @@ assert_contains "$out" 'Phase: build'
 for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review: `/sdd-review`' \
 	'still pass if every function returned nothing' 'never from the code under test' \
 	'After two fixes resting on the same assumption fail' \
-	'Write just enough code to pass the test' 'extend an existing test'; do
+	'Write just enough code to pass the test' 'extend an existing test' \
+	'a bare ID marks where a requirement lives' 'never repeat one that passed for this code' \
+	'Report only commands you ran' 'the control crossed'; do
 	assert_contains "$out" "$p"
 done
 assert_contains "$out" "A test that only repeats another's case may be deleted"

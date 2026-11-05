@@ -1,7 +1,8 @@
-Before you finish, run a security pass over this item's diff, in a fresh context (a subagent given only the diff, or /security-review). Report only findings
-you would bet are exploitable (injection, missing authorization, secrets, data leaking into logs or
-errors, unsafe exec or deserialisation), each with file:line, how, and the fix; skip denial of
-service, rate limits and theory. Write the result and who looked under "## Built".
+Before you finish, run a security pass over this item's diff, in a fresh context (a subagent given
+only the diff, or /security-review). Report only findings you would bet are exploitable (injection,
+missing authorization, secrets, data leaking into logs or errors, unsafe exec or deserialisation),
+each naming who attacks, their input, the control crossed, and the result, with file:line and the
+fix; skip denial of service, rate limits and theory. Write the result and who looked under "## Built".
 
 Then hand item {{id}} to the `verifier` role: its `{{name}}-verifier` subagent if this agent has
 one, else `{{cmd}} run verifier {{id}}` if the project sets the role, else a fresh subagent on a

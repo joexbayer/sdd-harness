@@ -4,7 +4,7 @@
 	base = main
 	forge = github
 [check]
-	run = shellcheck -s sh -S warning .sdd/bin/sdd .sdd/core/lib/common.sh .sdd/core/cmd/*.sh .sdd/core/agents/*.sh .sdd/core/forges/*.sh tests/*.sh tests/constitution/*.sh
+	run = shellcheck -s sh -S warning install.sh .sdd/bin/sdd .sdd/core/lib/common.sh .sdd/core/cmd/*.sh .sdd/core/agents/*.sh .sdd/core/forges/*.sh tests/*.sh tests/constitution/*.sh
 	run = sh tests/run.sh /bin/sh dash
 	# Item 53: sdd-server's tests, from its .ts sources (Node 22.18+, `npm ci` in server/ once).
 	run = sh -c 'cd server && npm test'

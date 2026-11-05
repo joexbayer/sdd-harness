@@ -25,4 +25,8 @@ done, without questions. Be brief.
   asked for.
 - After two fixes resting on the same assumption fail, stop and write that assumption under
   "## Built".
-- Verify with `{{cmd}} check` (0 passed, 1 failed, 3 no tests ran). Commit as you go.
+- Comments: a bare ID marks where a requirement lives (`// FR-{{id}}.1` on the function and on the test
+  that proves it; the item file holds the rest). Prose only for why the code can't say itself (a
+  constraint, a quirk), one line; never restate the code or its history.
+- Verify with `{{cmd}} check` (0 passed, 1 failed, 3 no tests ran). Run the checks this change needs;
+  never repeat one that passed for this code. Report only commands you ran. Commit as you go.
