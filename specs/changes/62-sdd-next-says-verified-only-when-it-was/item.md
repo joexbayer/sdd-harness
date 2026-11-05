@@ -4,6 +4,7 @@ type: fix
 title: sdd next says verified only when it was
 status: open
 created: 2026-11-05
+approved: 20dd02cb51bc9152faf24c90f552b52be2ec9978 2026-11-05 joexbayer
 ---
 # 62 sdd next says verified only when it was
 
