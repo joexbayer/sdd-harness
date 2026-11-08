@@ -221,7 +221,7 @@ fi
 # clone (a teammate's tick was proven on their machine). Features also need tasks, all ticked.
 trows=$(task_rows)
 unproven=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' |
-	while IFS= read -r t; do [ -n "$(task_commit "$t")" ] || echo "$t"; done)
+	while IFS= read -r t; do waived "$t" || [ -n "$(task_commit "$t")" ] || echo "$t"; done)
 [ -z "$unproven" ] || fail "item $ID: ticked, but no commit names them: $(joinlist "$unproven") (put the task ID in the commit subject)"
 # FR-58.1: a test the planner wrote is the contract; the builder may not quietly change it.
 bent=$(bent_tests)
@@ -229,6 +229,7 @@ bent=$(bent_tests)
 me=$(git config user.name)
 byhand=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r t; do
 	grep -qx "$t" "$ST/checks/$ID.tasks" 2>/dev/null && continue
+	! waived "$t" || continue
 	[ "$(git log -1 --format=%an "$(task_commit "$t")")" != "$me" ] || echo "$t"
 done)
 [ -z "$byhand" ] || fail "item $ID: ticked without $CMD task done: $(joinlist "$byhand") (untick them and run task done)"

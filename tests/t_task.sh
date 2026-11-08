@@ -211,4 +211,75 @@ awk '/^## Review/ { print "- t1.sh: the planner sample was wrong (no page check 
 git commit -qam "docs(1): say why t1.sh changed"
 out=$(sdd ship 2>&1)
 assert_not_contains "$out" 'written by the planner'
+
+# FR-67.1-67.4, 67.7: a waiver ticks a task the human cannot run, and says so.
+new_repo waive
+sdd new feature "Waivers" >/dev/null 2>&1
+f=specs/changes/1-waivers/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print
+	print "- [ ] T-1.1 Waived (files: tests/x.sh, .args; test: true)"
+	print "- [ ] T-1.2 Ticked by hand (files: .other; test: true)"
+	print "- [ ] T-1.3 Normal (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
+# FR-67.7: a suffix typed as a file warns on the current item, exit 0, no plan finding.
+out=$(sdd analyze 2>&1)
+assert_eq $? 0 "(analyze warns, does not fail)"
+assert_contains "$out" 'T-1.1 files: .args looks like a suffix, not a path'
+assert_not_contains "$out" '.other looks like a suffix'
+assert_not_contains "$(sdd analyze 1 2>&1)" 'looks like a suffix'
+touch .args
+assert_not_contains "$(sdd analyze 2>&1)" 'looks like a suffix'
+rm .args
+# FR-67.4: no reason, an unknown task, a reason with a newline.
+# FR-67.5: a role run cannot waive, as it cannot approve or ship.
+out=$(SDD_RUN=1 sdd task waive T-1.1 "why" 2>&1)
+assert_eq $? 2 "(waive under sdd run)"
+assert_contains "$out" "task waive is the human's"
+out=$(sdd task waive T-1.1 "" 2>&1)
+assert_eq $? 1 "(empty reason)"
+assert_contains "$out" 'a waiver needs a reason'
+sdd task waive T-9.9 "why" >/dev/null 2>&1
+assert_eq $? 1 "(unknown task)"
+sdd task waive T-1.1 "one
+two" >/dev/null 2>&1
+assert_eq $? 1 "(newline)"
+assert_not_contains "$(cat "$f")" '## Waived'
+# FR-67.1: the box is ticked, the reason, who and when recorded; nothing is committed.
+head=$(git rev-parse HEAD)
+r='files: had a typo; test passes on main \n $(touch pwned) & `x` \1'
+sdd task waive T-1.1 "$r" >/dev/null 2>&1 || fail "waive failed"
+assert_eq "$(git rev-parse HEAD)" "$head" "(no commit)"
+grep -q '^- \[x\] T-1.1 ' "$f" || fail "T-1.1 not ticked"
+assert_no_file pwned
+line="- T-1.1: $r ($(git config user.name), $(date +%F))"
+assert_contains "$(cat "$f")" "$line"
+# Before "## Review (optional)", below "## Built".
+assert_eq "$(L="$line" awk '/^## /{h=$0} $0==ENVIRON["L"]{print h}' "$f")" '## Waived'
+# FR-67.3: review shows it.
+assert_contains "$(sdd review 2>&1)" "waived  ${line#- }"
+# A tick by hand with no waiver is still refused at ship; a waived task is not asked for.
+sed 's/^- \[ \] T-1.2 /- [x] T-1.2 /' "$f" >"$T/f" && cp "$T/f" "$f"
+sdd task 'done' T-1.3 >/dev/null 2>&1 || fail "T-1.3 failed"
+# Must not change: a waiver is not "## Built" written (the plan is filled, Built is not).
+sdd check >/dev/null 2>&1
+assert_contains "$(sdd status 2>&1)" '"## Built" is not written yet'
+fill "$f" built
+git add -A && git commit -qm "feat(1): T-1.2 by hand, T-1.3 normal"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(unwaived hand-tick)"
+assert_contains "$out" 'ticked without .sdd/bin/sdd task done: T-1.2'
+assert_not_contains "$out" 'T-1.1'
+# FR-67.2: waive T-1.2 too (already ticked): ship accepts both, with no receipt or commit naming them.
+sdd task waive T-1.2 "ticked before the test could run" >/dev/null 2>&1 || fail "waive T-1.2 failed"
+git commit -qam "docs(1): waivers"
+# FR-67.2, FR-67.3: review does not warn about a waived task, and lists each waiver once.
+out=$(sdd review 2>&1)
+assert_not_contains "$out" 'no commit subject names'
+assert_eq "$(printf '%s\n' "$out" | grep -c 'T-1.2: ticked before')" 1 "(waiver shown once)"
+out=$(sdd task 2>&1)
+assert_contains "$out" 'waived'
+assert_not_contains "$out" 'ticked without'
+out=$(sdd ship 2>&1) || fail "ship failed: $out"
+assert_contains "$out" 'shipped 1 into main'
 exit 0

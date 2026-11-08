@@ -17,7 +17,7 @@ agent_sync() {
 	merge_hooks .claude/settings.local.json claude
 	ask_rules .claude/settings.local.json
 	exclude .claude/settings.local.json
-	echo "claude: session-start and stop hooks, and ask rules for approve, ship and tidy --remote, in .claude/settings.local.json"
+	echo "claude: session-start and stop hooks, and ask rules for approve, ship, tidy --remote and task waive, in .claude/settings.local.json"
 	install_skills .claude/skills claude
 	echo "claude: skills $NAME-new, -plan, -build, -review, -ship, -run, -audit-states in .claude/skills (all kept out of git)"
 	subagent_hooks .claude/settings.local.json
@@ -74,7 +74,7 @@ subagent_hooks() {
 	mv "$1.tmp.$$" "$1"
 }
 
-# ask_rules <settings>: Claude Code asks the human before approve, ship or tidy --remote runs.
+# ask_rules <settings>: Claude Code asks the human before approve, ship, tidy --remote or task waive runs.
 # Covers the spellings agents use (relative, ./, sh or bash, this checkout's absolute path,
 # and the bare name for a symlink on PATH); a relative path from a subfolder
 # (../.sdd/bin/sdd) is not.
@@ -82,7 +82,7 @@ subagent_hooks() {
 ask_rules() {
 	jq --arg cmd "$CMD" --arg root "$ROOT" --arg name "$NAME" '
 		([$cmd, "./" + $cmd, "sh " + $cmd, "bash " + $cmd, $root + "/" + $cmd, $name]
-			| map(. as $c | ["approve", "ship", "tidy --remote"] | map("Bash(" + $c + " " + . + ":*)")) | flatten) as $add
+			| map(. as $c | ["approve", "ship", "tidy --remote", "task waive"] | map("Bash(" + $c + " " + . + ":*)")) | flatten) as $add
 		| .permissions = (.permissions // {})
 		| .permissions.ask = (((.permissions.ask // []) - $add) + $add)
 	' "$1" >"$1.tmp.$$" || { rm -f "$1.tmp.$$"; die "could not update $1"; }

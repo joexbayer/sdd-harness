@@ -34,6 +34,8 @@ else
 fi
 vline=$(verified_by)
 echo "verify  ${vline:-Verified by: (missing)}"
+# FR-67.3: every waiver, however it was written.
+awk '/^## / { on = ($0 == "## Waived"); next } on && /^- T-/ { sub(/^- /, "waived  "); print }' "$IFILE"
 unnamed_note
 bent_tests | sed 's/^/⚠ /' # FR-58.3
 # Only in a PR (FR-27.2): before the first ship sdd has opened none, so no forge call.
@@ -74,7 +76,7 @@ fi
 # up to "## Review", so headings an agent adds inside Built stay part of it.
 section() {
 	H=$1 awk '
-		/^## / && !(on && ENVIRON["H"] == "Built" && $0 !~ /^## Review/) { on = (substr($0, 4) == ENVIRON["H"]); next }
+		/^## / && !(on && ENVIRON["H"] == "Built" && $0 !~ /^## (Review|Waived)/) { on = (substr($0, 4) == ENVIRON["H"]); next }
 		on' "$IFILE" | uncomment
 }
 

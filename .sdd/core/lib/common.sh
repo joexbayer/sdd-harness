@@ -304,16 +304,16 @@ uncomment() {
 
 # missing_sections <file> <plan|built>: required "## " sections of that part with no
 # content. Sections marked "(optional)" are never required. Below "## Built" only
-# "## Review" starts a new section: agents put their own "## " headings inside Built.
+# "## Review" and "## Waived" start a new section: agents put their own "## " headings inside Built.
 missing_sections() {
 	uncomment "$1" | P=$2 awk '
 	function flush() { if (name != "" && want && !optional && !filled) print name }
-	built && /^## / && $0 !~ /^## Review/ { next }
+	built && /^## / && $0 !~ /^## (Review|Waived)/ { next }
 	/^## / {
 		flush(); name = substr($0, 4)
 		if (name == "Built") built = 1
 		want = (ENVIRON["P"] == "built") ? built : !built
-		optional = (name ~ /\(optional\)/); filled = 0; next
+		optional = (name ~ /\(optional\)/ || name == "Waived"); filled = 0; next
 	}
 	name != "" && $0 ~ /[^ \t]/ { filled = 1 }
 	END { flush() }'
@@ -444,6 +444,12 @@ contract_tree() {
 	[ -n "${CTREE+x}" ] || CTREE=$(git ls-tree "$(cfg sdd.base main)" -- "$CONTRACTS/" 2>/dev/null)
 }
 unset CTREE
+
+# waived <T-id>: the item has a "## Waived" line for that task (FR-67.2). The section ends at the
+# next "## " heading, as Built does.
+waived() {
+	T=$1 awk '/^## / { on = ($0 == "## Waived"); next } on && index($0, "- " ENVIRON["T"] ": ") == 1 { f = 1 } END { exit !f }' "$IFILE"
+}
 
 # verified_by: the last "Verified by:" line in "## Built" (FR-22.3), a list bullet and guidance
 # removed; empty when there is none. Built runs up to "## Review", as in missing_sections.
@@ -959,6 +965,7 @@ unnamed_ticks() {
 	_head=$(git show "HEAD:$IFILE" 2>/dev/null) || return 0
 	task_rows | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r _t; do
 		printf '%s\n' "$_head" | grep -qF -- "- [x] $_t " || continue
+		waived "$_t" && continue
 		[ -n "$(task_commit "$_t")" ] || echo "$_t"
 	done
 }
@@ -1527,11 +1534,11 @@ item_read() {
 	}
 	function whole(l) {
 		l = unc(l, "w")
-		if (mbuilt && l ~ /^## / && l !~ /^## Review/) return
+		if (mbuilt && l ~ /^## / && l !~ /^## (Review|Waived)/) return
 		if (l ~ /^## /) {
 			mflush(); mname = substr(l, 4)
 			if (mname == "Built") mbuilt = 1
-			mpart = mbuilt; mopt = (mname ~ /\(optional\)/); mfilled = 0; return
+			mpart = mbuilt; mopt = (mname ~ /\(optional\)/ || mname == "Waived"); mfilled = 0; return
 		}
 		if (mname != "" && l ~ /[^ \t]/) mfilled = 1
 	}

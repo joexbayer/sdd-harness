@@ -54,11 +54,14 @@ done
 # FR-65.4 a wrong test command: stop and ask; FR-65.5 no claim of approval.
 assert_contains "$out" 'stop and ask the human (a changed plan is approved again if this type has approval)'
 assert_contains "$out" 'The plan is settled and the human is not watching.'
+# FR-67.6 never tick by hand; FR-67.8 ship refuses Verified by: none where the verified gate blocks.
+assert_contains "$out" 'Never tick a box by hand: stop and ask the human, who may waive the task'
+assert_contains "$out" 'ship refuses it where the `verified` gate blocks'
 assert_not_contains "$out" 'approved the plan'
 assert_contains "$out" "A test that only repeats another's case may be deleted"
 assert_not_contains "$out" 'so keep it fast'
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
-[ "$w" -le 750 ] || fail "build step is $w words (ceiling 750)"
+[ "$w" -le 770 ] || fail "build step is $w words (ceiling 770)"
 
 # FR-35.5: the verifier's prompt.
 setcfg role.verifier.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus

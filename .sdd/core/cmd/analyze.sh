@@ -17,6 +17,16 @@ else
 	item_load "$(tsv 1 "$src")" "$(tsv 2 "$src")" "$(tsv 3 "$src")" || die "could not read item $1"
 fi
 found=$(parse_item "$IFILE" "$ID" | plan_findings | findings_lines)
+# FR-67.7: a suffix typed as a file (".args" beside "tests/x.lith") is a typo; warn, never fail.
+if [ $# -eq 0 ]; then
+	task_rows | awk -F '\t' '{
+		n = split($4, f, ","); dir = 0
+		for (i = 1; i <= n; i++) { sub(/^[ \t]+/, "", f[i]); sub(/[ \t]+$/, "", f[i]); if (index(f[i], "/")) dir = 1 }
+		if (dir) for (i = 1; i <= n; i++) if (f[i] ~ /^\./ && !index(f[i], "/")) print $1 "\t" f[i]
+	}' | while IFS="$(printf '\t')" read -r t p; do
+		[ -e "$p" ] || warn "$t files: $p looks like a suffix, not a path"
+	done
+fi
 [ -z "$ITMP" ] || rm -f "$ITMP"
 if [ -n "$found" ]; then
 	printf '%s\n' "$found"

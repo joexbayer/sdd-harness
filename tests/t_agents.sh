@@ -54,7 +54,9 @@ assert_contains "$(cat .claude/skills/sdd-plan/SKILL.md)" 'Run `.sdd/bin/sdd nex
 
 # Ask rules: the human confirms approve, ship and (FR-7.10) tidy --remote, however the call is
 # spelled; no duplicates.
-assert_eq "$(jq '[.permissions.ask[] | select(test("sdd (approve|ship|tidy --remote)"))] | length' "$s")" 18
+assert_eq "$(jq '[.permissions.ask[] | select(test("sdd (approve|ship|tidy --remote|task waive)"))] | length' "$s")" 24
+# FR-67.5: the human confirms task waive.
+assert_contains "$(jq -r '.permissions.ask | join(" ")' "$s")" 'Bash(.sdd/bin/sdd task waive:*)'
 asks=$(jq -r '.permissions.ask | join(" ")' "$s")
 assert_contains "$asks" 'Bash(.sdd/bin/sdd approve:*)'
 assert_contains "$asks" 'Bash(bash .sdd/bin/sdd ship:*)'
@@ -71,7 +73,7 @@ out=$(sdd sync claude 2>&1)
 assert_contains "$out" 'left .claude/skills/sdd-build/SKILL.md alone'
 assert_not_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'edited'
 assert_eq "$(sed -n 5p .claude/skills/sdd-build/SKILL.md)" 'My own build skill.'
-assert_eq "$(jq '.permissions.ask | length' "$s")" 19
+assert_eq "$(jq '.permissions.ask | length' "$s")" 25
 
 sdd sync codex >/dev/null 2>&1 || fail "sync codex failed"
 assert_eq "$(jq '.hooks.Stop | length' .codex/hooks.json)" 1

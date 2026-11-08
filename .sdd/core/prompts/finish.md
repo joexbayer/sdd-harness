@@ -11,7 +11,7 @@ tests the check leaves out, reports parts nothing calls or reads, and
 reports only findings, each with the command and its output, and never edits code or the plan.
 Fix what it finds; put its line in "## Built":
   Verified by: <its model>: <n> of <m> FRs proven; <its findings in a few words, or "no findings">
-or, when no verifier could run, `Verified by: none` and why.
+or, when no verifier could run, `Verified by: none` and why (ship refuses it where the `verified` gate blocks).
 
 You are done when the check passes and "## Built" is written: per FR what changed (file:line) and
 its test, deviations, follow-ups. Then tell the human it is ready for review: `/{{name}}-review`
