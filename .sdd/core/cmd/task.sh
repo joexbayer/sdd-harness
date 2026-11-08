@@ -75,7 +75,7 @@ if [ "$1" = waive ]; then
 	case $why in *"$nl"*) die "a waiver reason is one line" ;; esac
 	row=$(task_rows | T=$tid awk -F '\t' '$1 == ENVIRON["T"]')
 	[ -n "$row" ] || die "no task $tid in item $ID (see: $CMD task)"
-	[ "$(tsv 2 "$row")" = done ] || tick_box "$tid"
+	[ "$(tsv 2 "$row")" = 'done' ] || tick_box "$tid"
 	L=$(printf -- '- %s: %s (%s, %s)' "$tid" "$why" "$(git config user.name)" "$(date +%F)")
 	H=
 	grep -qx '## Waived' "$IFILE" && H=1
