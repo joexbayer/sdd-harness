@@ -9,7 +9,8 @@ One page. Pick your case, run the steps in order. Install the `sdd` command once
 cd your-repo && git switch main          # install on the base branch: items branch from it
 sdd init                                 # copies .sdd/, writes .sdd/config, adds a block to AGENTS.md
 sdd sync claude                          # skills (/sdd-new, /sdd-review, /sdd-ship …) and the stop hook
-git add .sdd AGENTS.md                # init made these; add .gitleaks.toml too when it wrote one
+git add .sdd AGENTS.md
+[ -f .gitleaks.toml ] && git add .gitleaks.toml
 git commit -m "chore: adopt sdd"
 ```
 

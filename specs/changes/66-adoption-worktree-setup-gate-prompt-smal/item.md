@@ -49,6 +49,12 @@ D-66.2 No warn-only tier for `[check]`, and no change for `sdd-builder` mid-sess
 - FR-66.5: README.md and MIGRATE.md use `git add .sdd AGENTS.md` plus a comment naming `.gitleaks.toml`, then `git commit`. `init` makes only `.sdd/`, `AGENTS.md`, `.gitleaks.toml` (checked in a throwaway repo; `sync` files are excluded). Test: `tests/t_prompts_tests.sh` (grep).
 - Deviations: none. Notes: the new-worktree setup log is a temp file in the worktree, removed after. `sdd check` passed (212 s, over the 150 s budget warning). `SDD_PERF=1` timing run not done.
 
+Verifier findings fixed (Opus, a fresh context):
+- Blocker, FR-66.3: `--directory` also lists an untracked folder whose files are all ignored, so `config/` was skipped whole and a key committed there later passed `sdd check`. Only folders git really ignores are listed now (`git check-ignore --stdin`). Test: `t_security.sh`; end to end: `build/`, `deep/x/out/` listed, `config/` not.
+- Warn, FR-66.5: the README block left `.gitleaks.toml` untracked and `ship` refused. It now has its own line. Test: `t_prompts_tests.sh`.
+Left as they are: a directory name containing three single quotes makes invalid TOML (vanishingly rare); a setup that fails silently prints no reason, only that it failed.
+Verified by: claude-opus-5-5: 4 of 5 FRs proven, then FR-66.3 fixed with a regression test; 1 blocker and 1 warn fixed, 2 notes left
+
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->

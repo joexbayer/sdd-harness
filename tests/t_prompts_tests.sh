@@ -90,6 +90,7 @@ assert_contains "$(cat AGENTS.md)" '- Handing the human a step: name its skill (
 # FR-66.5: the docs stage what init made by name, never git add -A.
 for d in README.md MIGRATE.md; do
 	grep -q 'git add -A' "$SRC/$d" && fail "$d stages with git add -A"
+	grep -q '\[ -f .gitleaks.toml \] && git add .gitleaks.toml' "$SRC/$d" || fail "$d leaves .gitleaks.toml unstaged"
 	grep -q 'git add .sdd AGENTS.md' "$SRC/$d" || fail "$d does not stage .sdd AGENTS.md by name"
 	grep -q '\.gitleaks\.toml' "$SRC/$d" || fail "$d does not name .gitleaks.toml"
 done

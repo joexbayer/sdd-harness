@@ -111,7 +111,10 @@ if command -v gitleaks >/dev/null 2>&1; then
 	echo "token = $key" >out.dir/a.txt
 	echo "GITHUB_TOKEN=$key" >.env
 	echo "token = $key" >src/a.txt
+	# A folder that merely holds ignored files is not itself ignored: it stays scanned.
+	mkdir config && echo "GITHUB_TOKEN=$key" >config/.env
 	sdd init >/dev/null 2>&1
+	assert_not_contains "$(cat .gitleaks.toml)" "'''^config/'''"
 	assert_contains "$(cat .gitleaks.toml)" "'''^build/'''"
 	assert_contains "$(cat .gitleaks.toml)" "'''^out\\.dir/'''"
 	assert_contains "$(cat .gitleaks.toml)" "'''^\\.claude/worktrees/'''"
@@ -120,6 +123,7 @@ if command -v gitleaks >/dev/null 2>&1; then
 	assert_not_contains "$out" 'out.dir/a.txt'
 	assert_contains "$out" '.env'
 	assert_contains "$out" 'src/a.txt'
+	assert_contains "$out" 'config/.env'
 	# A repo's own file is never rewritten, ignored directories or not.
 	new_repo gl5
 	rm -rf .sdd && printf 'build/\n' >.gitignore && mkdir build && echo x >build/x

@@ -111,7 +111,7 @@ EOF
 		# would read them all. Ignored files such as .env stay scanned.
 		{
 			printf "paths = ['''^\\\\.claude/worktrees/'''"
-			git ls-files --others --ignored --exclude-standard --directory | grep '/$' | grep -vxF '.claude/worktrees/' |
+			git ls-files --others --ignored --exclude-standard --directory | grep '/$' | git check-ignore --stdin | grep -vxF '.claude/worktrees/' |
 				sed 's/[][\\.*^$+?(){}|]/\\&/g' | while IFS= read -r d; do printf ", '''^%s'''" "$d"; done
 			echo ']'
 		} >>.gitleaks.toml
