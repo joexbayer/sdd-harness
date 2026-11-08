@@ -18,6 +18,10 @@ assert_eq "$(cat CLAUDE.md)" '@AGENTS.md'
 ex=$(git rev-parse --git-path info/exclude)
 grep -qx '/.claude/settings.local.json' "$ex" || fail "settings not excluded"
 grep -qx '/CLAUDE.md' "$ex" || fail "CLAUDE.md not excluded"
+# FR-66.4: .DS_Store (anywhere in the tree) stays out of git for this clone, once.
+assert_eq "$(grep -cxF .DS_Store "$ex")" 1
+mkdir -p sub && touch sub/.DS_Store
+assert_eq "$(git status --porcelain sub)" ''
 [ -z "$(git status --porcelain)" ] || fail "sync must not leave anything to commit: $(git status --porcelain)"
 
 # Step skills: one per step, named after the tool, kept out of git; tool hints per agent.

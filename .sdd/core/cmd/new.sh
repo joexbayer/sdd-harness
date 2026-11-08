@@ -76,6 +76,12 @@ git add -- "$dir/item.md" || die "could not add $dir/item.md"
 git commit -q -m "docs($id): open $type \"$title\"" -- "$dir/item.md" || die "could not commit $dir/item.md"
 
 [ -z "$where" ] || sync_here
+# FR-66.1: seed the worktree so it can build; a failing setup keeps the item.
+setup=$(cfg worktree.setup)
+if [ -n "$where" ] && [ -n "$setup" ]; then
+	sh -c "$setup" </dev/null >"$where/.sdd-setup.log" 2>&1 || warn "worktree setup failed: $(tail -n 1 "$where/.sdd-setup.log")"
+	rm -f "$where/.sdd-setup.log"
+fi
 
 echo "$id $type · $title"
 [ -z "$from" ] || echo "roadmap $from${after:+   (depends: $(printf '%s' "$after" | sed 's/ /, /g'))}"

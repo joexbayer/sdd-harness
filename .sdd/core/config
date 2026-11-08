@@ -151,6 +151,10 @@
 	# The largest task size the builder takes: S, M or L. Below L, the plan rules tell the planner
 	# to size every task for it, and `sdd analyze` flags each task above it. S suits a small model.
 	max-size = L
+# A worktree made by `sdd new --worktree`, and task done's throwaway checkout, start with tracked
+# files only. `setup` runs there first (a command, like check.run), e.g. to seed what is ignored.
+# [worktree]
+#	setup = make seed
 # Usage tracking: one line per role run (sdd run, role subagents) in .git/sdd/runs.tsv, read by
 # `sdd usage`. Off unless someone asks for it, here or in their own ~/.config/sdd/config.
 [usage]

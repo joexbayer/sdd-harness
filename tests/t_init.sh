@@ -74,8 +74,10 @@ mkdir -p "$T/mk" && cd "$T/mk" || exit 1
 git init -q && printf 'module example.com/x\n' >go.mod
 printf 'check:\n\tgo test ./...\n' >Makefile
 git add -A && git commit -qm init
-sdd init >/dev/null 2>&1
+out=$(sdd init 2>&1)
 assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ' | paste -sd '|' -)" 'make check'
+# FR-66.2: init says the gate runs before every ship and asks the human to confirm it.
+assert_contains "$out" 'gate    make check runs before every ship. Your real per-change gate? If not, edit [check] run in .sdd/config'
 
 # FR-45.1: an install committed in the repo, then hand-changed (an edit and a file the new sdd
 # does not have), is replaced by rerunning init from the source sdd.

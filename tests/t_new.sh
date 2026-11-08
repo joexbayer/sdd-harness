@@ -45,6 +45,19 @@ bid=$(sed -n "s/^\([0-9]*\) feature · Beta$/\1/p" "$T/b.out")
 assert_file "$T/app.$aid/specs/changes/$aid-alpha/item.md"
 assert_file "$T/app.$bid/specs/changes/$bid-beta/item.md"
 
+# FR-66.1: [worktree] setup runs in the new worktree; a failing one warns and keeps the item.
+git config -f .sdd/config worktree.setup 'pwd > setup-ran'
+out=$(sdd new chore "Seeded" --worktree 2>&1) || fail "new with setup failed: $out"
+sid=$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\) chore.*/\1/p')
+assert_eq "$(cat "$T/app.$sid/setup-ran")" "$(cd "$T/app.$sid" && pwd -P)"
+git config -f .sdd/config worktree.setup 'echo nope-setup; exit 4'
+out=$(sdd new chore "Unseeded" --worktree 2>&1) || fail "a failing setup must not fail new: $out"
+assert_contains "$out" 'worktree setup failed'
+assert_contains "$out" 'nope-setup'
+fid=$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\) chore.*/\1/p')
+assert_file "$T/app.$fid/specs/changes/$fid-unseeded/item.md"
+git config -f .sdd/config --unset worktree.setup
+
 # The current item comes from the branch: none on main.
 assert_eq "$(git symbolic-ref --short HEAD)" main
 out=$(sdd status 2>&1)
