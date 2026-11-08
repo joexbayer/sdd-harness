@@ -41,7 +41,9 @@ none: a text file; the hunt runs read-only on the repo and writes scripts to a t
 
 ## Built
 - FR-64.1, FR-64.2: `.sdd/core/agents/skills/audit-states.md`, installed by `install_skills`; sync messages in `claude.sh` and `codex.sh`; a README line. Test: `tests/t_agents.sh` (installed, excluded from git, and states each rule).
+- Verifier findings fixed: the skill now says to fill in the item and commit the note, and to have the chore shipped before opening fixes (else an uncommitted note leaks onto the fix branch, and fixes can't see it).
 - Check passed. Security: a text file; the hunt it asks for is read-only on the repo.
+Verified by: claude-sonnet-5-5: 2 of 2 FRs proven; 2 gaps in the skill's steps (fixed)
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

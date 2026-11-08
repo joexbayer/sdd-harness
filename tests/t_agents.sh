@@ -30,7 +30,7 @@ done
 # FR-64.2: the audit's rules: one area, reproduced findings, a short note, fixes as normal items.
 k=$(cat .claude/skills/sdd-audit-states/SKILL.md)
 for p in 'one area' 'chore' 'read-only' 'retries, concurrency, restarts' 'CONFIRMED' 'PLAUSIBLE' \
-	'specs/kb/state-machines.md' 'what enforces it' 'ranked list in chat' 'new fix'; do
+	'specs/kb/state-machines.md' 'what enforces it' 'commit it with the note' 'ranked list in chat' 'ship the chore' 'new fix'; do
 	assert_contains "$k" "$p"
 done
 assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" "let's build X"

@@ -14,8 +14,9 @@ Audit one area at a time (the words after the command: a folder or subsystem). I
    result, file:line and the smallest fix. Skip theory and style. Say in one line which machines are sound.
 3. Update `specs/kb/state-machines.md`, kept short: only machines with a confirmed bug or an invariant that
    matters: states, allowed moves, invariants. Each invariant says what enforces it (a test, a database
-   constraint, or nothing yet). Offer a constitution article for one that must always hold.
+   constraint, or nothing yet). Offer a constitution article for one that must always hold. Fill in the item
+   (What and why, Security, Built) and commit it with the note.
 4. Present a ranked list in chat, by impact, in plain words, grouped by fix. Never send the human to read a
    file. Ask which groups to fix.
-5. Ship the chore as usual. For each group picked, run `{{cmd}} new fix "<title>"` and plan it: its regression test
-   comes first and must fail for the bug's reason.
+5. Ask the human to ship the chore (`/{{name}}-ship`) first, so the note is on the base branch. Then, for each group
+   picked, run `{{cmd}} new fix "<title>"` and plan it: its regression test comes first and must fail for the bug's reason.
