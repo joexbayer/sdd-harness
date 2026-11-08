@@ -219,18 +219,23 @@ f=specs/changes/1-waivers/item.md
 fill "$f" plan
 awk '/^## Tasks \(optional\)$/ { print
 	print "- [ ] T-1.1 Waived (files: tests/x.sh, .args; test: true)"
-	print "- [ ] T-1.2 Ticked by hand (test: true)"
+	print "- [ ] T-1.2 Ticked by hand (files: .other; test: true)"
 	print "- [ ] T-1.3 Normal (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
 # FR-67.7: a suffix typed as a file warns on the current item, exit 0, no plan finding.
 out=$(sdd analyze 2>&1)
 assert_eq $? 0 "(analyze warns, does not fail)"
 assert_contains "$out" 'T-1.1 files: .args looks like a suffix, not a path'
+assert_not_contains "$out" '.other looks like a suffix'
 assert_not_contains "$(sdd analyze 1 2>&1)" 'looks like a suffix'
 touch .args
 assert_not_contains "$(sdd analyze 2>&1)" 'looks like a suffix'
 rm .args
 # FR-67.4: no reason, an unknown task, a reason with a newline.
+# FR-67.5: a role run cannot waive, as it cannot approve or ship.
+out=$(SDD_RUN=1 sdd task waive T-1.1 "why" 2>&1)
+assert_eq $? 2 "(waive under sdd run)"
+assert_contains "$out" "task waive is the human's"
 out=$(sdd task waive T-1.1 "" 2>&1)
 assert_eq $? 1 "(empty reason)"
 assert_contains "$out" 'a waiver needs a reason'
@@ -268,6 +273,13 @@ assert_not_contains "$out" 'T-1.1'
 # FR-67.2: waive T-1.2 too (already ticked): ship accepts both, with no receipt or commit naming them.
 sdd task waive T-1.2 "ticked before the test could run" >/dev/null 2>&1 || fail "waive T-1.2 failed"
 git commit -qam "docs(1): waivers"
+# FR-67.2, FR-67.3: review does not warn about a waived task, and lists each waiver once.
+out=$(sdd review 2>&1)
+assert_not_contains "$out" 'no commit subject names'
+assert_eq "$(printf '%s\n' "$out" | grep -c 'T-1.2: ticked before')" 1 "(waiver shown once)"
+out=$(sdd task 2>&1)
+assert_contains "$out" 'waived'
+assert_not_contains "$out" 'ticked without'
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'shipped 1 into main'
 exit 0

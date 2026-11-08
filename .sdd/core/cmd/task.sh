@@ -25,6 +25,7 @@ if [ $# -eq 0 ]; then
 		[ -z "$(tsv 5 "$r")" ] || printf '      test: %s%s\n' "$(tsv 5 "$r")" "$ex"
 		[ -z "$(tsv 7 "$r")" ] || printf '      serves: %s\n' "$(tsv 7 "$r")"
 		[ -z "$(tsv 8 "$r")" ] || echo "      ✗ $(tsv 8 "$r")"
+		if waived "$t"; then echo "      waived (see: $NAME review)"; continue; fi
 		if [ -n "$c" ]; then echo "      commit $c"; else echo "      no commit names it yet"; fi
 		[ "$box" = "[ ]" ] || grep -qx "$t" "$record" 2>/dev/null || echo "      ticked without $NAME task done in this clone"
 	done
@@ -65,6 +66,7 @@ tick_box() {
 # FR-67.1, FR-67.4: waive a task: tick it (if it is not) and record reason, who and when under
 # "## Waived", before "## Review" if there is one. The reason is data: env and argv only.
 if [ "$1" = waive ]; then
+	human_only "task waive"
 	[ $# -ge 2 ] || usage_die "$usage"
 	tid=$2
 	why=${3-}

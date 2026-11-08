@@ -76,7 +76,7 @@ fi
 # up to "## Review", so headings an agent adds inside Built stay part of it.
 section() {
 	H=$1 awk '
-		/^## / && !(on && ENVIRON["H"] == "Built" && $0 !~ /^## Review/) { on = (substr($0, 4) == ENVIRON["H"]); next }
+		/^## / && !(on && ENVIRON["H"] == "Built" && $0 !~ /^## (Review|Waived)/) { on = (substr($0, 4) == ENVIRON["H"]); next }
 		on' "$IFILE" | uncomment
 }
 

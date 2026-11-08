@@ -965,6 +965,7 @@ unnamed_ticks() {
 	_head=$(git show "HEAD:$IFILE" 2>/dev/null) || return 0
 	task_rows | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r _t; do
 		printf '%s\n' "$_head" | grep -qF -- "- [x] $_t " || continue
+		waived "$_t" && continue
 		[ -n "$(task_commit "$_t")" ] || echo "$_t"
 	done
 }
