@@ -141,3 +141,12 @@ test("FR-53.11 a repo without .sdd/ on its base is reported, the others indexed"
   assert.equal(ix.snapshot("plain")!.error, "not an sdd repo: no .sdd/ on main");
   assert.equal(ix.snapshot("api")!.ok, true);
 });
+
+// FR-63.3: a configured repo with no index yet is not "no repo".
+test("FR-63.3 show says a configured repo is not indexed yet, with the error", async () => {
+  const f = await makeRepo();
+  const ix = index(f, [{ name: "gone", url: join(f.root, "no-such.git") }, { name: "web", url: f.origin }]);
+  await ix.rebuild(ix.repos[0]);
+  await assert.rejects(ix.show("gone", 1, false), { message: /^repo gone is not indexed yet: .*(does not exist|does not appear to be a git repository)/ });
+  await assert.rejects(ix.show("web", 1, false), { message: "repo web is not indexed yet: waiting for the first fetch" });
+});

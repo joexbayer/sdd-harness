@@ -18,7 +18,8 @@ const ItemsOut = z.object({ server_sdd: z.string(), repos: z.array(RepoOut),
   items: z.array(z.looseObject({ repo: z.string(), id: z.number() })), truncated: z.boolean() });
 const ItemOut = z.looseObject({ repo: z.string(), id: z.number() });
 const SearchOut = z.object({ matches: z.array(z.object({ repo: z.string(), ref: z.string(), item: z.number().nullable(),
-  path: z.string(), line: z.number(), text: z.string() })), truncated: z.boolean() });
+  path: z.string(), line: z.number(), text: z.string() })), truncated: z.boolean(),
+  skipped: z.array(z.object({ repo: z.string(), reason: z.string() })) });
 
 type Text = { type: "text"; text: string };
 type Out = { content: Text[]; structuredContent?: Record<string, unknown>; isError?: boolean };
@@ -192,7 +193,8 @@ export function buildServer(ix: RepoIndex, log: Log = () => {}): McpServer {
     audit(ctx, "search", fields, t0, out.matches.length);
     const where = repo ?? plural(ix.names().length, "repo");
     const head = `${plural(out.matches.length, "match", "matches")} for "${input.query}" in ${where}${out.truncated ? " · truncated" : ""}`;
-    return { content: [{ type: "text", text: [cut(head), ...out.matches.map(matchLine)].join("\n") }], structuredContent: out };
+    const skip = out.skipped.map((s) => cut(`not searched: ${s.repo} (${s.reason})`));
+    return { content: [{ type: "text", text: [cut(head), ...skip, ...out.matches.map(matchLine)].join("\n") }], structuredContent: out };
   });
   return server;
 }
