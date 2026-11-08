@@ -94,7 +94,8 @@ export class RepoIndex {
   // with raw, the item file at the ref the index read it from (FR-53.24).
   async show(name: string, id: number, raw: boolean): Promise<Record<string, unknown>> {
     const s = this.snaps.get(name);
-    if (!s || !this.repos.some((r) => r.name === name)) throw new Error(`no repo ${name} (repos: ${[...this.names()].sort().join(", ")})`);
+    if (!this.repos.some((r) => r.name === name)) throw new Error(`no repo ${name} (repos: ${[...this.names()].sort().join(", ")})`);
+    if (!s || s.gen === 0) throw new Error(`repo ${name} is not indexed yet: ${s?.error || "waiting for the first fetch"}`);
     const row = s.rows.find((r) => r.id === id);
     if (!row) throw new Error(`no item ${id} in ${name} (repos: ${[...this.names()].sort().join(", ")})`);
     const key = `${name}\0${s.gen}\0${id}`;
