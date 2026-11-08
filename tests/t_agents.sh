@@ -1,7 +1,7 @@
 # FR-1.10 sync claude/codex: hooks merged, existing settings kept, idempotent, excluded.
 # FR-1.11 stop hook: warn in lite, block once in standard. FR-1.12 name derived.
 # FR-4.1 step skills, FR-4.2 descriptions trigger on plain requests, FR-4.3 ask rules for
-# approve and ship, FR-4.4 only sdd's own skills and rules are replaced.
+# approve and ship, FR-4.4 only sdd's own skills and rules are replaced. FR-64.1, FR-64.2 the audit skill.
 . "$SRC/tests/lib.sh"
 new_repo
 
@@ -21,11 +21,17 @@ grep -qx '/CLAUDE.md' "$ex" || fail "CLAUDE.md not excluded"
 [ -z "$(git status --porcelain)" ] || fail "sync must not leave anything to commit: $(git status --porcelain)"
 
 # Step skills: one per step, named after the tool, kept out of git; tool hints per agent.
-for st in new plan build review ship; do
+for st in new plan build review ship audit-states; do
 	assert_file ".claude/skills/sdd-$st/SKILL.md"
 	assert_contains "$(sed -n 2p ".claude/skills/sdd-$st/SKILL.md")" "name: sdd-$st"
 	grep -q '^description: .*Use when' ".claude/skills/sdd-$st/SKILL.md" || fail "sdd-$st: no trigger in description"
 	grep -qx "/.claude/skills/sdd-$st" "$ex" || fail "sdd-$st not excluded"
+done
+# FR-64.2: the audit's rules: one area, reproduced findings, a short note, fixes as normal items.
+k=$(cat .claude/skills/sdd-audit-states/SKILL.md)
+for p in 'one area' 'chore' 'read-only' 'retries, concurrency, restarts' 'CONFIRMED' 'PLAUSIBLE' \
+	'specs/kb/state-machines.md' 'what enforces it' 'ranked list in chat' 'new fix'; do
+	assert_contains "$k" "$p"
 done
 assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" "let's build X"
 # /sdd-new <request>: the skill picks the type and a title and confirms them before `new`.

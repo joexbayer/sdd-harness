@@ -19,7 +19,7 @@ agent_sync() {
 	exclude .claude/settings.local.json
 	echo "claude: session-start and stop hooks, and ask rules for approve, ship and tidy --remote, in .claude/settings.local.json"
 	install_skills .claude/skills claude
-	echo "claude: skills $NAME-new, -plan, -build, -review, -ship, -run in .claude/skills (all kept out of git)"
+	echo "claude: skills $NAME-new, -plan, -build, -review, -ship, -run, -audit-states in .claude/skills (all kept out of git)"
 	subagent_hooks .claude/settings.local.json
 	install_subagents .claude/agents
 }

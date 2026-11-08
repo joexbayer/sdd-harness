@@ -10,6 +10,6 @@ agent_sync() {
 	exclude .codex/hooks.json
 	echo "codex: session-start and stop hooks in .codex/hooks.json (kept out of git)"
 	install_skills .agents/skills codex
-	echo "codex: skills $NAME-new, -plan, -build, -review, -ship in .agents/skills (kept out of git)"
+	echo "codex: skills $NAME-new, -plan, -build, -review, -ship, -audit-states in .agents/skills (kept out of git)"
 	echo "next    trust the hooks in Codex with /hooks (sdd sets no Codex approval rules yet: approve and ship are yours to run)"
 }

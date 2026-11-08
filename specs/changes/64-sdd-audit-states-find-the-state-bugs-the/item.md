@@ -37,7 +37,7 @@ none: a text file; the hunt runs read-only on the repo and writes scripts to a t
 `tests/t_agents.sh` passes under sh and dash; `sdd check` passes.
 
 ## Tasks (optional)
-- [ ] T-64.1 The skill, sync messages and README, FR-64.1, FR-64.2 (files: .sdd/core/agents/skills/audit-states.md, .sdd/core/agents/claude.sh, .sdd/core/agents/codex.sh, README.md, tests/t_agents.sh; test: SRC=$PWD SH=dash dash tests/t_agents.sh; size: S)
+- [x] T-64.1 The skill, sync messages and README, FR-64.1, FR-64.2 (files: .sdd/core/agents/skills/audit-states.md, .sdd/core/agents/claude.sh, .sdd/core/agents/codex.sh, README.md, tests/t_agents.sh; test: SRC=$PWD SH=dash dash tests/t_agents.sh; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

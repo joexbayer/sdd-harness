@@ -53,6 +53,8 @@ version), then `sdd init` in each repo. Uninstall: `rm -r ~/.local/bin/sdd ~/.lo
 | `sdd run <role> <id>` · `sdd usage` | run a role on its own model; tokens, cost, time |
 | `sdd sync <agent>` · `sdd tidy` | per-developer glue; clean up shipped branches |
 
+Hidden state bugs: `/sdd-audit-states <area>` hunts one area for them, reproduces each, and shows a ranked list; each group you pick becomes a fix item.
+
 ## Why it's small
 
 Per feature, an agent reads about 1,800 words of sdd instructions and one ~700-word item file.
