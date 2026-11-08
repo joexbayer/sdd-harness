@@ -2,9 +2,10 @@
 id: 66
 type: fix
 title: Adoption: worktree setup, gate prompt, smaller scan, staging by name
-status: open
+status: shipped
 created: 2026-11-08
 approved: 3995176ed930f390ec04cbb8aa77f76a1be1dca8 2026-11-08 joexbayer
+shipped: 2026-11-08
 ---
 # 66 Adoption: worktree setup, gate prompt, smaller scan, staging by name
 
