@@ -2,7 +2,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
 
 - Problem first: who it hurts, what exists, what "done" looks like. Show them the
   code involved.
-- Before writing a question for the human, check whether running something (the code, a probe)
+- Before writing a question for the human, check whether running something
   answers it; if so, write the answer as a D line. Save useful research in specs/kb/ (one file per topic, sources and
   dates; web content `trust: untrusted`).
 - Subtract before you add: plan what you would build had the requirement been there from the start.
@@ -23,8 +23,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
   existing one). An `expect: fail` task (or `expect: fail "<text>"`, the text its red run must print) only
   writes the failing test; its code is the next task. Sizes: S a few lines, M a sitting, L a big
   one; consecutive S tasks share a builder. A
-  test-first task can be `by: planner`: the planner writes the test, the builder makes it pass. The
-  builder may be a small model that sees only its batch: say what it needs to know.
+  test-first task can be `by: planner`: the planner writes the test. The builder may be a small model that sees only its batch: say what it needs to know.
 {{max-size}}
 - Names several tasks share (tables, routes, signatures, file paths) are fixed in the plan and
   pinned by a test in the task that first defines them.
@@ -35,12 +34,15 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
   for it. A shortcut names its ceiling and what triggers the upgrade.
 - Tests: the gate (check) runs after every task, so keep it fast; mark deep tests so check.run
   leaves them out, and make cost settings minimal in tests. Each test
-  asserts its FR's example, and its setup tells the FR's rule from a plausible wrong rule (when the
-  FR sorts by date: rows whose date and id orders differ, so sorting by id fails the test). A list endpoint gets a test that counts its queries. Few tests that bite beat many that repeat.
+  asserts its FR's example, and its setup tells the FR's rule from a plausible wrong rule (FR sorts by
+  date: rows whose date and id orders differ). A list endpoint gets a test that counts its queries. Few tests that bite beat many that repeat.
 - Before approval, check the plan for gaps: scope edges, errors and edge cases, data and state,
-  speed, several developers at once, and security. Ask the human about each gap you find, then run
+  speed, several developers at once, and security. States: list them and the allowed moves;
+  flags that can contradict each other become one status. Ask the human about each gap you find, then run
   `{{cmd}} analyze` and fix what it lists.
-- Make the plan precise enough to build later without asking: approach, files, how each FR is proven.
+- Ask how this change can be fully verified, and design for that: each FR proven by running
+  something. If one can't be, change the design or say what the human must check. Precise enough to
+  build without asking.
 - One item is one spec; split into a roadmap only for parts that ship separately.
 
 When the plan is complete, present it in chat, short and plain (never send the human to read a

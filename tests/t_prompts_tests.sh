@@ -29,7 +29,7 @@ for p in 'so keep it fast' 'mark deep tests so check.run' 'make cost settings mi
 	'a command on its own' 'ASCII' 'Only after a yes in' 'never chained to other commands' 'a plausible wrong rule' \
 	'Subtract before you add' 'had the requirement been there from the start' \
 	'Before writing a question for the human, check whether running something' \
-	'write its size in a year' 'no query in a loop (N+1)' 'No cache, queue or new service until a number asks' \
+	'how this change can be fully verified' 'flags that can contradict each other become one status' 'write its size in a year' 'no query in a loop (N+1)' 'No cache, queue or new service until a number asks' \
 	'A list endpoint gets a test that counts its queries'; do
 	assert_contains "$out" "$p"
 done
@@ -62,7 +62,7 @@ v=$(cat .claude/agents/sdd-verifier.md)
 # FR-35.5, FR-55.6: the verifier proves an FR by undoing its code; FR-42.2 its other rules.
 for p in "undo that FR's code in a scratch copy" 'report the FR unproven if the test still passes' \
 	'no test would fail if it were dropped' 'tests the check leaves out' 'nothing calls or reads' \
-	"only repeats another" 'a list with no limit, or a query inside a loop'; do
+	"only repeats another" 'a list with no limit, a query inside a loop' 'combinations nothing prevents'; do
 	assert_contains "$v" "$p"
 done
 # FR-51.1: the build skill's hand-off, and the review step's ship hand-off.
