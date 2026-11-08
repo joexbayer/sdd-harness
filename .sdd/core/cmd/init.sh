@@ -78,6 +78,7 @@ if [ ! -f "$config" ]; then
 	if [ -n "$checks" ]; then
 		printf '%s\n' "$checks" | while IFS= read -r c; do git config -f "$config" --add check.run "$c"; done
 		echo "checks: $(printf '%s\n' "$checks" | paste -sd ',' - | sed 's/,/, /g')"
+		echo "gate    $(printf '%s\n' "$checks" | paste -sd ',' - | sed 's/,/, /g') runs before every ship. Your real per-change gate? If not, edit [check] run in $DIRNAME/config"
 	else
 		warn "no test command detected: add 'run = <command>' under [check] in $DIRNAME/config"
 	fi
