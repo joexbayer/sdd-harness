@@ -46,6 +46,15 @@ none: prints a line of the test's own output, which it already shows on failure.
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-65.1: `.sdd/core/cmd/task.sh` prints `  last line: <x>` after the ✓ line on a pass (helper `last_line` skips blank lines). Test: `tests/t_task.sh`.
+FR-65.2: same file, `  red for: <x> (no expected text: check this is the bug)` when `expect: fail` has no text; not blocking. Test: `tests/t_task.sh`.
+FR-65.3: `.sdd/core/prompts/plan.md` tells the planner to give the text when known, e.g. `expect: fail "goldens 0"`. Test: `tests/t_prompts_tests.sh`.
+FR-65.4: `.sdd/core/prompts/build.md` says stop and ask for re-approval when a test command proves wrong. Test: `tests/t_prompts_tests.sh`.
+FR-65.5: `build.md` now opens "The plan is settled and the human is not watching." for all types. Test: `tests/t_prompts_tests.sh`.
+FR-65.6: `.sdd/core/agents/skills/audit-states.md`: replaces plan steps, `git archive` copy, `check` before Built, parent re-runs repeatedly for a race. Test: `tests/t_agents.sh`.
+
+Deviations: the plan word ceiling in `tests/t_prompts_tests.sh` raised 800 to 820 (plan.md grew by the FR-65.3 text). Wording in build.md is the same for all types (simplest; no per-type branch).
+
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
