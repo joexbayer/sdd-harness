@@ -50,8 +50,10 @@ echo 'exit 0' >t1.sh
 out=$(sdd task 'done' T-1.1 2>&1)
 assert_eq $? 1 "(a red task whose test passes)"
 assert_contains "$out" 'expected its test to fail'
-echo 'grep -q page q.sh' >t1.sh
+echo 'grep -q page q.sh 2>/dev/null; r=$?; echo goldens 0; exit $r' >t1.sh
 out=$(sdd task 'done' T-1.1 2>&1) || fail "red task failed: $out"
+# FR-65.2: no expected text: the red run's last line is shown, with a note.
+assert_contains "$out" '  red for: goldens 0 (no expected text: check this is the bug)'
 assert_contains "$out" '✓ T-1.1 done (its test fails, as expected)'
 assert_contains "$out" 'commit with: feat(1): T-1.1 Page test first'
 grep -q '^- \[x\] T-1.1 ' "$f" || fail "T-1.1 not ticked"
@@ -62,8 +64,16 @@ out=$(sdd task 'done' T-1.2 2>&1)
 assert_eq $? 1 "(failing test)"
 grep -q '^- \[ \] T-1.2 ' "$f" || fail "a failing task must stay unticked"
 echo page >q.sh
+# FR-65.1: the line is shown as the test printed it: backslashes kept, a NUL byte dropped.
+cat >t1.sh <<'EOF'
+grep -q page q.sh || exit 1
+printf 'C:\\new \\c x\000y\n'
+EOF
 out=$(sdd task 'done' T-1.2 2>&1) || fail "T-1.2 failed: $out"
 assert_contains "$out" '✓ T-1.2 done (its test passed)'
+# FR-65.1: a pass shows the last line of the test's output.
+assert_contains "$out" '  last line: C:\new \c xy'
+assert_contains "$out" "$(printf '\nnext    commit the code')"
 assert_file ran.txt
 rm ran.txt
 sdd task 'done' T-1.2 >/dev/null 2>&1

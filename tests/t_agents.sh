@@ -27,10 +27,11 @@ for st in new plan build review ship audit-states; do
 	grep -q '^description: .*Use when' ".claude/skills/sdd-$st/SKILL.md" || fail "sdd-$st: no trigger in description"
 	grep -qx "/.claude/skills/sdd-$st" "$ex" || fail "sdd-$st not excluded"
 done
-# FR-64.2: the audit's rules: one area, reproduced findings, a short note, fixes as normal items.
+# FR-65.6 and FR-64.2: the audit's rules: one area, reproduced findings, a short note, fixes as normal items.
 k=$(cat .claude/skills/sdd-audit-states/SKILL.md)
 for p in 'one area' 'chore' 'read-only' 'retries, concurrency, restarts' 'CONFIRMED' 'PLAUSIBLE' \
-	'specs/kb/state-machines.md' 'what enforces it' 'commit it with the note' 'ranked list in chat' 'ship the chore' 'new fix'; do
+	'specs/kb/state-machines.md' 'what enforces it' 'commit it with the note' 'ranked list in chat' 'ship the chore' 'new fix' \
+	'replaces the plan steps' 'then fill in the item' 'git archive' '3. Re-run each reproduction yourself, repeatedly for a race'; do
 	assert_contains "$k" "$p"
 done
 assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" "let's build X"
