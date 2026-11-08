@@ -58,6 +58,14 @@ An agent can edit the item and write a waiver line itself, as it can append to t
 - Also: `common.sh` `missing_sections` and `parse_item` end Built at `## Waived` (a waiver is not Built written; tested red without it). help.sh and README updated.
 - Deviations: build-step word ceiling 750 to 770 (t_prompts_tests.sh). The t_role_guard.sh "Never run" assertions follow the new sentence. `task waive` has no `human_only` guard for role runs (not in the plan).
 
+Verifier findings fixed (Opus, a fresh context):
+- `sdd review` warned "Ship refuses this" for a waived task that ship accepts: `unnamed_ticks` now skips waivers; `sdd task` says "waived". Test: `t_task.sh`.
+- A role run could waive unprompted: `human_only "task waive"`, as for approve and ship. Test: `t_task.sh`.
+- Review printed each waiver twice: `section Built` ends at `## Waived`. Test: `t_task.sh`.
+- FR-67.7's folder condition had no test: added.
+Left: no test for T-1.1 vs T-1.10 matching (the verifier showed it correct by hand). The timing test was not rerun: over budget on this machine for v0.1.3 and main alike.
+Verified by: claude-opus-5-5: 7 of 8 FRs proven, then FR-67.7's untested condition covered; 1 false warning, 1 missing guard fixed
+
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->
