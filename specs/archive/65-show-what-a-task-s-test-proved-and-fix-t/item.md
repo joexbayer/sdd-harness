@@ -2,9 +2,10 @@
 id: 65
 type: fix
 title: Show what a task's test proved, and fix the audit skill's steps
-status: open
+status: shipped
 created: 2026-11-08
 approved: 7d3b1a8a9359c1679fe0a25633a6ff16957a8a7e 2026-11-08 joexbayer
+shipped: 2026-11-08
 ---
 # 65 Show what a task's test proved, and fix the audit skill's steps
 
