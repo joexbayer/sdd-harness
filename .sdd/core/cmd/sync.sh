@@ -5,3 +5,6 @@
 need_repo
 sync_agent "$1" || exit 1
 grep -qxF "$1" "$ST/agents" 2>/dev/null || echo "$1" >>"$ST/agents"
+# FR-66.4: macOS litter is never work; `exclude` anchors to the root, this must match everywhere.
+_ex=$(git rev-parse --path-format=absolute --git-path info/exclude)
+grep -qxF .DS_Store "$_ex" 2>/dev/null || printf '.DS_Store\n' >>"$_ex"
