@@ -3,8 +3,9 @@
 # it. `task next` prints the next batch: the tasks the builder works at once (task_batch).
 # `task done` runs one task's test (the check, if it names none) and, when it passes, ticks the
 # task's box and notes it in this clone's state (.git/sdd/checks/<id>.tasks), which ship asks
-# for. It never commits (C-4): the agent commits the code and the tick, naming the task.
-usage="usage: $NAME task [next | done T-<id>.<n>]"
+# for. `task waive` (the human's) ticks a task whose test cannot run and records why under
+# "## Waived" in the item (FR-67.1). Neither commits (C-4): the agent commits the code and the tick.
+usage="usage: $NAME task [next | done T-<id>.<n> | waive T-<id>.<n> \"reason\"]"
 need_repo
 current_item || die "not on an item branch (see: $CMD status)"
 fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
@@ -46,6 +47,55 @@ if [ "$1" = next ] && [ $# -eq 1 ]; then
 	done
 	exit 0
 fi
+
+# tick_box <T-id>: tick the task's own line: in the plan part, outside code fences, the whole ID.
+tick_box() {
+	T=$1 awk '
+		$0 == "## Built" { past = 1 }
+		/^```/ { fence = !fence }
+		!past && !fence && !d && index($0, "- [ ] " ENVIRON["T"]) == 1 {
+			c = substr($0, length("- [ ] " ENVIRON["T"]) + 1, 1)
+			if (c == "" || c == " " || c == "\t") { $0 = "- [x]" substr($0, 6); d = 1 }
+		}
+		{ print }
+		END { exit !d }' "$IFILE" >"$IFILE.tmp.$$" && mv "$IFILE.tmp.$$" "$IFILE" ||
+		{ rm -f "$IFILE.tmp.$$"; die "could not find the line of $1 to tick in $IFILE"; }
+}
+
+# FR-67.1, FR-67.4: waive a task: tick it (if it is not) and record reason, who and when under
+# "## Waived", before "## Review" if there is one. The reason is data: env and argv only.
+if [ "$1" = waive ]; then
+	[ $# -ge 2 ] || usage_die "$usage"
+	tid=$2
+	why=${3-}
+	[ $# -le 3 ] || usage_die "$usage"
+	[ -n "$why" ] || die "a waiver needs a reason"
+	nl='
+'
+	case $why in *"$nl"*) die "a waiver reason is one line" ;; esac
+	row=$(task_rows | T=$tid awk -F '\t' '$1 == ENVIRON["T"]')
+	[ -n "$row" ] || die "no task $tid in item $ID (see: $CMD task)"
+	[ "$(tsv 2 "$row")" = done ] || tick_box "$tid"
+	L=$(printf -- '- %s: %s (%s, %s)' "$tid" "$why" "$(git config user.name)" "$(date +%F)")
+	H=
+	grep -qx '## Waived' "$IFILE" && H=1
+	L=$L H=$H awk '
+		function flush() { print ENVIRON["L"]; while (nb-- > 0) print ""; done = 1; inw = 0 }
+		/^## / {
+			if (inw) flush()
+			if ($0 == "## Built") built = 1
+			if ($0 == "## Waived") inw = 1
+			else if (built && !done && !ENVIRON["H"] && $0 ~ /^## Review/) { print "## Waived"; print ENVIRON["L"]; print ""; done = 1 }
+		}
+		inw && !/^## / { if ($0 ~ /[^ \t]/) { while (nb > 0) { print ""; nb-- } } else { nb++; next } }
+		{ print }
+		END { if (inw) flush(); else if (!done) { print ""; print "## Waived"; print ENVIRON["L"] } }' "$IFILE" >"$IFILE.tmp.$$" && mv "$IFILE.tmp.$$" "$IFILE" ||
+		{ rm -f "$IFILE.tmp.$$"; die "could not write the waiver to $IFILE"; }
+	printf '✓ %s waived: %s\n' "$tid" "$why"
+	echo "next    commit $IFILE (and the code), then: $CMD next"
+	exit 0
+fi
+
 [ "$1" = 'done' ] && [ $# -eq 2 ] || usage_die "$usage"
 tid=$2
 
@@ -159,17 +209,7 @@ else
 	fi
 fi
 
-# Tick the task's own line: in the plan part, outside code fences, the whole ID.
-T=$tid awk '
-	$0 == "## Built" { past = 1 }
-	/^```/ { fence = !fence }
-	!past && !fence && !d && index($0, "- [ ] " ENVIRON["T"]) == 1 {
-		c = substr($0, length("- [ ] " ENVIRON["T"]) + 1, 1)
-		if (c == "" || c == " " || c == "\t") { $0 = "- [x]" substr($0, 6); d = 1 }
-	}
-	{ print }
-	END { exit !d }' "$IFILE" >"$IFILE.tmp.$$" && mv "$IFILE.tmp.$$" "$IFILE" ||
-	{ rm -f "$IFILE.tmp.$$"; die "could not find the line of $tid to tick in $IFILE"; }
+tick_box "$tid"
 echo "$tid" >>"$record"
 case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
 printf '✓ %s done (%s) · commit with: %s(%s): %s %s\n' "$tid" "$how" "$kind" "$ID" "$tid" "$(tsv 3 "$row")"

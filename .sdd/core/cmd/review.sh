@@ -34,6 +34,8 @@ else
 fi
 vline=$(verified_by)
 echo "verify  ${vline:-Verified by: (missing)}"
+# FR-67.3: every waiver, however it was written.
+awk '/^## / { on = ($0 == "## Waived"); next } on && /^- T-/ { sub(/^- /, "waived  "); print }' "$IFILE"
 unnamed_note
 bent_tests | sed 's/^/⚠ /' # FR-58.3
 # Only in a PR (FR-27.2): before the first ship sdd has opened none, so no forge call.
