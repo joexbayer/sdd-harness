@@ -101,7 +101,7 @@ bad=$(tsv 8 "$row")
 	die "the plan is not approved, or changed since: the human runs $CMD approve first (a task's test runs only for the approved plan)"
 
 # FR-65.1, FR-65.2: the last non-blank line of a log.
-last_line() { grep -v '^[[:space:]]*$' "$1" | tail -n 1; }
+last_line() { LC_ALL=C tr -d '\000' <"$1" | LC_ALL=C grep -v '^[[:space:]]*$' | tail -n 1; }
 shown=
 test=$(tsv 5 "$row")
 expect=$(tsv 6 "$row")
@@ -168,6 +168,6 @@ echo "$tid" >>"$record"
 case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
 printf '✓ %s done (%s) · commit with: %s(%s): %s %s\n' "$tid" "$how" "$kind" "$ID" "$tid" "$(tsv 3 "$row")"
 # FR-51.3: an earlier tick its commit did not name, while an amend still fixes it.
-[ -z "$shown" ] || echo "$shown"
+[ -z "$shown" ] || printf '%s\n' "$shown"
 unnamed_note
 echo "next    commit the code and $IFILE together, then: $CMD next"

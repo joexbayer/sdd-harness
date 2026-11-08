@@ -55,6 +55,12 @@ FR-65.6: `.sdd/core/agents/skills/audit-states.md`: replaces plan steps, `git ar
 
 Deviations: the plan word ceiling in `tests/t_prompts_tests.sh` raised 800 to 820 (plan.md grew by the FR-65.3 text). Wording in build.md is the same for all types (simplest; no per-type branch).
 
+Verifier findings fixed (Opus, a fresh context):
+- `last line:` mangled backslashes and printed grep's "Binary file" message on a NUL byte: now `printf` and a NUL-free read. Test: `t_task.sh`.
+- Audit skill: the parent's re-run sat inside the subagent's brief, and "check before Built" read backwards: re-run is now its own step 3, check comes first. Test: `t_agents.sh`.
+- Approval wording left for chores: `build.md` ("any approval", "approved again if this type has approval"), `skills/build.md`.
+- Added the missing negative test: no `red for:` when the plan names the reason (`t_expect.sh`; removing the guard fails it).
+Verified by: claude-opus-5-5: 6 of 6 FRs proven; 2 display bugs, 3 wording problems and 1 test gap found and fixed
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

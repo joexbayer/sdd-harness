@@ -44,6 +44,8 @@ grep -q '^- \[ \] T-1.1 ' "$f" || fail "a red test failing for the wrong reason 
 printf 'sh wf.sh 2>/dev/null || { echo "wordfreq: not found"; exit 1; }\n' >t1.sh
 out=$(sdd task 'done' T-1.1 2>&1) || fail "red task with the expected text failed: $out"
 assert_contains "$out" '✓ T-1.1 done (its test fails, as expected: wordfreq: not found)'
+# FR-65.2: the plan names the reason, so there is no note.
+assert_not_contains "$out" 'red for:'
 grep -q '^- \[x\] T-1.1 ' "$f" || fail "T-1.1 not ticked"
 git add -A && git commit -qm "test(1): T-1.1 count test first"
 

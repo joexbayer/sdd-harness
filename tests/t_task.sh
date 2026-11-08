@@ -64,10 +64,16 @@ out=$(sdd task 'done' T-1.2 2>&1)
 assert_eq $? 1 "(failing test)"
 grep -q '^- \[ \] T-1.2 ' "$f" || fail "a failing task must stay unticked"
 echo page >q.sh
+# FR-65.1: the line is shown as the test printed it: backslashes kept, a NUL byte dropped.
+cat >t1.sh <<'EOF'
+grep -q page q.sh || exit 1
+printf 'C:\\new \\c x\000y\n'
+EOF
 out=$(sdd task 'done' T-1.2 2>&1) || fail "T-1.2 failed: $out"
 assert_contains "$out" '✓ T-1.2 done (its test passed)'
 # FR-65.1: a pass shows the last line of the test's output.
-assert_contains "$out" '  last line: goldens 0'
+assert_contains "$out" '  last line: C:\new \c xy'
+assert_contains "$out" "$(printf '\nnext    commit the code')"
 assert_file ran.txt
 rm ran.txt
 sdd task 'done' T-1.2 >/dev/null 2>&1

@@ -1,10 +1,10 @@
 BUILD: this is your time. The plan is settled and the human is not watching. Work hands-off until
 done, without questions. Be brief.
 
-- Build exactly what the plan says, nothing more. Editing the plan (above "## Built") voids the
+- Build exactly what the plan says, nothing more. Editing the plan (above "## Built") voids any
   approval. Unclear? Pick what fits the plan best and record the deviation under
   "## Built"; if truly stuck, write the question there and stop.
-- A task's test command that proves wrong: stop and ask for re-approval; never bend the test to fit.
+- A task's test command that proves wrong: stop and ask the human (a changed plan is approved again if this type has approval); never bend the test to fit.
 - Work through every note under "## Review", saying under "## Built" what changed.
 - Never run `{{cmd}} approve`, `{{cmd}} ship` or `{{cmd}} tidy --remote`: they are the human's.
 - Security rules, always:

@@ -13,12 +13,12 @@ Audit one area at a time (the words after the command: a folder or subsystem). I
    can actually reach, including through retries, concurrency, restarts and failures halfway. Reproduce each
    with a script or test: CONFIRMED if reproduced, PLAUSIBLE if only read. Report the sequence, the wrong
    result, file:line and the smallest fix. Skip theory and style. Say in one line which machines are sound.
-   Re-run each reproduction yourself, repeatedly for a race; never trust the subagent's count.
-3. Update `specs/kb/state-machines.md`, kept short: only machines with a confirmed bug or an invariant that
+3. Re-run each reproduction yourself, repeatedly for a race; never trust the subagent's count.
+4. Update `specs/kb/state-machines.md`, kept short: only machines with a confirmed bug or an invariant that
    matters: states, allowed moves, invariants. Each invariant says what enforces it (a test, a database
-   constraint, or nothing yet). Offer a constitution article for one that must always hold. Fill in the item
-   (What and why, Security, Built), run `{{cmd}} check` before Built, and commit it with the note.
-4. Present a ranked list in chat, by impact, in plain words, grouped by fix. Never send the human to read a
+   constraint, or nothing yet). Offer a constitution article for one that must always hold. Run `{{cmd}} check`,
+   then fill in the item (What and why, Security, Built) and commit it with the note.
+5. Present a ranked list in chat, by impact, in plain words, grouped by fix. Never send the human to read a
    file. Ask which groups to fix.
-5. Ask the human to ship the chore (`/{{name}}-ship`) first, so the note is on the base branch. Then, for each group
+6. Ask the human to ship the chore (`/{{name}}-ship`) first, so the note is on the base branch. Then, for each group
    picked, run `{{cmd}} new fix "<title>"` and plan it: its regression test comes first and must fail for the bug's reason.

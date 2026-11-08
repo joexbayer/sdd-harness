@@ -52,7 +52,7 @@ for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review
 	assert_contains "$out" "$p"
 done
 # FR-65.4 a wrong test command: stop and ask; FR-65.5 no claim of approval.
-assert_contains "$out" 'stop and ask for re-approval'
+assert_contains "$out" 'stop and ask the human (a changed plan is approved again if this type has approval)'
 assert_contains "$out" 'The plan is settled and the human is not watching.'
 assert_not_contains "$out" 'approved the plan'
 assert_contains "$out" "A test that only repeats another's case may be deleted"
