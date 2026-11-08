@@ -42,8 +42,12 @@ D-66.2 No warn-only tier for `[check]`, and no change for `sdd-builder` mid-sess
 `tests/t_task.sh` or `t_worktree` cases (FR-66.1: runs in both places, failure paths), `tests/t_init.sh` (FR-66.2), `tests/t_security.sh` (FR-66.3, real gitleaks when installed), `tests/t_agents.sh` (FR-66.4), grep in `t_prompts_tests.sh` (FR-66.5). Written first, seen to fail.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-66.1: `.sdd/core/cmd/new.sh` runs `worktree.setup` in the new worktree after `sync_here` (failure warns, item kept); `.sdd/core/cmd/task.sh` runs it in `red_without_code`'s checkout before the test (failure dies with the reason, cleanup by the trap, never red); commented `[worktree]` entry in `.sdd/core/config`. Tests: `tests/t_new.sh` (runs in worktree; failing setup warns), `tests/t_expect.sh` (failing setup stops, unticked, cleaned; good setup lets the red run).
+- FR-66.2: `init.sh` prints the `gate    ... runs before every ship. Your real per-change gate? ...` line. Test: `tests/t_init.sh`.
+- FR-66.3: `init.sh` appends each ignored directory (`git ls-files --others --ignored --exclude-standard --directory`, `/`-ending, not `.claude/worktrees/`) as a regex-escaped `^dir/` to `paths`. Test: `tests/t_security.sh` with real gitleaks: `build/` and `out\.dir/` skipped, `.env` and `src/` still reported, a repo's own file untouched. MIGRATE.md secret-scan bullet has the tip.
+- FR-66.4: `sync.sh` adds a plain `.DS_Store` line to `info/exclude` once. Test: `tests/t_agents.sh` (one line, `sub/.DS_Store` not in status). Did not run ship itself.
+- FR-66.5: README.md and MIGRATE.md use `git add .sdd AGENTS.md` plus a comment naming `.gitleaks.toml`, then `git commit`. `init` makes only `.sdd/`, `AGENTS.md`, `.gitleaks.toml` (checked in a throwaway repo; `sync` files are excluded). Test: `tests/t_prompts_tests.sh` (grep).
+- Deviations: none. Notes: the new-worktree setup log is a temp file in the worktree, removed after. `sdd check` passed (212 s, over the 150 s budget warning). `SDD_PERF=1` timing run not done.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
