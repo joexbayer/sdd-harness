@@ -4,6 +4,7 @@ type: feature
 title: /sdd-audit-states: find the state bugs the code can reach
 status: open
 created: 2026-11-08
+approved: 43bf266c477e7e4e51f85f38f6598f7b86bb32b5 2026-11-08 joexbayer
 ---
 # 64 /sdd-audit-states: find the state bugs the code can reach
 
