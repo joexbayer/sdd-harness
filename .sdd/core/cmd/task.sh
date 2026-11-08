@@ -77,6 +77,12 @@ red_without_code() {
 		mkdir -p -- "$red_dir/wt/$d" && cp -R -- "$p" "$red_dir/wt/$d/" || exit 1
 	done || die "$tid: could not copy its files into $red_dir"
 	log="$ST/checks/$ID.$tid.red.log"
+	# FR-66.1: seed the checkout like a worktree; a failing setup is not red.
+	setup=$(cfg worktree.setup)
+	if [ -n "$setup" ]; then
+		(cd "$red_dir/wt" && sh -c "$setup" </dev/null >"$red_dir/setup.log" 2>&1) ||
+			die "$tid: worktree setup failed, so its test did not run: $(tail -n 1 "$red_dir/setup.log")"
+	fi
 	(cd "$red_dir/wt" && sh -c "$test" </dev/null >"$log" 2>&1)
 	rc=$?
 	git worktree remove --force "$red_dir/wt" >/dev/null 2>&1

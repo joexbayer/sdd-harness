@@ -160,4 +160,23 @@ assert_contains "$out" '✗ T-3.3 expected its test to fail, but it passed: the 
 assert_contains "$out" 'git revert the code commit, run task done while the test fails, commit, then revert the revert'
 grep -q '^- \[ \] T-3.3 ' "$f" || fail "T-3.3 ticked"
 clean_after "(committed)"
+
+# FR-66.1: [worktree] setup runs in the throwaway checkout before the test; a failing setup stops
+# task done with the reason and is never red.
+echo 'code' >other.txt
+echo seeded >seeded
+echo 'echo api3 ok' >api3.sh
+printf '[ -f seeded ] || { echo noseed; exit 1; }\nsh api3.sh\n' >t33.sh
+git config -f .sdd/config worktree.setup 'echo setup-broke; exit 3'
+out=$(red T-3.3)
+assert_eq $? 1 "(failing setup)"
+assert_contains "$out" 'worktree setup failed'
+assert_contains "$out" 'setup-broke'
+grep -q '^- \[ \] T-3.3 ' "$f" || fail "T-3.3 ticked after a failing setup"
+clean_after "(failing setup)"
+git config -f .sdd/config worktree.setup 'touch seeded'
+out=$(red T-3.3) || fail "red with a setup failed: $out"
+assert_contains "$out" '✓ T-3.3 done (its test fails without the uncommitted code)'
+assert_not_contains "$(cat "$(git rev-parse --git-common-dir)"/sdd/checks/*T-3.3.red.log)" noseed
+clean_after "(setup)"
 echo ok
