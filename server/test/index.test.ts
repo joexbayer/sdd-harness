@@ -149,5 +149,4 @@ test("FR-63.3 show says a configured repo is not indexed yet, with the error", a
   await ix.rebuild(ix.repos[0]);
   await assert.rejects(ix.show("gone", 1, false), { message: /^repo gone is not indexed yet: .*(does not exist|does not appear to be a git repository)/ });
   await assert.rejects(ix.show("web", 1, false), { message: "repo web is not indexed yet: waiting for the first fetch" });
-  await assert.rejects(ix.show("nope", 1, false), { message: "no repo nope (repos: gone, web)" });
 });

@@ -58,6 +58,14 @@ D-63.2 Age guard on locks, not a blanket delete: `busy` makes the server the onl
 
 Verified by:
 
+Verifier findings fixed (Opus, a fresh context, on the code before these fixes):
+- Blocker: a remote HEAD naming an unpushed branch failed the repo. `set-head --auto` no longer throws; the base check decides. Test: `mirror.test.ts`.
+- Blocker: a repo with no `.sdd/` and no main lost "not an sdd repo" (Must not change). The missing-base error now tells the two apart. Test: `mirror.test.ts`.
+- Warn: `readdir({recursive})` followed directory symlinks, contradicting the Security section. Lock removal now walks without following them. Test: `mirror.test.ts`.
+- `show("nope")` in FR-63.3's test only repeated FR-53.25's: deleted (tools.test.ts keeps it).
+- Rerun: the verifier's `gaps.ts` cases now give `ok:true`, "not an sdd repo", and the outside lock kept. Its first run covered: hunt bugs 1-4 gone, bug 5 fixed once the lock is stale, and `linux-check.sh` on the container's git 2.47.3.
+Verified by: claude-opus-5-5: 6 of 6 FRs proven; 2 regressions and 1 false security claim found and fixed
+
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
 and says under "## Built" what it changed for each. -->

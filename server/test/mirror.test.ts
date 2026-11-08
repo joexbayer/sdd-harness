@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { readdir, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { baseBranch, ensureClone, fetchRepo, projectConfig } from "../src/mirror.ts";
@@ -168,6 +168,36 @@ test("FR-63.5 fetchRepo fails with the reason when the base branch is not on ori
   await assert.rejects(fetchRepo(repo, dir, ""), { message: "base branch trunk is not on origin" });
 });
 
+// FR-63.5: a remote HEAD that can't be resolved is no failure of its own; the base check decides.
+test("FR-63.5 fetchRepo keeps working when the remote HEAD names a branch nobody pushed", async () => {
+  const f = await makeRepo();
+  const repo = { name: "api", url: f.origin, key: key(f) };
+  const dir = join(f.root, "data", "repos", "api");
+  await ensureClone(repo, dir, "");
+  execFileSync("git", ["symbolic-ref", "HEAD", "refs/heads/nobody"], { cwd: f.origin });
+  execFileSync("git", ["symbolic-ref", "--delete", "refs/remotes/origin/HEAD"], { cwd: dir });
+  await fetchRepo(repo, dir, "");
+  assert.equal(rev(dir, "refs/heads/main"), rev(f.work.dir, "HEAD"));
+});
+
+// Must not change (FR-53.11): a repo without sdd is still called that, whatever its default branch.
+test("FR-63.5 a repo with no .sdd/ and no main is not an sdd repo", async () => {
+  const f = await makeRepo();
+  const bare = join(f.root, "plain.git");
+  const src = join(f.root, "plain");
+  const g = (cwd: string, ...a: string[]) => execFileSync("git", a, { cwd, stdio: "pipe" });
+  g(f.root, "init", "-q", "--bare", "-b", "master", bare);
+  g(f.root, "init", "-q", "-b", "master", src);
+  await writeFile(join(src, "a"), "x");
+  g(src, "add", "a");
+  g(src, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "a");
+  g(src, "push", "-q", bare, "master");
+  const repo = { name: "plain", url: bare, key: key(f) };
+  const dir = join(f.root, "data", "repos", "plain");
+  await ensureClone(repo, dir, "");
+  await assert.rejects(fetchRepo(repo, dir, ""), { message: "not an sdd repo: no .sdd/ on main" });
+});
+
 // FR-63.6: a lock left by a killed fetch stops every later fetch until it is old enough to be dead.
 test("FR-63.6 fetchRepo removes a ref lock older than the fetch timeout and keeps a fresh one", async () => {
   const f = await makeRepo();
@@ -184,4 +214,20 @@ test("FR-63.6 fetchRepo removes a ref lock older than the fetch timeout and keep
   await fetchRepo(repo, dir, "");
   assert.equal(existsSync(lock), false);
   assert.match(refs(dir, "refs/remotes"), new RegExp(`refs/remotes/origin/locked `));
+});
+
+test("FR-63.6 lock removal does not follow a symlink out of the clone", async () => {
+  const f = await makeRepo();
+  const repo = { name: "api", url: f.origin, key: key(f) };
+  const dir = join(f.root, "data", "repos", "api");
+  await ensureClone(repo, dir, "");
+  const outside = join(f.root, "outside");
+  await mkdir(outside);
+  const lock = join(outside, "x.lock");
+  await writeFile(lock, "");
+  const old = new Date(Date.now() - 120_000);
+  await utimes(lock, old, old);
+  await symlink(outside, join(dir, ".git", "refs", "remotes", "evil"));
+  await fetchRepo(repo, dir, "");
+  assert.equal(existsSync(lock), true);
 });

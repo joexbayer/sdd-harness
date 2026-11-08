@@ -57,11 +57,17 @@ const refList = async (dir: string) =>
 // timeout is dead (the server is the only fetcher), a younger one may be a gc's.
 async function removeStaleLocks(dir: string): Promise<void> {
   const gd = join(dir, ".git");
-  const names = (await readdir(join(gd, "refs"), { recursive: true })).map((n) => join("refs", n));
-  for (const n of [...names, "packed-refs.lock"]) {
-    if (!n.endsWith(".lock")) continue;
-    const st = await lstat(join(gd, n)).catch(() => null);
-    if (st?.isFile() && Date.now() - st.mtimeMs > FETCH_MS) await rm(join(gd, n), { force: true });
+  const locks = [join(gd, "packed-refs.lock")];
+  const walk = async (d: string): Promise<void> => {
+    for (const e of await readdir(d, { withFileTypes: true })) {
+      if (e.isDirectory()) await walk(join(d, e.name)); // isDirectory is false for a symlink: never followed
+      else if (e.name.endsWith(".lock")) locks.push(join(d, e.name));
+    }
+  };
+  await walk(join(gd, "refs"));
+  for (const l of locks) {
+    const st = await lstat(l).catch(() => null);
+    if (st?.isFile() && Date.now() - st.mtimeMs > FETCH_MS) await rm(l, { force: true });
   }
 }
 
@@ -75,13 +81,14 @@ export async function fetchRepo(repo: Repo, dir: string, knownHosts: string): Pr
   const r = await run("git", ["fetch", "-q", "--prune", "origin"], { cwd: dir, env, timeoutMs: FETCH_MS, maxBytes: CAP });
   if (r.code !== 0) throw new Error(errorLine(r));
   // origin/HEAD is set only at clone time (older git), so a renamed default branch leaves it dangling.
+  // A remote HEAD that can't be resolved is no failure of its own: the base check below decides.
   if ((await git(dir, ["rev-parse", "-q", "--verify", "refs/remotes/origin/HEAD"])).code !== 0) {
-    const h = await run("git", ["remote", "set-head", "origin", "--auto"], { cwd: dir, env, timeoutMs: FETCH_MS, maxBytes: CAP });
-    if (h.code !== 0) throw new Error(errorLine(h));
+    await run("git", ["remote", "set-head", "origin", "--auto"], { cwd: dir, env, timeoutMs: FETCH_MS, maxBytes: CAP });
   }
   const base = await baseBranch(dir);
   if ((await git(dir, ["rev-parse", "-q", "--verify", `refs/remotes/origin/${base}`])).code !== 0) {
-    throw new Error(`base branch ${base} is not on origin`);
+    const sdd = await git(dir, ["cat-file", "-t", "refs/remotes/origin/HEAD:.sdd"]);
+    throw new Error(sdd.code === 0 ? `base branch ${base} is not on origin` : `not an sdd repo: no .sdd/ on ${base}`);
   }
   const u = await git(dir, ["update-ref", `refs/heads/${base}`, `refs/remotes/origin/${base}`]);
   if (u.code !== 0) throw new Error(errorLine(u));
