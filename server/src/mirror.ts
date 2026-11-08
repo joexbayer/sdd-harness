@@ -1,7 +1,7 @@
 // The server's clones: `git clone --no-checkout` under <data>/repos/<name> (D-53.9), fetched over
 // ssh with the repo's deploy key and the server's known_hosts, strictly (FR-53.6, FR-53.7).
 import { existsSync } from "node:fs";
-import { mkdir, rename, rm } from "node:fs/promises";
+import { lstat, mkdir, readdir, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { errorLine, run, type RunResult } from "./run.ts";
 import type { Repo } from "./config.ts";
@@ -53,16 +53,38 @@ export async function ensureClone(repo: Repo, dir: string, knownHosts: string): 
 const refList = async (dir: string) =>
   (await git(dir, ["for-each-ref", "--format=%(objectname) %(refname)", "refs/heads", "refs/remotes"])).stdout;
 
+// A fetch killed mid-update leaves a *.lock that fails every later fetch; one older than the fetch
+// timeout is dead (the server is the only fetcher), a younger one may be a gc's.
+async function removeStaleLocks(dir: string): Promise<void> {
+  const gd = join(dir, ".git");
+  const names = (await readdir(join(gd, "refs"), { recursive: true })).map((n) => join("refs", n));
+  for (const n of [...names, "packed-refs.lock"]) {
+    if (!n.endsWith(".lock")) continue;
+    const st = await lstat(join(gd, n)).catch(() => null);
+    if (st?.isFile() && Date.now() - st.mtimeMs > FETCH_MS) await rm(join(gd, n), { force: true });
+  }
+}
+
 export async function fetchRepo(repo: Repo, dir: string, knownHosts: string): Promise<{ changed: boolean }> {
   const before = await refList(dir);
-  const r = await run("git", ["fetch", "-q", "--prune", "origin"],
-    { cwd: dir, env: sshEnv(repo, knownHosts), timeoutMs: FETCH_MS, maxBytes: CAP });
+  await removeStaleLocks(dir);
+  // The configured url wins over the clone's stored origin.
+  const set = await git(dir, ["remote", "set-url", "origin", repo.url]);
+  if (set.code !== 0) throw new Error(errorLine(set));
+  const env = sshEnv(repo, knownHosts);
+  const r = await run("git", ["fetch", "-q", "--prune", "origin"], { cwd: dir, env, timeoutMs: FETCH_MS, maxBytes: CAP });
   if (r.code !== 0) throw new Error(errorLine(r));
-  const base = await baseBranch(dir);
-  if ((await git(dir, ["rev-parse", "-q", "--verify", `refs/remotes/origin/${base}`])).code === 0) {
-    const u = await git(dir, ["update-ref", `refs/heads/${base}`, `refs/remotes/origin/${base}`]);
-    if (u.code !== 0) throw new Error(errorLine(u));
+  // origin/HEAD is set only at clone time (older git), so a renamed default branch leaves it dangling.
+  if ((await git(dir, ["rev-parse", "-q", "--verify", "refs/remotes/origin/HEAD"])).code !== 0) {
+    const h = await run("git", ["remote", "set-head", "origin", "--auto"], { cwd: dir, env, timeoutMs: FETCH_MS, maxBytes: CAP });
+    if (h.code !== 0) throw new Error(errorLine(h));
   }
+  const base = await baseBranch(dir);
+  if ((await git(dir, ["rev-parse", "-q", "--verify", `refs/remotes/origin/${base}`])).code !== 0) {
+    throw new Error(`base branch ${base} is not on origin`);
+  }
+  const u = await git(dir, ["update-ref", `refs/heads/${base}`, `refs/remotes/origin/${base}`]);
+  if (u.code !== 0) throw new Error(errorLine(u));
   return { changed: (await refList(dir)) !== before };
 }
 

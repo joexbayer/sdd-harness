@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { readdir, rm, writeFile } from "node:fs/promises";
+import { readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { baseBranch, ensureClone, fetchRepo, projectConfig } from "../src/mirror.ts";
@@ -122,4 +122,66 @@ test("a fetch that fails says why in one line", async () => {
   await ensureClone(repo, dir, "");
   await rm(f.origin, { recursive: true });
   await assert.rejects(fetchRepo(repo, dir, ""), { message: /does not appear to be a git repository/ });
+});
+
+const key = (f: { root: string }) => join(f.root, "no-key");
+
+// FR-63.4: the configured url wins over the clone's stored origin.
+test("FR-63.4 fetchRepo fetches from the configured url when it changed", async () => {
+  const a = await makeRepo();
+  const b = await makeRepo({ root: join(a.root, "b") });
+  await b.work.write("ONLY-B.md", "b\n");
+  b.work.commit("only b");
+  b.work.push();
+  const dir = join(a.root, "data", "repos", "api");
+  await ensureClone({ name: "api", url: a.origin, key: key(a) }, dir, "");
+  await fetchRepo({ name: "api", url: b.origin, key: key(a) }, dir, "");
+  assert.equal(rev(dir, "refs/heads/main"), rev(b.work.dir, "main"));
+});
+
+// FR-63.5: origin/HEAD is refreshed when a rename left it dangling; a base missing on origin fails.
+test("FR-63.5 fetchRepo refreshes a dangling origin/HEAD after the default branch is renamed", async () => {
+  const f = await makeRepo();
+  const repo = { name: "api", url: f.origin, key: key(f) };
+  const dir = join(f.root, "data", "repos", "api");
+  await ensureClone(repo, dir, "");
+  // Git 2.48+ may refresh origin/HEAD on fetch by itself; keep the test deterministic.
+  execFileSync("git", ["config", "remote.origin.followRemoteHEAD", "never"], { cwd: dir });
+  f.work.git("config", "-f", ".sdd/config", "sdd.base", "trunk");
+  f.work.commit("base is trunk");
+  f.work.git("push", "-q", "origin", "main:trunk");
+  execFileSync("git", ["symbolic-ref", "HEAD", "refs/heads/trunk"], { cwd: f.origin });
+  execFileSync("git", ["branch", "-D", "main"], { cwd: f.origin });
+  await fetchRepo(repo, dir, "");
+  assert.equal(await baseBranch(dir), "trunk");
+  assert.equal(rev(dir, "refs/heads/trunk"), rev(f.work.dir, "HEAD"));
+});
+
+test("FR-63.5 fetchRepo fails with the reason when the base branch is not on origin", async () => {
+  const f = await makeRepo();
+  f.work.git("config", "-f", ".sdd/config", "sdd.base", "trunk");
+  f.work.commit("base is trunk, which origin lacks");
+  f.work.push();
+  const repo = { name: "api", url: f.origin, key: key(f) };
+  const dir = join(f.root, "data", "repos", "api");
+  await ensureClone(repo, dir, "");
+  await assert.rejects(fetchRepo(repo, dir, ""), { message: "base branch trunk is not on origin" });
+});
+
+// FR-63.6: a lock left by a killed fetch stops every later fetch until it is old enough to be dead.
+test("FR-63.6 fetchRepo removes a ref lock older than the fetch timeout and keeps a fresh one", async () => {
+  const f = await makeRepo();
+  const repo = { name: "api", url: f.origin, key: key(f) };
+  const dir = join(f.root, "data", "repos", "api");
+  await ensureClone(repo, dir, "");
+  f.work.git("push", "-q", "origin", "HEAD:locked");
+  const lock = join(dir, ".git", "refs", "remotes", "origin", "locked.lock");
+  await writeFile(lock, "");
+  await assert.rejects(fetchRepo(repo, dir, ""), { message: /\.lock/ });
+  assert.equal(existsSync(lock), true);
+  const old = new Date(Date.now() - 120_000);
+  await utimes(lock, old, old);
+  await fetchRepo(repo, dir, "");
+  assert.equal(existsSync(lock), false);
+  assert.match(refs(dir, "refs/remotes"), new RegExp(`refs/remotes/origin/locked `));
 });
