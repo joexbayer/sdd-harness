@@ -2,9 +2,10 @@
 id: 63
 type: fix
 title: sdd-server: search and fetch survive real repo changes
-status: open
+status: shipped
 created: 2026-11-08
 approved: 93545e30ba06bfdb0bc670f9d5418ec2a5cb80a2 2026-11-08 joexbayer
+shipped: 2026-11-08
 ---
 # 63 sdd-server: search and fetch survive real repo changes
 
