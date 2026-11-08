@@ -47,8 +47,16 @@ D-63.2 Age guard on locks, not a blanket delete: `busy` makes the server the onl
 `server/test/search.test.ts` (FR-63.1, 63.2), `index.test.ts` (FR-63.3), `mirror.test.ts` (FR-63.4 to 63.6: a changed url serves the new repo; origin/HEAD removed by hand is refreshed after a rename; a base gone from origin fails with the reason; a 2-minute-old lock is removed, a fresh one kept). Each written first and seen to fail.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-63.1: `server/src/search.ts:31-34` lists existing refs (`for-each-ref`) and drops indexed refs that are gone. Test: `search.test.ts` "FR-63.1 search skips an indexed ref...".
+- FR-63.2: `search.ts:19,22` collects `skipped`; `tools.ts:21-22` (schema), `:196` (one `not searched: <repo> (<reason>)` line per repo). Test: `search.test.ts` "FR-63.2 ..." (failed and never-indexed repo, structured and text).
+- FR-63.3: `repo-index.ts:98` `show` says `repo X is not indexed yet: <error>`; "no repo" kept for unconfigured names. Test: `index.test.ts` "FR-63.3 ...".
+- FR-63.4: `mirror.ts:72` `remote set-url origin <url>` before fetch. Test: `mirror.test.ts` "FR-63.4 ...".
+- FR-63.5: `mirror.ts:77-85` `rev-parse origin/HEAD`, else `remote set-head origin --auto`; throws `base branch X is not on origin` (the old silent skip of update-ref is gone). Tests: "FR-63.5 ..." x2 (rename to trunk with followRemoteHEAD=never; base gone).
+- FR-63.6: `mirror.ts:58-66` `removeStaleLocks` (regular files only, under `.git/refs` plus `packed-refs.lock`, older than FETCH_MS), called first in `fetchRepo`. Test: "FR-63.6 ..." (fresh lock kept and fetch fails, backdated 2 min lock removed).
+- Deviations: `search` also skips a repo (reason `base branch X is missing in the clone`) when even the base ref is gone; the rename test sets `sdd.base = trunk` on the new branch, since base comes from origin/HEAD's config. Existing search tests' `deepEqual` gained `skipped: []`.
+- Follow-ups: none.
+
+Verified by:
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
