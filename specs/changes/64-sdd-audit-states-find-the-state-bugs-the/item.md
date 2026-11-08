@@ -8,43 +8,35 @@ created: 2026-11-08
 # 64 /sdd-audit-states: find the state bugs the code can reach
 
 ## Why
-<!-- The problem in plain words: who hurts, and how. 2-4 lines. -->
+A state-machine hunt on sdd-server (2026-11-08) found 5 reproduced bugs in code that had passed its tests, a verifier and a security
+pass: bugs between features over time, which per-item checks cannot see. The user wants it repeatable. The prompt is a sweep, so it runs on demand.
 
 ## What changes
-<!-- User-visible behaviour. One requirement per entry, each with a concrete example:
-    US-64.1 As a <role> I <action>, so that <outcome>.
-    FR-64.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-      e.g. <input> → <output>
-Start each entry at the beginning of its line, ID first. IDs never change; leave gaps. -->
+FR-64.1 WHEN `sdd sync <agent>` installs skills THE SYSTEM SHALL install `/sdd-audit-states`.
+  e.g. `sdd sync claude` → `.claude/skills/sdd-audit-states/SKILL.md`
+FR-64.2 WHEN the skill runs THE SYSTEM SHALL tell the agent to: take one area (ask if none is named); open a chore item; have a fresh subagent, read-only on the repo, find explicit and implicit state machines and the invalid states or moves the code can reach, through retries, concurrency, restarts and half-done failures, each CONFIRMED by a script or test that shows it, or PLAUSIBLE; keep `specs/kb/state-machines.md` short (machines with a confirmed bug or an invariant that matters, each invariant saying what enforces it); present a ranked list in chat; open one fix item per group the human picks, its regression test first.
+  e.g. `/sdd-audit-states billing` → the ranked list in chat, `CONFIRMED` findings with the sequence and smallest fix
 
 ## Not in scope (optional)
-<!-- What this deliberately leaves out, and where it went. -->
+- Running it automatically or per item; new commands, config or gates. A whole-repo mode: one area at a time keeps findings deep and tokens down.
 
 ## How
-<!-- What a reviewer needs: an ASCII sketch of the moving parts, key types or signatures,
-and the decisions they would question, each at the start of its line:
-    D-64.1 <decision>, because <reason>. -->
+One text file, `.sdd/core/agents/skills/audit-states.md`, installed by the existing `install_skills`. The sync messages in `agents/claude.sh` and `codex.sh` name it; README's commands get a line.
+D-64.1 A chore, not a spike: a spike's files don't land, and the findings note should.
+D-64.2 Fixes are ordinary `fix` items: the same plan, approval and review; the audit fixes nothing itself.
+Verification: the skill is text, so a test proves it is installed and says the rules. Whether it finds bugs was shown by the sdd-server hunt, whose prompt it reuses.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-64.4 rejects non-images and files over 5 MB -->
+none: a text file; the hunt runs read-only on the repo and writes scripts to a temp folder.
 
 ## Questions (optional)
 <!-- Q-64.1 <question> → recommend: <answer>. Resolve before building. -->
 
 ## Done when
-<!-- DOD-64.1 <observable outcome>, e.g. "works against staging". -->
+`tests/t_agents.sh` passes under sh and dash; `sdd check` passes.
 
 ## Tasks (optional)
-<!-- Small, ordered steps the builder does one at a time, each in one sitting, each with a test
-of its own (so it can pass before the next task exists):
-    - [ ] T-64.1 Page the orders query, FR-64.1 (files: src/orders.js; test: npm test -- orders; size: S)
-Size each task `S`, `M` or `L` (none is M): consecutive S tasks go to one builder together, M and
-L ones alone. Add `; expect: fail` for a test written first (it must fail), or
-`; expect: fail "<text>"` (it must fail with that text in its output); without `test:` the
-full check runs. `.sdd/bin/sdd task done T-64.1` ticks a task when its test passes. -->
+- [ ] T-64.1 The skill, sync messages and README, FR-64.1, FR-64.2 (files: .sdd/core/agents/skills/audit-states.md, .sdd/core/agents/claude.sh, .sdd/core/agents/codex.sh, README.md, tests/t_agents.sh; test: SRC=$PWD SH=dash dash tests/t_agents.sh; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
