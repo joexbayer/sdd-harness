@@ -87,4 +87,10 @@ assert_contains "$(cat AGENTS.md)" 'Never send the human to read a file: summari
 # FR-51.2: the AGENTS.md block init writes.
 assert_contains "$(cat AGENTS.md)" '- Handing the human a step: name its skill (`/sdd-new`, `/sdd-review`, `/sdd-ship`) when this
   agent has them (`.sdd/bin/sdd sync <agent>`), with the command as fallback.'
+# FR-66.5: the docs stage what init made by name, never git add -A.
+for d in README.md MIGRATE.md; do
+	grep -q 'git add -A' "$SRC/$d" && fail "$d stages with git add -A"
+	grep -q 'git add .sdd AGENTS.md' "$SRC/$d" || fail "$d does not stage .sdd AGENTS.md by name"
+	grep -q '\.gitleaks\.toml' "$SRC/$d" || fail "$d does not name .gitleaks.toml"
+done
 echo ok

@@ -19,7 +19,8 @@ curl -fsSL https://raw.githubusercontent.com/joexbayer/sdd-harness/main/install.
 cd your-repo && git switch main
 sdd init                    # copies .sdd/ into the repo, writes .sdd/config, adds a block to AGENTS.md
 sdd sync claude             # skills and hooks for Claude Code (or: codex)
-git add -A && git commit -m "chore: adopt sdd"
+git add .sdd AGENTS.md                # init made these; add .gitleaks.toml too when it wrote one
+git commit -m "chore: adopt sdd"
 ```
 
 Then tell your agent what you want, or type `/sdd-new add CSV export`. Existing project or Spec

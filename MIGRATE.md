@@ -9,7 +9,8 @@ One page. Pick your case, run the steps in order. Install the `sdd` command once
 cd your-repo && git switch main          # install on the base branch: items branch from it
 sdd init                                 # copies .sdd/, writes .sdd/config, adds a block to AGENTS.md
 sdd sync claude                          # skills (/sdd-new, /sdd-review, /sdd-ship …) and the stop hook
-git add -A && git commit -m "chore: adopt sdd"
+git add .sdd AGENTS.md                # init made these; add .gitleaks.toml too when it wrote one
+git commit -m "chore: adopt sdd"
 ```
 
 Then fix what `init` warned about:
@@ -31,6 +32,8 @@ Then fix what `init` warned about:
 - **Secret scan.** With gitleaks installed, `init` adds it to the gate and writes a `.gitleaks.toml`
   that skips agent worktrees (`.claude/worktrees/`). Fake keys in test fixtures: `gitleaks dir . -v`
   prints their fingerprints; check each is fake, then list them in `.gitleaksignore`.
+  The allowlist lists the directories git ignored when `init` ran: one ignored later is scanned until
+  you add it (`'''^dir/'''` under `paths`).
 
 ## New project
 
