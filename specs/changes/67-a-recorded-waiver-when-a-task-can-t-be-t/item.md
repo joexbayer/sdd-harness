@@ -47,8 +47,16 @@ An agent can edit the item and write a waiver line itself, as it can append to t
 `tests/t_task.sh` (FR-67.1, 67.4, 67.7), `tests/t_ship.sh` or nearest (FR-67.2, and an unwaived hand-tick still refused), `t_review` or nearest (FR-67.3), `t_agents.sh` (FR-67.5), `t_prompts_tests.sh` (FR-67.6, 67.8). Written first, seen to fail.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-67.1: `task.sh` `waive` branch (shared `tick_box`; writes `## Waived` before `## Review`, else at the end; who = `git config user.name`, date `date +%F`; no commit). Test: t_task.sh (waive section).
+- FR-67.2: `ship.sh` skips waived tasks in `unproven` and `byhand`; `common.sh` `waived`. Test: t_task.sh (unwaived hand-tick refused, then both waived and shipped).
+- FR-67.3: `review.sh` prints `waived  T-..` lines. Test: t_task.sh.
+- FR-67.4: `task.sh` refuses no reason, unknown task, newline. Test: t_task.sh.
+- FR-67.5: `claude.sh` ask rules and messages. Test: t_agents.sh (24 matching rules, 25 in all).
+- FR-67.6: `build.md` "Never tick a box by hand" and `task waive` in "Never run". Tests: t_prompts_tests.sh, t_role_guard.sh.
+- FR-67.7: `analyze.sh` warn loop (no `<id>` only, exit code unchanged). Test: t_task.sh.
+- FR-67.8: `finish.md`. Test: t_prompts_tests.sh.
+- Also: `common.sh` `missing_sections` and `parse_item` end Built at `## Waived` (a waiver is not Built written; tested red without it). help.sh and README updated.
+- Deviations: build-step word ceiling 750 to 770 (t_prompts_tests.sh). The t_role_guard.sh "Never run" assertions follow the new sentence. `task waive` has no `human_only` guard for role runs (not in the plan).
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them

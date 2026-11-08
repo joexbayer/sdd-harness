@@ -50,7 +50,7 @@ version), then `sdd init` in each repo. Uninstall: `rm -r ~/.local/bin/sdd ~/.lo
 | `sdd approve` · `sdd ship` | the human's two steps |
 | `sdd check` | your tests and linters, plus secret scanning with gitleaks |
 | `sdd review` | what was built, requirement by requirement |
-| `sdd task [next \| done <T-id>]` | the tasks; `done` runs a task's test before ticking it |
+| `sdd task [next \| done <T-id> \| waive <T-id> "why"]` | the tasks; `done` runs a task's test before ticking it; `waive` (the human's) ticks one that cannot be run and records why in the item |
 | `sdd ls` · `sdd show <id>` · `sdd status` | items across all branches (`--json` for tools) |
 | `sdd run <role> <id>` · `sdd usage` | run a role on its own model; tokens, cost, time |
 | `sdd sync <agent>` · `sdd tidy` | per-developer glue; clean up shipped branches |

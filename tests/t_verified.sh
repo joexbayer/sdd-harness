@@ -31,7 +31,7 @@ assert_contains "$out" 'else `.sdd/bin/sdd run verifier 1` if the project sets t
 assert_contains "$out" 'different model than yours'
 assert_contains "$out" 'reports only findings, each with the command and its output, and never edits code or the plan'
 assert_contains "$out" '  Verified by: <its model>: <n> of <m> FRs proven; <its findings in a few words, or "no findings">'
-assert_contains "$out" 'or, when no verifier could run, `Verified by: none` and why.'
+assert_contains "$out" 'or, when no verifier could run, `Verified by: none` and why (ship refuses it where the `verified` gate blocks).'
 
 # FR-22.2: a verifier role on a Claude model gets its subagent, with what a verifier does.
 setcfg role.verifier.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
