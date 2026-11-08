@@ -40,8 +40,8 @@ none: a text file; the hunt runs read-only on the repo and writes scripts to a t
 - [x] T-64.1 The skill, sync messages and README, FR-64.1, FR-64.2 (files: .sdd/core/agents/skills/audit-states.md, .sdd/core/agents/claude.sh, .sdd/core/agents/codex.sh, README.md, tests/t_agents.sh; test: SRC=$PWD SH=dash dash tests/t_agents.sh; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-64.1, FR-64.2: `.sdd/core/agents/skills/audit-states.md`, installed by `install_skills`; sync messages in `claude.sh` and `codex.sh`; a README line. Test: `tests/t_agents.sh` (installed, excluded from git, and states each rule).
+- Check passed. Security: a text file; the hunt it asks for is read-only on the repo.
 
 ## Review (optional)
 <!-- The human's review notes: what to change, one per line. The agent works through them
