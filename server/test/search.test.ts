@@ -1,5 +1,6 @@
 import { before, test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { RepoIndex } from "../src/repo-index.ts";
@@ -56,13 +57,13 @@ test("FR-53.30 search finds the query in open items' plans and on the base branc
   assert.equal(out.matches.some((m) => m.path === "README.md"), false, "only specs/ is searched");
   const long = out.matches.find((m) => m.text.startsWith("xxx"));
   assert.equal(long!.text.length, 300);
-  assert.deepEqual(await search(ix, { query: "t.nant", repo: "api" }), { matches: [], truncated: false });
+  assert.deepEqual(await search(ix, { query: "t.nant", repo: "api" }), { matches: [], truncated: false, skipped: [] });
 });
 
 test("FR-53.30 a query is text, never an option", async () => {
   const marker = join(api.root, "pwned");
   const out = await search(ix, { query: `--open-files-in-pager=touch ${marker}` });
-  assert.deepEqual(out, { matches: [], truncated: false });
+  assert.deepEqual(out, { matches: [], truncated: false, skipped: [] });
   assert.equal(existsSync(marker), false);
 });
 
@@ -103,4 +104,30 @@ test("FR-53.30 FR-53.31 the search tool: schema, lines, and the cap", async () =
   const unknown = await call("search", { query: "tenant", repo: "nope" });
   assert.equal(unknown.isError, true);
   assert.equal(unknown.text, "no repo nope (repos: api, web)");
+});
+
+// FR-63.2: a repo with no usable index is named, not skipped silently.
+test("FR-63.2 search names repos that are not indexed or failed to index", async () => {
+  const two = new RepoIndex({ data: join(api.root, "data2"), knownHosts: "", bundled: BUNDLED, repos: [
+    { name: "api", url: api.origin, key: "k" }, { name: "gone", url: join(api.root, "missing.git"), key: "k" },
+    { name: "web", url: web.origin, key: "k" }] });
+  await two.rebuild(two.repos[0]);
+  await two.rebuild(two.repos[1]);
+  const out = await search(two, { query: "tenant" });
+  assert.equal(out.matches.length > 0, true);
+  assert.deepEqual(out.skipped?.map((s) => s.repo), ["gone", "web"]);
+  assert.match(out.skipped![0].reason, /missing\.git/);
+  assert.equal(out.skipped![1].reason, "not indexed yet");
+  const r = await caller(two)("search", { query: "tenant" });
+  assert.ok(r.text.split("\n").includes("not searched: web (not indexed yet)"), r.text);
+  assert.ok(r.text.includes("not searched: gone ("), r.text);
+});
+
+// FR-63.1: a branch pruned from the clone since the last index must not sink the whole search.
+test("FR-63.1 search skips an indexed ref that no longer exists", async () => {
+  execFileSync("git", ["update-ref", "-d", `refs/remotes/origin/${tenants}`], { cwd: ix.snapshot("api")!.clone });
+  const out = await search(ix, { query: "tenant", repo: "api" });
+  assert.equal(out.truncated, false);
+  assert.deepEqual(out.matches.map((m) => m.path), ["specs/archive/5-old/item.md", "specs/kb/tenancy.md"].sort());
+  assert.equal(out.matches.every((m) => m.ref === "main"), true);
 });

@@ -5,7 +5,7 @@ import { gitEnv } from "./mirror.ts";
 import type { RepoIndex } from "./repo-index.ts";
 
 export interface Match { repo: string; ref: string; item: number | null; path: string; line: number; text: string }
-export interface SearchOut { matches: Match[]; truncated: boolean }
+export interface SearchOut { matches: Match[]; truncated: boolean; skipped: { repo: string; reason: string }[] }
 
 const BUDGET_MS = 10_000;
 const TEXT = 300;
@@ -16,9 +16,10 @@ export async function search(ix: RepoIndex, q: { query: string; repo?: string; l
   const t0 = Date.now();
   const matches: Match[] = [];
   let truncated = false;
+  const skipped: SearchOut["skipped"] = [];
   for (const name of q.repo ? [q.repo] : [...ix.names()].sort()) {
     const s = ix.snapshot(name);
-    if (!s || s.gen === 0) continue;
+    if (!s || s.gen === 0) { skipped.push({ repo: name, reason: s?.error || "not indexed yet" }); continue; }
     // The base first, then item branches (by id): a line on both is reported once, from the base,
     // so an item branch is named only for lines it added or changed (FR-53.32).
     const refs: { git: string; ref: string; item: number | null }[] = s.rows
@@ -26,6 +27,11 @@ export async function search(ix: RepoIndex, q: { query: string; repo?: string; l
       .sort((a, b) => a.id - b.id)
       .map((r) => ({ git: r.source === "remote" ? `refs/remotes/${r.branch}` : `refs/heads/${r.branch}`, ref: r.branch, item: r.id }));
     refs.unshift({ git: `refs/heads/${s.base}`, ref: s.base, item: null });
+    // A ref pruned since the index would make git grep exit 128 for the whole repo.
+    const have = new Set((await run("git", ["for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"],
+      { cwd: s.clone, env: gitEnv(), timeoutMs: BUDGET_MS, maxBytes: 32 << 20 })).stdout.split("\n"));
+    for (let i = refs.length - 1; i >= 0; i--) if (!have.has(refs[i].git)) refs.splice(i, 1);
+    if (refs.length === 0) { skipped.push({ repo: name, reason: `base branch ${s.base} is missing in the clone` }); continue; }
     const left = budgetMs - (Date.now() - t0);
     if (left <= 0) { truncated = true; break; }
     const r = await run("git", ["grep", "-n", "-I", "-i", "-F", "-z", "--no-textconv", "-e", q.query,
@@ -49,5 +55,5 @@ export async function search(ix: RepoIndex, q: { query: string; repo?: string; l
     }
     if (matches.length === limit && truncated) break;
   }
-  return { matches, truncated };
+  return { matches, truncated, skipped };
 }
