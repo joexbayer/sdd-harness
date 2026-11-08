@@ -106,8 +106,15 @@ useDefault = true
 
 [allowlist]
 description = "agent worktrees (Claude Code isolation: worktree): copies git does not commit"
-paths = ['''^\.claude/worktrees/''']
 EOF
+		# FR-66.3: also skip the directories git ignores now (build/, node_modules/): gitleaks dir
+		# would read them all. Ignored files such as .env stay scanned.
+		{
+			printf "paths = ['''^\\\\.claude/worktrees/'''"
+			git ls-files --others --ignored --exclude-standard --directory | grep '/$' | grep -vxF '.claude/worktrees/' |
+				sed 's/[][\\.*^$+?(){}|]/\\&/g' | while IFS= read -r d; do printf ", '''^%s'''" "$d"; done
+			echo ']'
+		} >>.gitleaks.toml
 		echo "wrote .gitleaks.toml (gitleaks' default rules; skips .claude/worktrees/, agents' copies of the repo)"
 	elif ! grep -qF '.claude/worktrees' .gitleaks.toml; then
 		echo "tip     .gitleaks.toml: add '^\\.claude/worktrees/' to its allowlist paths, or gitleaks also scans agents' worktree copies of the repo"

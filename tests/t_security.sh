@@ -99,4 +99,32 @@ out=$(PATH=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x
 assert_contains "$out" "tip     install gitleaks"
 assert_not_contains "$(git config -f .sdd/config --get-all check.run)" gitleaks
 [ ! -e .gitleaks.toml ] || fail "no gitleaks in the check, yet .gitleaks.toml was written" # FR-46.3
+
+# FR-66.3: the directories git ignores are skipped by the scan, ignored files still are scanned,
+# and a repo's own .gitleaks.toml is left alone. Real gitleaks, when installed.
+if command -v gitleaks >/dev/null 2>&1; then
+	new_repo gl4
+	rm -rf .sdd .gitleaks.toml && printf 'build/\nout.dir/\n.env\n' >.gitignore && git add -A && git commit -qm ignore >/dev/null 2>&1
+	key="ghp_aB3dE5gH7jK9mN1pQ3sT5vW7yZ9bC1eF3hJ5"
+	mkdir -p build out.dir src
+	echo "token = $key" >build/a.txt
+	echo "token = $key" >out.dir/a.txt
+	echo "GITHUB_TOKEN=$key" >.env
+	echo "token = $key" >src/a.txt
+	sdd init >/dev/null 2>&1
+	assert_contains "$(cat .gitleaks.toml)" "'''^build/'''"
+	assert_contains "$(cat .gitleaks.toml)" "'''^out\\.dir/'''"
+	assert_contains "$(cat .gitleaks.toml)" "'''^\\.claude/worktrees/'''"
+	out=$(gitleaks dir . --no-banner -v -c .gitleaks.toml 2>&1)
+	assert_not_contains "$out" 'build/a.txt'
+	assert_not_contains "$out" 'out.dir/a.txt'
+	assert_contains "$out" '.env'
+	assert_contains "$out" 'src/a.txt'
+	# A repo's own file is never rewritten, ignored directories or not.
+	new_repo gl5
+	rm -rf .sdd && printf 'build/\n' >.gitignore && mkdir build && echo x >build/x
+	printf '[extend]\nuseDefault = true\n' >.gitleaks.toml && git add -A && git commit -qm own >/dev/null 2>&1
+	sdd init >/dev/null 2>&1
+	assert_eq "$(cat .gitleaks.toml)" "$(printf '[extend]\nuseDefault = true')"
+fi
 exit 0
