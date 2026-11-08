@@ -20,7 +20,7 @@ assert_contains "$out" 'Assumptions to check'
 assert_contains "$out" 'load-bearing questions first'
 assert_contains "$out" 'Cases that share one rule share one FR'
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
-[ "$w" -le 800 ] || fail "plan step is $w words (ceiling 800)"
+[ "$w" -le 820 ] || fail "plan step is $w words (ceiling 820)"
 # One phrase per rule (D-55.1): FR-35.3 test rules, FR-36.6 by: planner, FR-39.3 shared names,
 # FR-41.1 the approval ask, FR-42.1 a setup that tells the rules apart; FR-20.3 subtract before
 # adding, FR-20.5 probe before asking (were t_discipline.sh).
@@ -30,7 +30,8 @@ for p in 'so keep it fast' 'mark deep tests so check.run' 'make cost settings mi
 	'Subtract before you add' 'had the requirement been there from the start' \
 	'Before writing a question for the human, check whether running something' \
 	'how this change can be fully verified' 'flags that can contradict each other become one status' 'write its size in a year' 'no query in a loop (N+1)' 'No cache, queue or new service until a number asks' \
-	'A list endpoint gets a test that counts its queries'; do
+	'A list endpoint gets a test that counts its queries' \
+	'expect: fail "goldens 0"'; do
 	assert_contains "$out" "$p"
 done
 
@@ -50,6 +51,10 @@ for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review
 	'Report only commands you ran' 'the control crossed' 'No unbounded list or query'; do
 	assert_contains "$out" "$p"
 done
+# FR-65.4 a wrong test command: stop and ask; FR-65.5 no claim of approval.
+assert_contains "$out" 'stop and ask for re-approval'
+assert_contains "$out" 'The plan is settled and the human is not watching.'
+assert_not_contains "$out" 'approved the plan'
 assert_contains "$out" "A test that only repeats another's case may be deleted"
 assert_not_contains "$out" 'so keep it fast'
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')

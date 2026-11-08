@@ -100,6 +100,9 @@ bad=$(tsv 8 "$row")
 [ "$(gate_level approved "$ITYPE")" = off ] || approval_ok ||
 	die "the plan is not approved, or changed since: the human runs $CMD approve first (a task's test runs only for the approved plan)"
 
+# FR-65.1, FR-65.2: the last non-blank line of a log.
+last_line() { grep -v '^[[:space:]]*$' "$1" | tail -n 1; }
+shown=
 test=$(tsv 5 "$row")
 expect=$(tsv 6 "$row")
 reason=$(tsv 10 "$row")
@@ -140,11 +143,13 @@ else
 			echo "✗ $tid failed$without, but not for the expected reason ($reason); log: $log"
 			exit 1
 		fi
+		[ -n "$reason" ] || shown="  red for: $(last_line "$log") (no expected text: check this is the bug)"
 		how="its test fails${without:-, as expected}"
 		[ -z "$reason" ] || how="$how: $reason"
 	else
 		[ "$rc" -eq 0 ] || { tail -n 20 "$log"; echo "✗ $tid: its test failed (exit $rc; log: $log)"; exit 1; }
 		how="its test passed"
+		shown="  last line: $(last_line "$log")"
 	fi
 fi
 
@@ -163,5 +168,6 @@ echo "$tid" >>"$record"
 case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
 printf '✓ %s done (%s) · commit with: %s(%s): %s %s\n' "$tid" "$how" "$kind" "$ID" "$tid" "$(tsv 3 "$row")"
 # FR-51.3: an earlier tick its commit did not name, while an amend still fixes it.
+[ -z "$shown" ] || echo "$shown"
 unnamed_note
 echo "next    commit the code and $IFILE together, then: $CMD next"

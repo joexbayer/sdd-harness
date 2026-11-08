@@ -20,7 +20,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
   escaping and crypto.
 - End the plan with small, ordered tasks under "## Tasks", each naming its files, FRs,
   `size: S|M|L` and a test that can pass before later tasks exist (new, or extending an
-  existing one). An `expect: fail` task (or `expect: fail "<text>"`, the text its red run must print) only
+  existing one). An `expect: fail` task (or `expect: fail "<text>"`, the text its red run must print; give it when known, e.g. `expect: fail "goldens 0"`) only
   writes the failing test; its code is the next task. Sizes: S a few lines, M a sitting, L a big
   one; consecutive S tasks share a builder. A
   test-first task can be `by: planner`: the planner writes the test. The builder may be a small model that sees only its batch: say what it needs to know.
