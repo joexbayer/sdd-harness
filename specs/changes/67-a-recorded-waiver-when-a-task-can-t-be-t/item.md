@@ -4,6 +4,7 @@ type: fix
 title: A recorded waiver when a task can't be ticked
 status: open
 created: 2026-11-08
+approved: 7c5f6d917f4a7a2d99d280b349a515a60ada0547 2026-11-08 joexbayer
 ---
 # 67 A recorded waiver when a task can't be ticked
 
