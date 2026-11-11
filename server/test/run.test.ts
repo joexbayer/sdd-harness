@@ -1,28 +1,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { run } from "../src/run.ts";
 import { gitEnv } from "../src/mirror.ts";
+import { tmp } from "./fixtures.ts";
 
-const alive = (marker: string) => {
+// alive: does a process with this pid exist (signal 0 asks without signalling)?
+const alive = (pid: number) => {
   try {
-    return execFileSync("pgrep", ["-f", marker], { encoding: "utf8" }).trim() !== "";
-  } catch (e) {
-    // pgrep exits 1 when nothing matches; anything else (no pgrep) must not read as "none left".
-    if ((e as { status?: number }).status === 1) return false;
-    throw e;
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
 };
 
-// FR-70.2: the timeout kills the child and everything it started (found by a unique argv marker).
+// FR-70.2: the timeout kills the child and everything it started. The grandchild writes its own
+// pid to a file, so the test needs no pgrep.
 test("FR-70.2 a timed-out child's own children are killed too", async () => {
-  const marker = `sdd-gc-${process.pid}-${Date.now()}`;
+  const pidFile = join(await tmp(), "grandchild.pid");
   const started = Date.now();
-  const r = await run("sh", ["-c", `sh -c "sleep 301; :" ${marker} & wait`], { env: gitEnv(), timeoutMs: 1000, maxBytes: 1 << 20 });
+  const r = await run("sh", ["-c", `sh -c 'echo $$ >"$0"; exec sleep 301' "${pidFile}" & wait`],
+    { env: gitEnv(), timeoutMs: 1000, maxBytes: 1 << 20 });
   assert.equal(r.code, 1);
   assert.match(r.stderr, /^sh: timed out after 1 s\n/);
   assert.ok(Date.now() - started < 10_000);
-  assert.equal(alive(marker), false);
+  const pid = Number((await readFile(pidFile, "utf8")).trim());
+  assert.ok(pid > 1, "the grandchild started");
+  // SIGKILL is delivered at once; the kernel may take a moment to reap.
+  for (let i = 0; i < 20 && alive(pid); i++) await new Promise((res) => setTimeout(res, 100));
+  assert.equal(alive(pid), false);
 });
 
 test("run keeps its error texts: not found, output cap, exit code", async () => {
