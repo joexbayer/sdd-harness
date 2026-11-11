@@ -97,4 +97,34 @@ for d in README.md MIGRATE.md; do
 	grep -q 'git add .sdd AGENTS.md' "$SRC/$d" || fail "$d does not stage .sdd AGENTS.md by name"
 	grep -q '\.gitleaks\.toml' "$SRC/$d" || fail "$d does not name .gitleaks.toml"
 done
+
+# FR-69.1: {{if <fact>}} blocks print only when the fact holds for the type; FR-69.2: the type's own
+# prompt comes first. No block, no change.
+new_repo blocks
+mkdir -p .sdd/local/prompts
+{
+	for f in frs tasks security approval code verify nonsense; do printf '{{if %s}}\nHAS-%s\n{{end}}\n' "$f" "$f"; done
+	printf 'ALWAYS\n'
+} >.sdd/local/prompts/plan.append.md
+printf 'TYPE-FIRST\n' >.sdd/local/prompts/plan.hotfix.md
+sdd new hotfix "Down" >/dev/null 2>&1 || fail "new hotfix failed"
+out=$(sdd next 2>&1)
+for f in frs tasks security approval code verify; do
+	case $f in code) assert_contains "$out" "HAS-code" ;; *) assert_not_contains "$out" "HAS-$f" ;; esac
+done
+assert_not_contains "$out" 'HAS-nonsense'
+assert_not_contains "$out" '{{'
+assert_contains "$out" 'ALWAYS'
+before=${out%%TYPE-FIRST*}
+case $before in *'PLAN:'*) fail "type prompt not first: $before" ;; esac
+git checkout -q -b other main
+sdd new feature "Wide" >/dev/null 2>&1 || fail "new feature failed"
+out=$(sdd next 2>&1)
+for f in frs tasks security approval code verify; do assert_contains "$out" "HAS-$f"; done
+assert_not_contains "$out" 'HAS-nonsense'
+git checkout -q -b spike-b main
+sdd new spike "Look" >/dev/null 2>&1 || fail "new spike failed"
+out=$(sdd next 2>&1)
+assert_not_contains "$out" 'HAS-code'
+assert_contains "$out" 'HAS-approval'
 echo ok

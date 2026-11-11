@@ -228,19 +228,25 @@ gate_level() {
 # render <file> <id> <title> <type>: substitute {{id}} {{title}} {{type}} {{date}}
 # {{cmd}} {{base}} {{name}} literally (no regex, so titles may contain any character). A line that
 # is just {{max-size}} becomes RENDER_SIZE (next sets it; FR-39.1), or nothing when that is empty.
+# Lines from {{if <fact>}} to {{end}} (each alone on its line; no nesting, no else) print only when
+# <fact> is a word of RENDER_FACTS (next sets it from type_facts; FR-69.1); an unknown fact hides.
 RENDER_DATE=
 RENDER_BASE=
+RENDER_FACTS=
 RENDER_SIZE=
 render() {
 	[ -n "$RENDER_DATE" ] || RENDER_DATE=$(date +%F)
 	[ -n "$RENDER_BASE" ] || RENDER_BASE=$(cfg sdd.base main)
 	R_ID=$2 R_TITLE=$3 R_TYPE=$4 R_DATE=$RENDER_DATE R_CMD=$CMD R_BASE=$RENDER_BASE R_NAME=$NAME \
-		R_SIZE=$RENDER_SIZE awk '
+		R_SIZE=$RENDER_SIZE R_FACTS=" $RENDER_FACTS " awk '
 	function repl(s, from, to,   out, i) {
 		out = ""
 		while ((i = index(s, from)) > 0) { out = out substr(s, 1, i - 1) to; s = substr(s, i + length(from)) }
 		return out s
 	}
+	/^\{\{if [a-z]+\}\}$/ { skip = !index(ENVIRON["R_FACTS"], " " substr($0, 6, length($0) - 7) " "); next }
+	$0 == "{{end}}" { skip = 0; next }
+	skip { next }
 	$0 == "{{max-size}}" { if (ENVIRON["R_SIZE"] != "") $0 = ENVIRON["R_SIZE"]; else next }
 	{
 		$0 = repl($0, "{{id}}", ENVIRON["R_ID"]); $0 = repl($0, "{{title}}", ENVIRON["R_TITLE"])
@@ -249,6 +255,20 @@ render() {
 		$0 = repl($0, "{{name}}", ENVIRON["R_NAME"])
 		print
 	}' "$1"
+}
+
+# type_facts <type>: the words that hold for the type, for the {{if}} blocks of a prompt (FR-69.1):
+# frs, tasks, security (its template has a SHALL line, a Tasks, a Security section), approval,
+# verify (that gate is not off), code (the type lands code).
+type_facts() {
+	if _t=$(sdd_path "templates/$1.md"); then
+		awk '/SHALL/ { r = 1 } /^## Tasks/ { t = 1 } /^## Security/ { s = 1 }
+			END { printf "%s%s%s", r ? " frs" : "", t ? " tasks" : "", s ? " security" : "" }' "$_t"
+	fi
+	[ "$(gate_level approved "$1")" = off ] || printf ' approval'
+	[ "$(gate_level verified "$1")" = off ] || printf ' verify'
+	[ "$(cfg "type.$1.lands" all)" = item ] || printf ' code'
+	echo
 }
 
 slugify() {

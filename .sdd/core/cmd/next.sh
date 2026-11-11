@@ -1,6 +1,6 @@
 # shellcheck shell=sh
-# next: agent-facing instructions for the current phase. Prints prompts/<phase>.md and then
-# prompts/<phase>.<type>.md; a file under local/ replaces its core twin, and
+# next: agent-facing instructions for the current phase. Prints prompts/<phase>.<type>.md and then
+# prompts/<phase>.md; a file under local/ replaces its core twin, and
 # local/prompts/<name>.append.md is added after it.
 [ $# -eq 0 ] || usage_die "usage: $NAME next"
 need_repo
@@ -135,8 +135,10 @@ if [ "$PHASE" = plan ]; then
   anything bigger; \`{{cmd}} analyze\` flags every task above M." ;;
 	esac
 fi
-prompt "$PHASE" "$ID" "$title" "$ITYPE"
+# shellcheck disable=SC2034 # read by render (common.sh)
+RENDER_FACTS=$(type_facts "$ITYPE")
 prompt "$PHASE.$ITYPE" "$ID" "$title" "$ITYPE"
+prompt "$PHASE" "$ID" "$title" "$ITYPE"
 # A filled-in plan waiting for approval: what analyze finds, for the agent to fix first (FR-19.3).
 case $WHYCODE in
 approval | changed | contract)
