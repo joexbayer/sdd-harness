@@ -6,8 +6,8 @@ markdown file. It is read-only: git stays the only way anything changes.
 
 Not on npm yet: until it is published, run it from a checkout of this repo:
 `cd server && npm ci && node src/cli.ts serve --config ./sdd-server.conf` (Node 22.18 or newer).
-The `npx sdd-server@0.1.0 …` and `npm install -g` lines below, and the Docker image (it installs the
-package), work once it is published.
+The `npx sdd-server@0.1.0 …` and `npm install -g` lines below, the Docker image (it installs the
+package) and the step 1 URL (its tag) work once it is published.
 
 ```
  your agent ──HTTPS + your token──▶ Caddy ──▶ sdd-server ──git fetch every 60 s──▶ GitHub / GitLab

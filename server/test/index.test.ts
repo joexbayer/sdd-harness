@@ -162,3 +162,18 @@ test("FR-70.3 sddJson takes its time limit as a parameter, ls 10 minutes and sho
   assert.equal(LS_MS, 600_000);
   assert.equal(SHOW_MS, 60_000);
 });
+
+// FR-70.3: the index runs under the ls limit and show under the show limit, not the other way.
+test("FR-70.3 the index uses the ls limit and show the show limit", async () => {
+  const f = await makeRepo();
+  const fake = await tmp();
+  await mkdir(join(fake, "bin"));
+  await mkdir(join(fake, "core"));
+  await writeFile(join(fake, "VERSION"), "0.0.0-fake\n");
+  await writeFile(join(fake, "bin", "sdd"), `sleep 2\ncase $1 in\nls) echo '{"id":1,"status":"open","branch":"","source":"base","title":"x"}' ;;\nshow) echo '{"id":1}' ;;\nesac\n`);
+  const ix = new RepoIndex({ data: join(f.root, "data"), knownHosts: "", bundled: fake,
+    repos: [{ name: "api", url: f.origin, key: join(f.root, "no-key") }], limits: { ls: 20_000, show: 1000 } });
+  await ix.rebuild(ix.repos[0]);
+  assert.equal(ix.snapshot("api")!.ok, true, ix.snapshot("api")!.error);
+  await assert.rejects(ix.show("api", 1, false), /timed out after 1 s/);
+});

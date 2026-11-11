@@ -7,8 +7,10 @@ import { gitEnv } from "../src/mirror.ts";
 const alive = (marker: string) => {
   try {
     return execFileSync("pgrep", ["-f", marker], { encoding: "utf8" }).trim() !== "";
-  } catch {
-    return false; // pgrep exits 1 when nothing matches
+  } catch (e) {
+    // pgrep exits 1 when nothing matches; anything else (no pgrep) must not read as "none left".
+    if ((e as { status?: number }).status === 1) return false;
+    throw e;
   }
 };
 
