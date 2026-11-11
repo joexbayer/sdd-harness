@@ -43,7 +43,7 @@ assert_contains "$out" 'Phase: build'
 # One phrase per rule: FR-42.2 the verifier hand-off, FR-51.1 the review hand-off names the skill,
 # FR-35.4 test rules, FR-55.5 duplicates may go, FR-20.1 stop after two failed fixes, FR-20.2
 # tests check behaviour (were t_discipline.sh); FR-55.7 a loose word ceiling.
-for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review: `/sdd-review`' \
+for p in 'ready for review: `/sdd-review`' \
 	'still pass if every function returned nothing' 'never from the code under test' \
 	'After two fixes resting on the same assumption fail' \
 	'Write just enough code to pass the test' 'extend an existing test' \
@@ -57,6 +57,12 @@ assert_contains "$out" 'stop only where a rule below says so'
 assert_not_contains "$out" 'without questions'
 assert_not_contains "$out" 'if truly stuck'
 assert_contains "$out" 'voids any approval'
+# FR-69.7: no verifier role: the fresh subagent is given the brief by path, not a summary of it.
+assert_contains "$out" 'given the item id and the text of .sdd/core/prompts/role-verifier.md
+(.sdd/local/ wins)'
+assert_not_contains "$out" 'reports parts nothing calls or reads'
+assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'in the plan part of the item file'
+assert_not_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'under "## What changes"'
 assert_contains "$out" 'The plan is settled and the human is not watching.'
 # FR-67.6 never tick by hand; FR-67.8 ship refuses Verified by: none where the verified gate blocks.
 assert_contains "$out" 'ship refuses it where the `verified` gate blocks'
