@@ -64,5 +64,17 @@ Written first, seen to fail: `server/test/run.test.ts` (new; FR-70.2), `mirror.t
 - [x] T-70.3 Deploy files and README that work as written, FR-70.6 FR-70.7 FR-70.8 (files: server/deploy/compose.yaml, server/deploy/sdd-server.service, server/README.md; test: sh -c 'cd server && npm test && sh scripts/docs-check.sh'; size: S)
 
 ## Built
+- FR-70.1: `mirror.ts` `sshEnv` adds the three ssh options. Test: `mirror.test.ts` (the command string). The verifier ran a clone against a listener that never answers: failed after 21 s, no ssh left; without the options still running after 35 s.
+- FR-70.2: `run.ts` uses `spawn` with `detached: true` and its own timer; on a timeout or an output overrun it kills the group (`process.kill(-pid)`, only for a pid it spawned). Test: `run.test.ts` (a grandchild found by a unique marker). Proven on macOS (0 left in 80 runs) and Linux (0 in 20).
+- FR-70.3: `sdd.ts` `LS_MS` 600 s, `SHOW_MS` 60 s; `sddJson` takes the limit; `RepoIndex` holds both (`limits`, defaults those). Test: `index.test.ts` (a fake sdd that takes 2 s: the index passes under the ls limit, show fails under a 1 s show limit).
+- FR-70.4: `config.ts` default `127.0.0.1:8080`; the conf example and README keep `listen = :8080` with the reason. Test: `config.test.ts`, `http.test.ts`. The verifier saw `127.0.0.1:8080 (LISTEN)` with no `listen`, `*:18089` with an explicit one.
+- FR-70.5: `http.ts` `/^Bearer (\S+)$/i`. Test: `http.test.ts` (lowercase 200; `Basic`, trailing words 401).
+- FR-70.6 to 70.8: `deploy/compose.yaml` (`init: true`), `deploy/sdd-server.service` (`StateDirectory=sdd-server`, no `ReadWritePaths`, the ExecStart note), `README.md` (chown of keys, not-on-npm note with the from-a-checkout command, Node 22+ at the token step, `server-v<version>` tags). Test: `scripts/docs-check.sh` asserts each.
+- Security pass (the verifier, on the diff): the group kill signals only the group this call made (a failed spawn has no pid, so nothing is killed; the timer is cleared on close); tokens, schemas and the Host allowlist untouched.
+- Deviations: `run()` always closes the child's stdin (a child that reads stdin gets EOF, not a hang). A timed-out child's exit code is now often 137 on macOS (was 1); callers test only for non-zero. Spawn EACCES gives code -13 with a message (was 1, empty).
+- Known limits, left: a descendant that leaves the group with `setsid` and keeps stdout can make `run()` wait past its limit (git and ssh as called here do not); Ctrl-C on a laptop `serve` no longer reaches in-flight children (ssh ends within about 45 s; Docker and systemd clean up). `sshEnv` is exported for its test only.
+- Follow-up: the server's timing test `http.test.ts` "serve picks up a push within the interval" fails under heavy machine load (seen once at load 19).
+
+Verified by: claude-opus-5-5: 5 of 8 FRs proven, then fixed with tests: the FR-70.2 test passed without pgrep, the index limit was untested, docs-check missed 3 clauses; 3 notes left (above)
 
 ## Review (optional)
