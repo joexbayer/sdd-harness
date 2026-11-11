@@ -28,6 +28,8 @@ assert_no_file .claude/agents/sdd-builder.md
 assert_contains "$(cat "$a")" 'Plan the given item carefully.'
 assert_no_file .claude/agents/sdd-odd.md
 assert_contains "$out" 'skipped role odd: tier weird needs a model name'
+# FR-68.1: busybox ash reads `\]` in a bracket as its end, so the model pattern has no backslash.
+sed -n '/^tier_ok()/,/^}/p' "$SRC/.sdd/core/lib/common.sh" | grep -q '\\' && fail "tier_ok has a backslash"
 assert_eq "$(sed -n 4p .claude/agents/sdd-reviewer.md)" 'Mine.'
 grep -qx '/.claude/agents/sdd-planner.md' "$(git rev-parse --git-common-dir)/info/exclude" || fail "subagent not excluded"
 s=.claude/settings.local.json

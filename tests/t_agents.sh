@@ -44,6 +44,12 @@ assert_contains "$(cat .claude/skills/sdd-new/SKILL.md)" 'Start it?'
 assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" 'types /sdd-new followed by what they want'
 assert_contains "$(sed -n 3p .claude/skills/sdd-new/SKILL.md)" 'fix this bug'
 assert_contains "$(sed -n 3p .claude/skills/sdd-review/SKILL.md)" 'wants to review it'
+# FR-68.11: the ship skill runs ship, not review (which would record the code as reviewed); on a
+# stale review it walks the human through the review first.
+k=$(cat .claude/skills/sdd-ship/SKILL.md)
+assert_not_contains "$k" '.sdd/bin/sdd review`'
+assert_contains "$k" 'code changed since your review'
+assert_contains "$k" 'sdd-review skill'
 # Strict YAML: no ": " inside a description's plain value.
 for st in new plan build review ship; do
 	sed -n 3p ".claude/skills/sdd-$st/SKILL.md" | cut -c14- | grep -q ': ' && fail "sdd-$st: ': ' in description"

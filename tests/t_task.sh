@@ -282,4 +282,36 @@ assert_contains "$out" 'waived'
 assert_not_contains "$out" 'ticked without'
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'shipped 1 into main'
+
+# FR-68.8: approved = warn: task done runs the test on a plan not approved.
+new_repo warned
+setcfg type.feature.approved warn
+sdd new feature "Warned" >/dev/null 2>&1
+f=specs/changes/1-warned/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print; print "- [ ] T-1.1 One (test: echo ran >ran.txt)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan"
+out=$(sdd task 'done' T-1.1 2>&1) || fail "task done under approved = warn: $out"
+assert_file ran.txt
+grep -q '^- \[x\] T-1.1 ' "$f" || fail "T-1.1 not ticked"
+
+# Must not change (item 68): T-1.1 and T-1.10 stay distinct in ticks, commit proof and ship.
+new_repo ten
+sdd new feature "Ten" >/dev/null 2>&1
+f=specs/changes/1-ten/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print; print "- [ ] T-1.10 Tenth (test: true)"; print "- [ ] T-1.1 First (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
+sdd task 'done' T-1.1 >/dev/null 2>&1 || fail "T-1.1 failed"
+grep -q '^- \[ \] T-1.10 ' "$f" || fail "ticking T-1.1 ticked T-1.10"
+git add -A && git commit -qm "feat(1): T-1.10 names the wrong task"
+sdd task 'done' T-1.10 >/dev/null 2>&1 || fail "T-1.10 failed"
+git add -A && git commit -qm "feat(1): T-1.10 tenth"
+fill "$f" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(T-1.1 named by no commit)"
+assert_contains "$out" 'ticked, but no commit names them: T-1.1'
+git commit -q --allow-empty -m "feat(1): T-1.1 first"
+out=$(sdd ship 2>&1) || fail "ship failed: $out"
+assert_contains "$out" 'shipped 1 into main'
 exit 0

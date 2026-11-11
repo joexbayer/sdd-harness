@@ -153,9 +153,9 @@ row=$(task_rows | T=$tid awk -F '\t' '$1 == ENVIRON["T"]')
 [ "$(tsv 2 "$row")" = open ] || die "$tid is already ticked"
 bad=$(tsv 8 "$row")
 [ -z "$bad" ] || die "$tid: $bad"
-# The test is a shell command from the item: run it only for the plan the human approved. Types
-# without an approval step (hotfix, chore) trust it like the check commands in config.
-[ "$(gate_level approved "$ITYPE")" = off ] || approval_ok ||
+# The test is a shell command from the item: run it only for the plan the human approved. Where
+# approval does not block (hotfix, chore, a warn level) it is trusted like the check commands. FR-68.8
+[ "$(gate_level approved "$ITYPE")" != block ] || approval_ok ||
 	die "the plan is not approved, or changed since: the human runs $CMD approve first (a task's test runs only for the approved plan)"
 
 # FR-65.1, FR-65.2: the last non-blank line of a log.

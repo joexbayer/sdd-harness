@@ -188,10 +188,10 @@ tier_file() {
 tier_get() { _tf=$(tier_file "$1") && git config -f "$_tf" --get "tier.$1.$2"; }
 
 # tier_ok <agent> <model>: names safe to use as a file name and inside YAML: an agent is a word,
-# a model has no spaces, quotes or newlines.
+# a model has no spaces, quotes or newlines. FR-68.1
 tier_ok() {
 	case $1 in '' | *[!a-z0-9-]*) return 1 ;; esac
-	case $2 in '' | *[!A-Za-z0-9._:/@[\]-]*) return 1 ;; esac
+	case $2 in '' | *[!]A-Za-z0-9._:/@[-]*) return 1 ;; esac
 }
 
 # cfg_mine <key> [default]: a tier or agent setting, the developer's own config first, then the
@@ -1192,15 +1192,16 @@ pr_table() {
 }
 
 # AWK_JSON: awk functions to prepend to a program. esc(s) makes s safe inside a JSON string
-# (character by character, because gsub's backslash handling differs between awks; tabs never
-# reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$20,
+# (character by character, because gsub's backslash handling differs between awks; control
+# characters, CR from CRLF files included, become \u00XX: FR-68.10). row_json() renders an item_row line ($1..$20,
 # plus $21..$26 = a PR's number, state, review, ci, url, words when ls joined one) as the fields
 # every reader sees, so a new column is added here and nowhere else.
 AWK_JSON='function esc(s,   o, i, c) {
+	if (!esc_n) for (esc_n = 1; esc_n < 32; esc_n++) esc_t[sprintf("%c", esc_n)] = sprintf("\\u%04x", esc_n)
 	o = ""
 	for (i = 1; i <= length(s); i++) {
 		c = substr(s, i, 1)
-		if (c == "\\") o = o "\\\\"; else if (c == "\"") o = o "\\\""; else if (c == "\r") o = o "\\r"; else o = o c
+		if (c == "\\") o = o "\\\\"; else if (c == "\"") o = o "\\\""; else if (c in esc_t) o = o esc_t[c]; else o = o c
 	}
 	return o
 }
