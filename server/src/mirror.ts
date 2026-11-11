@@ -24,10 +24,12 @@ export function git(dir: string, args: string[], timeoutMs = FETCH_MS): Promise<
 
 const q = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
-function sshEnv(repo: Repo, knownHosts: string): Record<string, string> {
+export function sshEnv(repo: Repo, knownHosts: string): Record<string, string> {
   return gitEnv({ GIT_SSH_COMMAND: ["ssh", "-F", "/dev/null", "-i", q(repo.key), "-o", "IdentitiesOnly=yes",
     "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", `UserKnownHostsFile=${q(knownHosts || "/dev/null")}`,
-    "-o", "GlobalKnownHostsFile=/dev/null"].join(" ") });
+    "-o", "GlobalKnownHostsFile=/dev/null",
+    // FR-70.1
+    "-o", "ConnectTimeout=20", "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3"].join(" ") });
 }
 
 // HEAD of a clone names no branch, so sdd never mistakes the empty work tree for the base branch
