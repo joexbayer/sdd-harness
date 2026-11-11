@@ -139,4 +139,15 @@ out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" "rebased onto main"
 assert_contains "$out" "branch fix/1-pushed-early deleted"
 git rev-parse -q --verify refs/heads/fix/1-pushed-early >/dev/null && fail "pushed branch should be deleted"
+
+# FR-68.4: an approved strict feature relabelled hotfix (no tasks, verifier or review gate) does not ship.
+new_repo swap
+setcfg sdd.profile strict
+planned_item feature "Swap"
+sed 's/^type: feature/type: hotfix/' "$ITEM" >"$T/f" && cp "$T/f" "$ITEM"
+echo code >code.txt && fill "$ITEM" built && git add -A && git commit -qm "fix(1): code"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(type changed after the item was opened)"
+assert_contains "$out" 'item 1 was opened as feature: its type cannot change (now hotfix); open a new item'
+assert_not_contains "$(git log --format=%s main)" 'ship'
 exit 0

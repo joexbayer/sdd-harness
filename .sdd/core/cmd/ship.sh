@@ -98,8 +98,18 @@ pr_ready() {
 		die "$BRANCH is behind $remote/$base: git merge $remote/$base (or rebase, if never pushed), then $CMD ship"
 }
 
+# type_guard: the type an item was opened with stays its type (D-68.1). FR-68.4
+type_guard() {
+	_ip="$SPECS/changes/${IDIR##*/}/item.md"
+	_add=$(git log --diff-filter=A --format=%H -- "$_ip" | tail -n 1)
+	[ -n "$_add" ] || return 0
+	_was=$(git show "$_add:$_ip" | fm_get type)
+	[ "$_was" = "$ITYPE" ] || fail "item $ID was opened as $_was: its type cannot change (now $ITYPE); open a new item"
+}
+
 # pr_gates: the gates the local ship also applies to this code: the constitution and the check.
 pr_gates() {
+	type_guard
 	guard=$(constitution_guard) || die "item $ID: $guard"
 	: >"$ST/checks/$ID.articles.log"
 	check_articles "$ST/checks/$ID.articles.log" || die "item $ID: $(printf '%s\n' "$CHECK_ARTICLES" | paste -sd ';' -)"
@@ -243,6 +253,7 @@ if [ "$(gate_level tasks "$ITYPE")" != off ]; then
 	[ -z "$unread" ] || tmsg="${tmsg:+$tmsg; }tasks $NAME cannot read: $unread"
 	[ -z "$tmsg" ] || gate tasks "item $ID: $tmsg"
 fi
+type_guard
 # The constitution blocks in every profile.
 guard=$(constitution_guard) || fail "item $ID: $guard"
 

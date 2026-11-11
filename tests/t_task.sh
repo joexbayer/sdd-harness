@@ -212,6 +212,27 @@ git commit -qam "docs(1): say why t1.sh changed"
 out=$(sdd ship 2>&1)
 assert_not_contains "$out" 'written by the planner'
 
+# FR-68.3: a later commit naming the planner's task does not hide the bent test; a commit naming it
+# before the file existed is not where it was written.
+new_repo bent2
+sdd new feature "Paging" >/dev/null 2>&1
+f=specs/changes/1-paging/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print
+	print "- [ ] T-1.1 Page test, FR-1.1 (files: t1.sh; test: sh t1.sh; expect: fail; size: S; by: planner)"
+	print "- [ ] T-1.2 Page, FR-1.1 (files: q.sh; test: sh t1.sh; size: S)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
+git commit -q --allow-empty -m "chore(1): T-1.1 start"
+echo 'grep -q page q.sh' >t1.sh && sdd task 'done' T-1.1 >/dev/null 2>&1 && git add -A && git commit -qm "test(1): T-1.1 page test" || fail "T-1.1 failed"
+echo nopage >q.sh && echo 'exit 0' >t1.sh && sdd task 'done' T-1.2 >/dev/null 2>&1 && git add -A &&
+	git commit -qm "feat(1): T-1.2 page (adjust T-1.1 test)" || fail "T-1.2 failed"
+fill "$f" built && git commit -qam "docs(1): built"
+line='item 1: T-1.1'"'"'s test t1.sh (written by the planner) changed after it was written'
+assert_contains "$(sdd review 2>&1)" "⚠ $line"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(a bent planner test, hidden by a later commit naming its task)"
+assert_contains "$out" "$line"
+
 # FR-67.1-67.4, 67.7: a waiver ticks a task the human cannot run, and says so.
 new_repo waive
 sdd new feature "Waivers" >/dev/null 2>&1

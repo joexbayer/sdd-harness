@@ -958,13 +958,13 @@ ir_batch() {
 	printf '%s\n' "$IR_FACTS" | awk -F '\t' "$AWK_TASK"'$1 == "task" && $2 ~ /^T-[0-9]+\.[0-9]+$/ { print task_row($2, $3, $4) }' | task_batch
 }
 
-# task_commit <task id>: the newest commit on this branch (since the base) whose subject names
-# the task, as a whole ID: T-4.1 is not T-4.10.
+# task_commit <task id> [all]: the newest commit on this branch (since the base) whose subject
+# names the task, as a whole ID: T-4.1 is not T-4.10. With "all": every such commit, oldest first.
 task_commit() {
-	git log --format='%h %s' "$(cfg sdd.base main)..HEAD" 2>/dev/null |
-		T=$1 awk '{ s = " " substr($0, index($0, " ") + 1) " "; t = ENVIRON["T"]
+	git log ${2:+--reverse} --format='%h %s' "$(cfg sdd.base main)..HEAD" 2>/dev/null |
+		T=$1 A=${2:-} awk '{ s = " " substr($0, index($0, " ") + 1) " "; t = ENVIRON["T"]
 			while ((i = index(s, t)) > 0) {
-				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; exit }
+				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; if (ENVIRON["A"] == "") exit; break }
 				s = substr(s, i + length(t))
 			} }'
 }
@@ -986,16 +986,21 @@ unnamed_note() {
 	[ -z "$_u" ] || echo "⚠ ticked and committed, but no commit subject names them: $(joinlist "$_u"). Ship refuses this: name each task ID in a commit subject (amend that commit while it is the last one)."
 }
 
-# bent_tests: one line per file of a done `by: planner` task that changed after the commit naming
-# the task (later commits or the working tree), unless "## Built" names the file (FR-58.1).
+# bent_tests: one line per file of a done `by: planner` task that changed after the first commit
+# naming the task with the file (later commits or the working tree), unless "## Built" names the
+# file (FR-58.1).
 bent_tests() {
 	_built=$(awk '/^## Built/ { on = 1; next } /^## / { on = 0 } on' "$IFILE")
 	_tab=$(printf '\t')
 	task_rows | awk -F '\t' '$2 == "done" && $11 == "planner" { print $1 "\t" $4 }' |
 		while IFS="$_tab" read -r _t _files; do
-			_c=$(task_commit "$_t")
-			[ -n "$_c" ] || continue
+			_cs=$(task_commit "$_t" all)
+			[ -n "$_cs" ] || continue
 			for _f in $(printf '%s\n' "$_files" | tr ',' ' '); do
+				# FR-68.3: from the first commit naming the task that has the file.
+				_c=
+				for _k in $_cs; do git cat-file -e "$_k:$_f" 2>/dev/null && _c=$_k && break; done
+				[ -n "$_c" ] || continue
 				[ -n "$(git diff --name-only "$_c" -- "$_f")" ] || continue
 				printf '%s\n' "$_built" | grep -qF -- "$_f" && continue
 				echo "item $ID: $_t's test $_f (written by the planner) changed after it was written: undo it, or say why under \"## Built\" naming the file"
