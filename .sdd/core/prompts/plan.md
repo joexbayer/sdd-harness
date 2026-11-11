@@ -25,7 +25,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
   escaping and crypto.
 {{end}}
 {{if frs}}
-- Each Security mitigation is an FR whose example is the attack and the refusal.
+- Each mitigation is an FR whose example is the attack and the refusal.
 {{end}}
 {{if tasks}}
 - End the plan with small, ordered tasks under "## Tasks", each naming its files, FRs,
@@ -33,7 +33,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
   existing one). An `expect: fail` task (or `expect: fail "<text>"`, the text its red run must print; give it when known, e.g. `expect: fail "goldens 0"`) only
   writes the failing test; its code is the next task. Sizes: S a few lines, M a sitting, L a big
   one; consecutive S tasks share a builder. A
-  test-first task can be `by: planner`: the planner writes the test. The builder may be a small model that sees only its batch: say what it needs to know.
+  test-first task can be `by: planner` (planner role): the planner writes the test. The builder may be a small model that sees only its batch: say what it needs to know.
 {{max-size}}
 - Names several tasks share (tables, routes, signatures, file paths) are fixed in the plan and
   pinned by a test in the task that first defines them.

@@ -21,6 +21,9 @@ assert_contains "$(cat "$k")" 'On the first failure'
 assert_contains "$(cat "$k")" "stop only for a task's test that proves wrong, a box that cannot be ticked, or a
 refactor that must change a test"
 assert_not_contains "$(cat "$k")" 'do not stop to ask'
+# FR-69.6 no tasks ends the loop; FR-69.9 a `by:` batch goes to that role.
+assert_contains "$(cat "$k")" '"no open tasks" or "has no tasks" ends the loop'
+assert_contains "$(cat "$k")" 'A batch marked `by: <role>` goes to that'
 assert_contains "$(cat "$k")" 'do not start the next batch'
 assert_contains "$(cat "$k")" 'until `.sdd/bin/sdd check` passes and "## Built" is written'
 assert_contains "$(cat "$k")" 'subagent type `sdd-builder`, one call per batch'

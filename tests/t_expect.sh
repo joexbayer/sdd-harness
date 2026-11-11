@@ -32,6 +32,9 @@ assert_contains "$(sdd task)" 'test: sh t1.sh (expect: fail "wordfreq: not found
 assert_contains "$(sdd task)" 'test: sh t2.sh (expect: fail)'
 assert_contains "$(sdd task next)" 'test: sh t1.sh (expect: fail "wordfreq: not found")'
 assert_contains "$(sdd next)" 'it must fail with "wordfreq: not found" in its output'
+# FR-69.8: under an expect: fail task the closing line says when to run task done.
+assert_contains "$(sdd next)" 'When its test fails as planned, run: .sdd/bin/sdd task done T-1.1'
+assert_not_contains "$(sdd next)" 'When its test passes'
 
 # FR-22.1: failing for another reason (a typo) is not red: not ticked.
 printf 'echo "syntax error near unexpected token"\nexit 2\n' >t1.sh

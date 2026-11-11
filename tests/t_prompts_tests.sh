@@ -172,7 +172,7 @@ assert_contains "$P" 'Scale: for each table'
 assert_contains "$Bd" 'verifier'
 typed feature
 assert_contains "$P" 'size:'
-assert_contains "$P" 'Each Security mitigation is an FR'
+assert_contains "$P" 'Each mitigation is an FR'
 assert_contains "$Bd" 'security pass'
 assert_contains "$Bd" 'Say it per FR'
 assert_contains "$Bd" "A task's test command that proves wrong: stop and ask the human; never bend"

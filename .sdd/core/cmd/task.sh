@@ -33,7 +33,7 @@ if [ $# -eq 0 ]; then
 fi
 if [ "$1" = next ] && [ $# -eq 1 ]; then
 	rows=$(task_rows)
-	[ -n "$rows" ] || { echo "item $ID has no tasks (add - [ ] T-$ID.1 … to the plan)"; exit 0; }
+	[ -n "$rows" ] || { echo "item $ID has no tasks: the check and the write-up are next (see: $CMD next)"; exit 0; }
 	batch=$(printf '%s\n' "$rows" | task_batch)
 	[ -n "$batch" ] || { echo "no open tasks: the check and \"## Built\" are next (see: $CMD next)"; exit 0; }
 	echo "batch   $(printf '%s\n' "$batch" | cut -f1 | paste -sd ' ' -)"

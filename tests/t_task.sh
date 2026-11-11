@@ -158,7 +158,11 @@ git commit -qam "docs(3): plan" && sdd approve >/dev/null 2>&1 || fail "approve 
 out=$(sdd task next)
 assert_contains "$out" '[ ] T-3.1 Login test (size: S; by: planner)'
 assert_contains "$out" 'test: pytest -q tests/test_login.py (expect: fail)'
-assert_contains "$(sdd next)" '  by      planner'
+# FR-69.9: no planner role here: the builder does it; with a tier set, the run line stays.
+assert_contains "$(sdd next)" '  by      planner (no such role here: do it yourself)'
+assert_not_contains "$(sdd next)" 'sdd run planner'
+setcfg role.planner.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
+assert_contains "$(sdd next)" '  by      planner (.sdd/bin/sdd run planner 3)'
 out=$(sdd task 'done' T-3.3 2>&1)
 assert_eq $? 1 "(by: not a role)"
 assert_contains "$out" 'T-3.3: by: must be a role name (a lowercase word)'
@@ -335,4 +339,10 @@ assert_contains "$out" 'ticked, but no commit names them: T-1.1'
 git commit -q --allow-empty -m "feat(1): T-1.1 first"
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'shipped 1 into main'
+# FR-69.6: an item with no tasks ends the loop; nothing says to add tasks to the approved plan.
+new_repo notasks
+sdd new fix "Plain" >/dev/null 2>&1
+out=$(sdd task next)
+assert_contains "$out" 'item 1 has no tasks: the check and the write-up are next (see: .sdd/bin/sdd next)'
+assert_not_contains "$out" 'add'
 exit 0
