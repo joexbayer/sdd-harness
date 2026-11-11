@@ -670,18 +670,24 @@ current_item() {
 }
 
 # fingerprint: tree hash of the code in the working tree (untracked files included,
-# specs/ excluded: writing the plan or Built does not invalidate a check). Uses a
-# temporary copy of the index so the real index is never touched.
+# specs/ excluded but for specs/contracts/: writing the plan or Built does not invalidate a
+# check). Uses a temporary copy of the index so the real index is never touched.
 fingerprint() {
 	_idx=$(mktemp "${TMPDIR:-/tmp}/$NAME-index.XXXXXX") || return 1
 	_real=$(git rev-parse --path-format=absolute --git-path index)
 	if [ -f "$_real" ]; then cp "$_real" "$_idx"; else rm -f "$_idx"; fi
 	GIT_INDEX_FILE=$_idx git add -A >/dev/null 2>&1
-	GIT_INDEX_FILE=$_idx git rm -r -q --cached --ignore-unmatch -- "$SPECS" >/dev/null 2>&1
-	GIT_INDEX_FILE=$_idx git write-tree
+	fp_tree "$_idx"
 	_rc=$?
 	rm -f "$_idx"
 	return $_rc
+}
+
+# fp_tree <index>: drop specs/ but specs/contracts/ from a temporary index and write its tree, so
+# the working tree (fingerprint) and a ref (phase_check_passed) give the same tree. FR-68.2
+fp_tree() {
+	GIT_INDEX_FILE=$1 git rm -r -q --cached --ignore-unmatch -- "$SPECS" ":(exclude)$CONTRACTS" >/dev/null 2>&1
+	GIT_INDEX_FILE=$1 git write-tree
 }
 
 # code_changed: does this branch change anything outside specs/ (committed, staged,
@@ -784,8 +790,12 @@ check_passed_here() {
 # when a check was recorded for the item at all.
 phase_check_passed() {
 	[ -f "$ST/checks/$ID" ] || return 1
-	[ -z "${PHASE_REF:-}" ] || [ -n "$PHASE_FP" ] ||
-		PHASE_FP=$(git ls-tree "$PHASE_REF" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
+	if [ -n "${PHASE_REF:-}" ] && [ -z "$PHASE_FP" ]; then
+		_idx=$(mktemp "${TMPDIR:-/tmp}/$NAME-index.XXXXXX") || return 1
+		rm -f "$_idx"
+		GIT_INDEX_FILE=$_idx git read-tree "$PHASE_REF" && PHASE_FP=$(fp_tree "$_idx")
+		rm -f "$_idx"
+	fi
 	check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}
 }
 
