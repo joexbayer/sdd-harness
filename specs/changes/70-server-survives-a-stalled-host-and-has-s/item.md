@@ -61,7 +61,7 @@ Written first, seen to fail: `server/test/run.test.ts` (new; FR-70.2), `mirror.t
 ## Tasks
 - [x] T-70.1 Timeouts that end: process group kill, ssh options, a longer limit for the index, FR-70.1 FR-70.2 FR-70.3 (files: server/src/run.ts, server/src/mirror.ts, server/src/sdd.ts, server/src/repo-index.ts, server/test/mirror.test.ts, server/test/index.test.ts; test: sh -c 'cd server && npm test'; size: M)
 - [x] T-70.2 Loopback by default, any-case bearer, FR-70.4 FR-70.5 (files: server/src/config.ts, server/src/http.ts, server/deploy/sdd-server.conf.example, server/test/config.test.ts, server/test/http.test.ts; test: sh -c 'cd server && npm test'; size: S)
-- [ ] T-70.3 Deploy files and README that work as written, FR-70.6 FR-70.7 FR-70.8 (files: server/deploy/compose.yaml, server/deploy/sdd-server.service, server/README.md; test: sh -c 'cd server && npm test && sh scripts/docs-check.sh'; size: S)
+- [x] T-70.3 Deploy files and README that work as written, FR-70.6 FR-70.7 FR-70.8 (files: server/deploy/compose.yaml, server/deploy/sdd-server.service, server/README.md; test: sh -c 'cd server && npm test && sh scripts/docs-check.sh'; size: S)
 
 ## Built
 

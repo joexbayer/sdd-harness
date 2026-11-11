@@ -2,6 +2,7 @@ services:
   sdd-server:
     build: { context: ., args: { SDD_SERVER_VERSION: "0.1.0" } }
     restart: unless-stopped
+    init: true # reaps ssh processes a stalled fetch leaves behind
     read_only: true
     tmpfs: [/tmp]
     volumes:
