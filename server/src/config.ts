@@ -5,7 +5,7 @@ import { execFile } from "node:child_process";
 export interface Repo { name: string; url: string; key: string }
 export interface Token { name: string; sha256: string } // 64 lowercase hex
 export interface Config {
-  listen: string; // server.listen, default ":8080"
+  listen: string; // server.listen, default "127.0.0.1:8080" (FR-70.4)
   publicHost: string; // server.public-host, required (FR-53.4, FR-53.13)
   data: string; // server.data, default "/data"
   knownHosts: string; // server.known-hosts
@@ -90,7 +90,7 @@ export async function loadConfig(path: string): Promise<Config> {
   if (toks.length === 0) throw new ConfigError("no [token] configured: add one with sdd-server token <name>");
 
   return {
-    listen: server.get("listen") || ":8080",
+    listen: server.get("listen") || "127.0.0.1:8080",
     publicHost,
     data: server.get("data") || "/data",
     knownHosts: server.get("known-hosts") ?? "",
