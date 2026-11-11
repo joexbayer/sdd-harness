@@ -19,6 +19,7 @@ You run the build; builders do the tasks. Loop until no task is open:
    report to the user what failed and its log, and do not start the next batch.
 
 Then run `{{cmd}} next` and follow it until `{{cmd}} check` passes and "## Built" is written.
-Do not edit the plan (everything above "## Built"), and do not stop to ask: record unclear
-choices under "## Built". Approve and ship stay the human's. Then tell the user it is ready
+Work hands-off: stop only for a task's test that proves wrong, a box that cannot be ticked, or a
+refactor that must change a test, and then report to the human. Do not edit the plan (everything
+above "## Built"): record unclear choices under "## Built". Approve and ship stay the human's. Then tell the user it is ready
 for review: `/{{name}}-review` (or `{{cmd}} review`).

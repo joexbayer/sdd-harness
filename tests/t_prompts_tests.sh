@@ -52,10 +52,13 @@ for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review
 	assert_contains "$out" "$p"
 done
 # FR-65.4 a wrong test command: stop and ask; FR-65.5 no claim of approval.
-assert_contains "$out" 'stop and ask the human (a changed plan is approved again if this type has approval)'
+# FR-69.5 one stopping rule: hands-off, stop only where a rule says so; no "without questions".
+assert_contains "$out" 'stop only where a rule below says so'
+assert_not_contains "$out" 'without questions'
+assert_not_contains "$out" 'if truly stuck'
+assert_contains "$out" 'voids any approval'
 assert_contains "$out" 'The plan is settled and the human is not watching.'
 # FR-67.6 never tick by hand; FR-67.8 ship refuses Verified by: none where the verified gate blocks.
-assert_contains "$out" 'Never tick a box by hand: stop and ask the human, who may waive the task'
 assert_contains "$out" 'ship refuses it where the `verified` gate blocks'
 assert_not_contains "$out" 'approved the plan'
 assert_contains "$out" "A test that only repeats another's case may be deleted"
@@ -127,4 +130,53 @@ sdd new spike "Look" >/dev/null 2>&1 || fail "new spike failed"
 out=$(sdd next 2>&1)
 assert_not_contains "$out" 'HAS-code'
 assert_contains "$out" 'HAS-approval'
+# FR-69.3: `next` prints only the rules the type uses. Each type, plan and build, as the agent reads it.
+new_repo types
+typed() { # <type>: plan output in $P, build output in $Bd
+	git checkout -q main
+	sdd new "$1" "T $1" >/dev/null 2>&1 || fail "new $1 failed"
+	P=$(sdd next 2>&1)
+	f=$(set -- specs/changes/*-t-"$1"/item.md; echo "$1")
+	fill "$f" plan
+	git add -A && git commit -qm "docs: plan"
+	sdd approve >/dev/null 2>&1
+	git add -A && git commit -qm "docs: approve" >/dev/null 2>&1
+	Bd=$(sdd next 2>&1)
+}
+typed hotfix
+case $P in *'Hotfix: production is broken: fix first'*) ;; *) fail "hotfix plan: $P" ;; esac
+for p in 'write no code' 'FR-' 'Tasks' 'Security' 'approv' 'size:'; do assert_not_contains "$P" "$p"; done
+assert_not_contains "$Bd" 'verifier'
+assert_contains "$Bd" 'security pass'
+typed chore
+assert_not_contains "$P" 'approve'
+assert_not_contains "$P" 'The ask'
+assert_contains "$P" '## Security'
+assert_not_contains "$Bd" 'verifier'
+typed spike
+for p in 'Write just enough code' 'security pass' 'verifier' 'Add no dependency' 'Verify with'; do assert_not_contains "$Bd" "$p"; done
+assert_contains "$Bd" 'Spike: explore freely'
+for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
+typed roadmap
+for p in 'Write just enough code' 'security pass' 'verifier' 'Verify with'; do assert_not_contains "$Bd" "$p"; done
+for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
+typed refactor
+for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
+assert_contains "$Bd" 'stop and ask the human: the change is not a pure refactor'
+assert_contains "$Bd" 'verifier'
+typed contract
+assert_not_contains "$Bd" 'verifier'
+assert_contains "$Bd" 'Contract: write the files'
+typed fix
+assert_contains "$P" 'Scale: for each table'
+assert_contains "$Bd" 'verifier'
+typed feature
+assert_contains "$P" 'size:'
+assert_contains "$P" 'Each Security mitigation is an FR'
+assert_contains "$Bd" 'security pass'
+assert_contains "$Bd" 'Say it per FR'
+assert_contains "$Bd" "A task's test command that proves wrong: stop and ask the human; never bend"
+assert_contains "$Bd" 'Never tick a box by hand: stop and ask the human, who may waive the task'
+typed amendment
+assert_contains "$Bd" 'Amendment: edit specs/constitution.md'
 echo ok

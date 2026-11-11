@@ -57,7 +57,12 @@ stop)
 		item_phase
 		case $PHASE in
 		# FR-60.1: the next step is the human's, so a block could only trap the agent.
-		plan) msg="$NAME: item $ID has code changes but the plan is not ready ($WHY). The next step is the human's: stop and ask them." ;;
+		# FR-69.4: with no approval gate the next step is the agent's: the sections to fill in.
+		plan) if [ "$WHYCODE" = fill ] && [ "$(gate_level approved "$ITYPE")" = off ]; then
+				msg="$NAME: item $ID: write \"$MISSING\" in the item, then go on ($CMD next)"
+			else
+				msg="$NAME: item $ID has code changes but the plan is not ready ($WHY). The next step is the human's: stop and ask them."
+			fi ;;
 		# FR-28.2: a role run's builder does tasks only; once none is open, finishing (check,
 		# Built) is the orchestrating session's, so it may stop.
 		build) [ -n "${SDD_RUN:-}" ] && [ "$WHYCODE" != task ] || msg="$NAME: item $ID is not finished: $WHY. Run $CMD next." ;;

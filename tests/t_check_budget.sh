@@ -20,7 +20,7 @@ assert_contains "$out" "✓ check passed for item $id ("
 s=$(sed -n 's/^secs=//p' "$(git rev-parse --git-path sdd/checks/"$id")")
 [ "$s" -ge 2 ] || fail "expected secs >= 2 in the record, got [$s]"
 assert_contains "$out" "($s s)"
-assert_contains "$out" "⚠ the check took $s s (budget 1 s): keep the gate fast. Slow tests (end-to-end, real hash cost, sleeps, network) belong to their task's test: mark them and leave them out of check.run; make cost settings (hash rounds, timeouts) configurable and minimal in tests, with one test on the real values"
+assert_contains "$out" "⚠ the check took $s s (budget 1 s): keep the check fast: it runs at a task with no test of its own, at finish and at ship. Slow tests (end-to-end, real hash cost, sleeps, network) belong to their task's test: mark them and leave them out of check.run; make cost settings (hash rounds, timeouts) configurable and minimal in tests, with one test on the real values"
 
 # FR-35.2: budget 0 turns the warning off, on the same slow check.
 setcfg check.budget 0

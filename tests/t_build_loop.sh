@@ -17,6 +17,10 @@ assert_contains "$(cat "$k")" '`.sdd/bin/sdd run builder <id>`'
 assert_contains "$(cat "$k")" 'run `.sdd/bin/sdd task done <T-id>` yourself'
 assert_contains "$(cat "$k")" 'every task ID of the batch in the subject'
 assert_contains "$(cat "$k")" 'On the first failure'
+# FR-69.5: one stopping rule, the three cases.
+assert_contains "$(cat "$k")" "stop only for a task's test that proves wrong, a box that cannot be ticked, or a
+refactor that must change a test"
+assert_not_contains "$(cat "$k")" 'do not stop to ask'
 assert_contains "$(cat "$k")" 'do not start the next batch'
 assert_contains "$(cat "$k")" 'until `.sdd/bin/sdd check` passes and "## Built" is written'
 assert_contains "$(cat "$k")" 'subagent type `sdd-builder`, one call per batch'
@@ -81,4 +85,13 @@ assert_eq "$(cat "$STUB_LOG")" 'T-1.3'
 assert_contains "$(git log --format=%s main..HEAD)" 'feat(1): T-1.1 T-1.2 work'
 assert_contains "$(sdd task next)" 'no open tasks'
 assert_not_contains "$(sdd status)" 'task T-'
+
+# FR-69.4: a stop in the plan phase of a type with no approval gate names the section to fill in.
+git switch -q main
+sdd new hotfix "Broken" >/dev/null 2>&1 || fail "new hotfix failed"
+echo code >code.txt
+cmd=$(jq -r '.hooks.Stop[0].hooks[0].command' .claude/settings.local.json)
+out=$(printf '{"cwd":"%s","stop_hook_active":false}' "$PWD" | sh -c "$cmd")
+assert_contains "$(printf '%s' "$out" | jq -r '.systemMessage // .reason')" 'item 2: write "What is broken" in the item, then go on (.sdd/bin/sdd next)'
+assert_not_contains "$out" 'stop and ask'
 exit 0
