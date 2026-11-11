@@ -52,8 +52,8 @@ fi
 # tick_box <T-id>: tick the task's own line: in the plan part, outside code fences, the whole ID.
 tick_box() {
 	T=$1 awk '
-		$0 == "## Built" { past = 1 }
 		/^```/ { fence = !fence }
+		!fence && $0 == "## Built" { past = 1 } # FR-68.7
 		!past && !fence && !d && index($0, "- [ ] " ENVIRON["T"]) == 1 {
 			c = substr($0, length("- [ ] " ENVIRON["T"]) + 1, 1)
 			if (c == "" || c == " " || c == "\t") { $0 = "- [x]" substr($0, 6); d = 1 }

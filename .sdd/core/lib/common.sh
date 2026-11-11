@@ -305,11 +305,13 @@ uncomment() {
 # missing_sections <file> <plan|built>: required "## " sections of that part with no
 # content. Sections marked "(optional)" are never required. Below "## Built" only
 # "## Review" and "## Waived" start a new section: agents put their own "## " headings inside Built.
+# A heading inside a code fence is text. FR-68.7
 missing_sections() {
 	uncomment "$1" | P=$2 awk '
 	function flush() { if (name != "" && want && !optional && !filled) print name }
+	/^```/ { fc = !fc }
 	built && /^## / && $0 !~ /^## (Review|Waived)/ { next }
-	/^## / {
+	!fc && /^## / {
 		flush(); name = substr($0, 4)
 		if (name == "Built") built = 1
 		want = (ENVIRON["P"] == "built") ? built : !built
@@ -319,9 +321,10 @@ missing_sections() {
 	END { flush() }'
 }
 
-# plan_part <file>: the body above "## Built" (frontmatter excluded).
+# plan_part <file>: the body above "## Built" (frontmatter excluded; a fenced one is plan text: FR-68.7).
 plan_part() {
-	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit } { print }' "$1"
+	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } /^```/ { fc = !fc }
+		!fc && $0 == "## Built" { exit } { print }' "$1"
 }
 
 # extensions_on: the extensions turned on: team and user config add up (FR-61.3).
@@ -363,7 +366,7 @@ plan_hash() {
 		printf '%s\n' "$_ph"
 		return 0
 	fi
-	_ph=$(awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit }
+	_ph=$(awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } /^```/ { fc = !fc } !fc && $0 == "## Built" { exit }
 		/^- \[[xX]\] T-/ { $0 = "- [ ] T-" substr($0, 9) } { print }' "$1" | git hash-object --stdin) || return 1
 	case $1 in *' '* | '') ;; *)
 		[ -z "$_pc" ] || [ "$PWD" != "$ROOT" ] ||
@@ -1550,8 +1553,9 @@ item_read() {
 	}
 	function whole(l) {
 		l = unc(l, "w")
+		if (l ~ /^```/) wfc = !wfc
 		if (mbuilt && l ~ /^## / && l !~ /^## (Review|Waived)/) return
-		if (l ~ /^## /) {
+		if (!wfc && l ~ /^## /) {
 			mflush(); mname = substr(l, 4)
 			if (mname == "Built") mbuilt = 1
 			mpart = mbuilt; mopt = (mname ~ /\(optional\)/ || mname == "Waived"); mfilled = 0; return
@@ -1567,7 +1571,8 @@ item_read() {
 		if (i && !((kk = substr($0, 1, i - 1)) in fm)) { v = substr($0, i + 1); sub(/^[ \t]+/, "", v); fm[kk] = v }
 		next
 	}
-	$0 == "## Built" { past = 1 }
+	/^```/ { pfc = !pfc }
+	!pfc && $0 == "## Built" { past = 1 }
 	past { next }
 	{ $0 = unc($0, "p") }
 	'"$AWK_PARSE"'
