@@ -2,9 +2,10 @@
 id: 71
 type: amendment
 title: C-4: new may record the next item id on the remote
-status: open
+status: shipped
 created: 2026-11-11
 approved: 2e19942ff80e839db248f1a30b8c11ee4e0f029b 2026-11-11 joexbayer
+shipped: 2026-11-13
 ---
 # 71 C-4: new may record the next item id on the remote
 
