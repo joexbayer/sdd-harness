@@ -64,6 +64,7 @@ PATH="$T/bin:$PATH" GH_STATE="$T/gh" GH_ORIGIN="$T/origin.git"
 export PATH GH_STATE GH_ORIGIN
 
 planned_item feature "Faster search"
+setcfg type.feature.reviewed block # FR-68.5 below
 echo fast >search.txt && git add search.txt && git commit -qm "feat(1): search"
 fill "$ITEM" built && git commit -qam "docs(1): built"
 
@@ -122,6 +123,12 @@ echo passing >"$T/gh/ci"
 
 # FR-10.2: new local commits are checked, pushed, and the body updated; no second PR.
 echo faster >search.txt && git commit -qam "fix(1): review comment"
+# FR-68.5: the item gates apply to them first: code the human has not reviewed is not pushed.
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(new commits, not reviewed)"
+assert_contains "$out" 'item 1: code changed since your review (search.txt)'
+[ "$(git --git-dir="$T/origin.git" rev-parse feature/1-faster-search)" != "$(git rev-parse HEAD)" ] || fail "unreviewed commits were pushed"
+sdd review >/dev/null
 out=$(sdd ship 2>&1) || fail "second ship failed: $out"
 assert_contains "$out" 'pushed new commits to PR #1'
 assert_eq "$(git --git-dir="$T/origin.git" rev-parse feature/1-faster-search)" "$(git rev-parse HEAD)"
@@ -155,6 +162,7 @@ git clone -q "$T/origin.git" "$T/mate"
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(behind origin/main)"
 assert_contains "$out" 'fix/2-typo is behind origin/main: git merge origin/main'
+assert_eq "$(git rev-parse main)" "$(git rev-parse origin/main)" "(FR-68.9: main fast-forwarded to origin/main)"
 git merge -q --no-edit origin/main
 (cd "$T/mate" && git switch -q fix/2-typo && echo mate >mate.txt && git add mate.txt && git commit -qm mate &&
 	git push -q origin HEAD) || fail "teammate push failed"
@@ -165,6 +173,31 @@ awk -F '\t' -v OFS='\t' '$2 == 2 { $3 = "CLOSED" } { print }' "$T/gh/prs" >"$T/g
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(closed)"
 assert_contains "$out" 'PR #2 is closed'
+
+# FR-68.6, FR-68.9: item 3 depends on 2, whose PR closed unmerged; a teammate amended the
+# constitution and added team.txt on origin/main.
+(cd "$T/mate" && git switch -q main && git pull -q && printf '\nC-4 Four.\n  Why: d.\n  Enforced: review\n' >>specs/constitution.md &&
+	echo team >team.txt && git add -A && git commit -qm "docs(9): amendment, and team code" && git push -q origin main) ||
+	fail "teammate main push failed"
+git switch -q main
+planned_item feature "Mine"
+awk '{ print } /^status: / { print "depends: 2" }' "$ITEM" >"$T/i" && cp "$T/i" "$ITEM"
+echo m >m.txt && git add -A && git commit -qm "feat(3): mine"
+fill "$ITEM" built && git commit -qam "docs(3): built"
+assert_contains "$(sdd next)" 'Waits for: 2 (Typo)'
+sdd review >/dev/null
+# FR-68.9: merged by hand before ship ever fetched (main still behind): ship fetches and
+# fast-forwards main first, so the teammate's amendment and team.txt are not this item's.
+git fetch -q origin && git merge -q --no-edit origin/main
+out=$(sdd ship 2>&1) || fail "ship 3 failed: $out"
+assert_contains "$out" 'warning: item 3: waits for 2 (Typo) (gate depends)'
+assert_contains "$out" 'PR opened for item 3'
+assert_eq "$(git rev-parse main)" "$(git rev-parse origin/main)" "(FR-68.9: main fast-forwarded)"
+assert_not_contains "$(sdd review)" 'team.txt'
+# FR-68.6: also when ship merges.
+out=$(sdd ship 2>&1) || fail "merge 3 failed: $out"
+assert_contains "$out" 'warning: item 3: waits for 2 (Typo) (gate depends)'
+assert_contains "$out" 'merged PR #3 into main'
 
 # FR-10.4, FR-10.5: the real query (FORGE_JQ, which the stub skips) sorts GitHub's check results:
 # a running check is pending, a failed status context is failing, no checks is none.

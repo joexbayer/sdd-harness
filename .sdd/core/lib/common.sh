@@ -1652,6 +1652,7 @@ function deps_load(   n, l, i, f) {
 	n = split(ENVIRON["ROWS"], l, "\n")
 	for (i = 1; i <= n; i++) {
 		if (split(l[i], f, "\t") < 19) continue
+		if (f[17] == "pr") f[3] = "open" # FR-68.6: in a PR, not merged
 		if (!(f[1] in ist)) { ist[f[1]] = f[3]; iti[f[1]] = f[8] }
 		if (f[18] != "" && deps_rank(f[3]) > deps_rank(est[f[18]])) { est[f[18]] = f[3]; eid[f[18]] = f[1]; eti[f[18]] = f[8] }
 	}

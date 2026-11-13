@@ -81,7 +81,7 @@ Each written first and seen to fail on main:
 - [x] T-68.2 Contracts stay in the check fingerprint, FR-68.2 (files: .sdd/core/lib/common.sh, tests/t_contracts.sh; test: for t in contracts cache; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 - [x] T-68.3 Bent test from the first commit; type fixed at creation, FR-68.3 FR-68.4 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/ship.sh, tests/t_task.sh, tests/t_ship.sh; test: for t in task ship; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 - [x] T-68.4 Fences do not end the plan, FR-68.7 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, tests/t_phase.sh; test: for t in phase task gitcalls; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
-- [ ] T-68.5 PR path: item gates on new commits, dependencies in a PR, local base fast-forwarded, FR-68.5 FR-68.6 FR-68.9 (files: .sdd/core/cmd/ship.sh, .sdd/core/lib/common.sh, tests/t_forge.sh, tests/t_depends.sh; test: for t in forge depends ship; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: L)
+- [x] T-68.5 PR path: item gates on new commits, dependencies in a PR, local base fast-forwarded, FR-68.5 FR-68.6 FR-68.9 (files: .sdd/core/cmd/ship.sh, .sdd/core/lib/common.sh, tests/t_forge.sh, tests/t_depends.sh; test: for t in forge depends ship; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: L)
 
 ## Built
 

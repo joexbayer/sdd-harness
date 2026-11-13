@@ -81,4 +81,22 @@ finish "$docs"
 out=$(sdd ship 2>&1) || fail "lite ship with an unmet depends failed: $out"
 assert_contains "$out" 'warning: item 4: waits for R-1.3 (not opened yet) (gate depends)'
 git cat-file -e main:specs/archive/4-docs/item.md || fail "item 4 not shipped in lite"
+
+# FR-68.6: an item shipped into a pull request (archived on its branch, as ship with a forge leaves
+# it, not on main) has not shipped: next says so and standard refuses.
+git switch -q main
+sdd new chore "Queue" >/dev/null 2>&1 || fail "new chore 5 failed"
+fill specs/changes/5-queue/item.md
+sed 's/^status: open$/status: shipped/' specs/changes/5-queue/item.md >"$T/q" && cp "$T/q" specs/changes/5-queue/item.md
+mkdir -p specs/archive && git mv specs/changes/5-queue specs/archive/5-queue && git add -A && git commit -qm 'docs(5): ship chore "Queue"'
+git switch -q main
+sdd new chore "After queue" >/dev/null 2>&1 || fail "new chore 6 failed"
+after=specs/changes/6-after-queue/item.md
+setcfg sdd.profile standard
+awk '{ print } /^status: / { print "depends: 5" }' "$after" >"$T/a" && cp "$T/a" "$after"
+assert_contains "$(sdd next)" 'Waits for: 5 (Queue)'
+finish "$after"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(depends on an item in a PR)"
+assert_contains "$out" 'item 6: waits for 5 (Queue) (gate depends)'
 echo ok
