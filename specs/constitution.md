@@ -16,10 +16,12 @@ C-3 IDs never change and are never reused; gaps are fine.
   Why: every reference (tests, commits, other items) depends on them staying put.
   Enforced: review
 
-C-4 Only new, approve and ship create commits. No verb pushes, except two human-only ones:
-  `tidy --remote` deletes remote branches of items already shipped or dropped on the base, and
-  `ship` with `forge = github` pushes its own item branch and merges that branch's PR. No verb
-  pushes the base branch.
-  Why: the human decides what lands and what leaves the machine; both run behind an ask rule,
-  and the base changes only through a merge the human started.
+C-4 Only new, approve and ship create commits. No verb pushes, except: `new` records the item
+  id it takes in one ref on the remote (`refs/sdd/next-id`: a number, no branch, no file), and
+  two human-only verbs: `tidy --remote` deletes remote branches of items already shipped or
+  dropped on the base, and `ship` with `forge = github` pushes its own item branch and merges
+  that branch's PR. No verb pushes the base branch.
+  Why: the human decides what lands and what leaves the machine: the two that move work run
+  behind an ask rule where the agent has one (Claude Code), the base changes only through a
+  merge the human started, and an id is not work: two developers must never get the same one.
   Enforced: check sh tests/constitution/c4-commits.sh
