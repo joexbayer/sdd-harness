@@ -48,7 +48,7 @@ D-72.4 Not tried against GitHub yet (pushing is the owner's call): the first `sd
 Written first, seen to fail: `tests/t_new.sh` (two clones of a bare origin: ids 1 and 2; remote ahead; unreachable remote warns; bad content; a lost race, by moving the ref between the read and the write), `tests/t_query.sh` or `t_ship.sh` (FR-72.4), `tests/t_init.sh` (FR-72.5), `tests/constitution/c4-commits.sh` still passes.
 
 ## Tasks
-- [ ] T-72.1 The remote test fails first, FR-72.1 (files: tests/t_new.sh; test: SRC=$PWD SH=dash dash tests/t_new.sh; expect: fail; size: S)
+- [x] T-72.1 The remote test fails first, FR-72.1 (files: tests/t_new.sh; test: SRC=$PWD SH=dash dash tests/t_new.sh; expect: fail; size: S)
 - [ ] T-72.2 Reserve the id on the remote; fall back with a warning; ignore bad content, FR-72.1 FR-72.2 FR-72.3 (files: .sdd/core/lib/common.sh, tests/constitution/c4-commits.sh, tests/t_new.sh; test: for t in new open roadmap; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done && sh tests/constitution/c4-commits.sh; size: M)
 - [ ] T-72.3 Shared ids are shown, not hidden; no mode key, FR-72.4 FR-72.5 (files: .sdd/core/cmd/ls.sh, .sdd/core/cmd/show.sh, .sdd/core/cmd/ship.sh, .sdd/core/cmd/init.sh, .sdd/core/config, tests/t_query.sh, tests/t_init.sh; test: for t in query init ship serve_clone; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 

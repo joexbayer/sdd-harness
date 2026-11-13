@@ -76,6 +76,69 @@ out=$(sdd new chore "After custom" 2>&1) || fail "$out"
 assert_contains "$out" '15 chore'
 assert_eq "$(git symbolic-ref --short HEAD)" 15-after-custom
 
+# FR-72.1 two clones of one origin, no push between: ids 1 and 2; the origin counter holds the last.
+new_repo ids
+git init -q --bare "$T/o72.git" && git remote add origin "$T/o72.git" && git push -q origin main
+git clone -q "$T/o72.git" "$T/mate72"
+refval() { git --git-dir="$T/o72.git" cat-file -p refs/sdd/next-id 2>/dev/null | cut -d ' ' -f1; }
+out=$(sdd new chore "Alice" 2>&1) || fail "$out"
+assert_contains "$out" '1 chore'
+out=$(cd "$T/mate72" && sdd new chore "Bob" 2>&1) || fail "$out"
+assert_contains "$out" '2 chore'
+assert_eq "$(refval)" 2
+assert_no_file "$T/o72.git/refs/heads/chore"
+# FR-72.1 the origin says 5, the clone has seen 3: 6, and the origin then says 6.
+git switch -q main
+git branch chore/3-seen main
+blob=$(printf '5 someone\n' | git --git-dir="$T/o72.git" hash-object -w --stdin)
+git --git-dir="$T/o72.git" update-ref refs/sdd/next-id "$blob"
+out=$(sdd new chore "Ahead" 2>&1) || fail "$out"
+assert_contains "$out" '6 chore'
+assert_eq "$(refval)" 6
+# FR-72.1 the clone has seen more than the origin says: its own next id, written back.
+git switch -q main
+git branch chore/9-seen main
+out=$(sdd new chore "Behind" 2>&1) || fail "$out"
+assert_contains "$out" '10 chore'
+assert_eq "$(refval)" 10
+# FR-72.3 content that does not start with a number is ignored and replaced.
+git switch -q main
+blob=$(printf 'x; rm -rf\n' | git --git-dir="$T/o72.git" hash-object -w --stdin)
+git --git-dir="$T/o72.git" update-ref refs/sdd/next-id "$blob"
+out=$(sdd new chore "Garbage" 2>&1) || fail "$out"
+assert_contains "$out" '11 chore'
+assert_eq "$(refval)" 11
+# FR-72.1 a lost race: the origin moves between the read and the write; the loser reads again.
+git switch -q main
+mkdir "$T/bin72"
+REALGIT=$(command -v git)
+cat >"$T/bin72/git" <<WRAP
+#!/bin/sh
+if [ "\$1" = push ] && [ -f "$T/race72" ]; then
+	rm -f "$T/race72"
+	b=\$(printf '20 racer\n' | "$REALGIT" --git-dir="$T/o72.git" hash-object -w --stdin)
+	"$REALGIT" --git-dir="$T/o72.git" update-ref refs/sdd/next-id "\$b"
+fi
+exec "$REALGIT" "\$@"
+WRAP
+chmod +x "$T/bin72/git"
+: >"$T/race72"
+out=$(PATH="$T/bin72:$PATH" sdd new chore "Raced" 2>&1) || fail "$out"
+assert_contains "$out" '21 chore'
+assert_eq "$(refval)" 21
+# FR-72.2 an unreachable remote: the clone's own next id, a warning, no hang, success.
+git switch -q main
+git remote set-url origin "$T/nowhere72.git"
+out=$(sdd new chore "Offline" 2>&1 </dev/null) || fail "offline new failed: $out"
+assert_contains "$out" '22 chore'
+assert_contains "$out" 'sdd: warning: id 22 is not reserved on origin (could not reach it): another developer may take the same id'
+# FR-72.2 no remote configured: no warning.
+git switch -q main
+git remote remove origin
+out=$(sdd new chore "Alone" 2>&1) || fail "$out"
+assert_contains "$out" '23 chore'
+assert_not_contains "$out" 'not reserved'
+
 # Invoked through a symlink (a global ~/bin/sdd), it still finds its own folder.
 mkdir -p "$HOME/bin"
 ln -s "$SRC/.sdd/bin/sdd" "$HOME/bin/sdd"
