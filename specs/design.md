@@ -151,11 +151,11 @@ proves nothing (zero tests, or unverified).
 
 Item IDs are plain integers.
 
-- **solo**: an atomic counter (`mkdir` lock) in the git common dir, never below the highest ID
+- Local: an atomic counter (`mkdir` lock) in the git common dir, never below the highest ID
   seen in branch names and `specs/`.
-- **team**: claimed on the git remote by pushing a unique empty commit to `refs/sdd/ids/<n>`.
-  A second claimant is rejected as non-fast-forward and retries with `n+1`. This works on any
-  git host and needs no server.
+- With a remote (item 72): `new` reads `refs/sdd/next-id` and compare-and-swaps it to the id it
+  takes, retrying on a race; offline it falls back to the local counter with a warning. Any git
+  host, no server, no mode switch (C-4).
 
 IDs inside an item embed the item number. They never change, and gaps are fine
 (spec-kit#4065).
@@ -221,7 +221,8 @@ readers ignore keys they do not know.
 | 5 strict | `trust`, env allowlist, role profiles, `upgrade` with checksums |
 
 Every verb prints a few lines and ends with the next command to run. Only `new`, `approve`
-and `ship` create commits (constitution C-4). No verb pushes, except `tidy --remote` (deletes remote branches of shipped
+and `ship` create commits (constitution C-4). No verb pushes, except `new` (records the id it takes
+in the remote ref `refs/sdd/next-id`, item 72), `tidy --remote` (deletes remote branches of shipped
 items) and `ship` with `forge = github` (pushes its item branch, merges its PR); none pushes the base.
 
 ## 9. Verification ladder

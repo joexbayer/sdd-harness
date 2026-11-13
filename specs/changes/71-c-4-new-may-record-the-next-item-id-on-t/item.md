@@ -53,5 +53,18 @@ The old Why also claimed both pushing verbs "run behind an ask rule": Codex gets
 - One marker ref per id: also atomic, but grows without end and needs a cleanup rule.
 
 ## Built
+- specs/constitution.md C-4: replaced with the Proposed text, word for word.
+- specs/design.md §8: names `new` and `refs/sdd/next-id` (item 72) beside the two human verbs.
+- Deviation: specs/design.md §7 (IDs) also rewritten: it described a team mode claiming
+  `refs/sdd/ids/<n>` (one ref per id, a rejected alternative), contradicting the new C-4. Now: local
+  counter, and with a remote one counter ref with compare-and-swap, no mode switch (item 72).
+- `tests/constitution/c4-commits.sh` is unchanged and stricter than the new text (only the
+  `tidy --remote` and forge `ship` lines may push); item 72 adds the `# C-4: new (id)` line.
+- Security pass: docs only, no code changed; the verifier read the diff.
+- Follow-ups for item 72: the ref holds the last id taken, which `next-id` names loosely;
+  `cmd/tidy.sh:5` ("the one push C-4 allows"), the c4-commits.sh header and sdd-dev SKILL.md
+  (push markers, "team IDs are a roadmap item") go stale when it ships.
+
+Verified by: claude-opus-5-5: text matches the Proposed text, check articles pass; design.md §7 contradicted C-4 (fixed), "no file" wording may puzzle (a ref points at a blob holding the number), left for review
 
 ## Review (optional)
