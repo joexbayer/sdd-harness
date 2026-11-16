@@ -148,6 +148,7 @@ awk '{ print } /^## Must not change$/ { print "The layout:"; print "```"; print 
 /^## Test$/ { print "- [ ] T-1.1 Below the fence (test: true)"; print "" }' "$f" >"$T/p" && cp "$T/p" "$f"
 git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
 assert_contains "$(sdd task)" '[ ] T-1.1 Below the fence'
+assert_contains "$(sdd ls --json)" '"tasks_total":1'
 sdd task 'done' T-1.1 >/dev/null 2>&1 || fail "T-1.1 failed: $(sdd task 'done' T-1.1 2>&1)"
 grep -q '^- \[x\] T-1.1 Below' "$f" || fail "T-1.1 not ticked"
 git commit -qam "fix(1): T-1.1 below the fence"

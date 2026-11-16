@@ -150,4 +150,15 @@ out=$(sdd ship 2>&1)
 assert_eq $? 1 "(type changed after the item was opened)"
 assert_contains "$out" 'item 1 was opened as feature: its type cannot change (now hotfix); open a new item'
 assert_not_contains "$(git log --format=%s main)" 'ship'
+# FR-68.4: a rename of the item folder in the same commit does not hide the type it was opened with.
+new_repo swap2
+setcfg sdd.profile strict
+planned_item feature "Swap"
+git mv specs/changes/1-swap specs/changes/1-swap2
+sed 's/^type: feature/type: hotfix/' specs/changes/1-swap2/item.md >"$T/f" && cp "$T/f" specs/changes/1-swap2/item.md
+git add -A && git commit -qm "docs(1): rename"
+echo code >code.txt && fill specs/changes/1-swap2/item.md built && git add -A && git commit -qm "fix(1): code"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(type changed with a folder rename)"
+assert_contains "$out" 'item 1 was opened as feature: its type cannot change (now hotfix); open a new item'
 exit 0

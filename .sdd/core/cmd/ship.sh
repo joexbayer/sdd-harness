@@ -102,9 +102,10 @@ pr_ready() {
 # type_guard: the type an item was opened with stays its type (D-68.1). FR-68.4
 type_guard() {
 	_ip="$SPECS/changes/${IDIR##*/}/item.md"
-	_add=$(git log --diff-filter=A --format=%H -- "$_ip" | tail -n 1)
+	# --follow: a folder rename must not pass for the item's creation.
+	_add=$(git log --follow --diff-filter=A --name-only --format=%H -- "$_ip" | sed '/^$/d' | tail -n 2)
 	[ -n "$_add" ] || return 0
-	_was=$(git show "$_add:$_ip" | fm_get type)
+	_was=$(git show "$(printf '%s\n' "$_add" | head -n 1):$(printf '%s\n' "$_add" | tail -n 1)" | fm_get type)
 	[ "$_was" = "$ITYPE" ] || fail "item $ID was opened as $_was: its type cannot change (now $ITYPE); open a new item"
 }
 
