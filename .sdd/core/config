@@ -3,7 +3,6 @@
 
 [sdd]
 	profile = lite
-	mode = solo
 	base = main
 	branch = {type}/{id}-{slug}
 	gates = planned analyzed approved tasks check built verified reviewed depends

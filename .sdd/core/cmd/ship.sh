@@ -260,6 +260,9 @@ fi
 [ "$(fm_get status "$IFILE")" = open ] || die "item $ID is not open"
 archive="$SPECS/archive/${IDIR##*/}"
 [ ! -e "$archive" ] || die "$archive already exists"
+# FR-72.4: the same id already on the base under another name (two clones took it offline).
+_twin=$(git ls-tree --name-only "$base" "$SPECS/archive/" "$SPECS/changes/" 2>/dev/null | sed 's|.*/||' | grep "^$ID-" | grep -vx "${IDIR##*/}" | head -n 1)
+[ -z "$_twin" ] || warn "id $ID is also $_twin on $base"
 
 lands=$(cfg "type.$ITYPE.lands" all)
 # With a forge, GitHub merges into the remote base: the branch must already contain it (no

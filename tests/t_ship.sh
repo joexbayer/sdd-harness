@@ -161,4 +161,15 @@ echo code >code.txt && fill specs/changes/1-swap2/item.md built && git add -A &&
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(type changed with a folder rename)"
 assert_contains "$out" 'item 1 was opened as feature: its type cannot change (now hotfix); open a new item'
+# --- FR-72.4: an id already on main under another name warns at ship; the ship goes through.
+new_repo twin
+planned_item fix "Ident B"
+echo fixed >fix.txt && git add fix.txt && git commit -qm "fix(1): code"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+git switch -q main && mkdir -p specs/archive/1-ident-a && printf -- '---\nid: 1\ntype: fix\ntitle: Ident A\nstatus: shipped\n---\n# 1 Ident A\n' >specs/archive/1-ident-a/item.md
+git add -A && git commit -qm "docs(1): ship fix Ident A"
+git switch -q fix/1-ident-b
+out=$(sdd ship 2>&1) || fail "ship failed: $out"
+assert_contains "$out" 'warning: id 1 is also 1-ident-a on main'
+assert_file specs/archive/1-ident-b/item.md
 exit 0

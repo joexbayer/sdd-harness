@@ -13,10 +13,12 @@ done
 [ -n "$id" ] || usage_die "usage: $NAME show <id> [--json]"
 need_repo
 
-# The id from the folder name, as id_of has it (item_sources gives each id once).
-src=$(item_sources | I=$id awk -F '\t' '{ d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
-	if (i == ENVIRON["I"]) { print $1 "\t" $2 "\t" $3 "\t" $5; exit } }')
-[ -n "$src" ] || die "no item $id (see: $CMD ls)"
+# FR-72.4: every item with this id, by the folder name as id_of has it (two clones may have taken it).
+srcs=$(item_sources | I=$id awk -F '\t' '{ d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
+	if (i == ENVIRON["I"]) print $1 "\t" $2 "\t" $3 "\t" $5 }')
+[ -n "$srcs" ] || die "no item $id (see: $CMD ls)"
+show_one() {
+src=$1
 o=$(tsv 1 "$src")
 r=$(tsv 2 "$src")
 p=$(tsv 3 "$src")
@@ -61,7 +63,7 @@ if [ -n "$json" ]; then
 		}
 		print out "}"
 	}'
-	exit 0
+	return 0
 fi
 printf '%s\n' "$row" | awk -F '\t' '{ printf "%s %s · %s · %s · %s%s\n", $1, $2, $8, $3, $4, ($9 == "" ? "" : " · " $9) }'
 [ -z "$facts" ] || printf '%s\n' "$facts" | ROWS=$rows awk -F '\t' "$AWK_DEPS"'
@@ -72,4 +74,16 @@ BEGIN { deps_load() }
 	printf "%-9s %s%s\n", $2, mark, $4
 	if ($5 != "") printf "%-9s e.g. %s\n", "", $5
 }'
-echo "next    $CMD ls"
+}
+first=1
+oldifs=$IFS
+IFS='
+'
+set -f
+for _s in $srcs; do
+	IFS=$oldifs
+	[ -n "$first" ] || [ -n "$json" ] || echo
+	first=
+	show_one "$_s"
+done
+[ -n "$json" ] || echo "next    $CMD ls"
