@@ -2,9 +2,10 @@
 id: 68
 type: fix
 title: Gate holes found in the review
-status: open
+status: shipped
 created: 2026-11-11
 approved: 4d6e0fb371487a498e95f4d2c10ac735ebbc4127 2026-11-11 joexbayer
+shipped: 2026-11-16
 ---
 # 68 Gate holes found in the review
 
