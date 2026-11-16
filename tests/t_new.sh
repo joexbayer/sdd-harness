@@ -108,6 +108,23 @@ git --git-dir="$T/o72.git" update-ref refs/sdd/next-id "$blob"
 out=$(sdd new chore "Garbage" 2>&1) || fail "$out"
 assert_contains "$out" '11 chore'
 assert_eq "$(refval)" 11
+assert_not_contains "$out" 'Illegal number'
+assert_not_contains "$out" 'integer expression'
+# FR-72.2 a remote that refuses the write: the clone's own next id, the reason, the counter unmoved.
+git switch -q main
+printf '#!/bin/sh\nexit 1\n' >"$T/o72.git/hooks/pre-receive" && chmod +x "$T/o72.git/hooks/pre-receive"
+out=$(sdd new chore "Refused" 2>&1 </dev/null) || fail "refused new failed: $out"
+assert_contains "$out" 'sdd: warning: id 12 is not reserved on origin (it refused the write)'
+assert_eq "$(refval)" 11
+rm "$T/o72.git/hooks/pre-receive"
+# FR-72.2 over ssh nothing may prompt or wait long: BatchMode and a connect timeout.
+git switch -q main
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>"%s/ssh72.log"\nexit 255\n' "$T" >"$T/ssh72" && chmod +x "$T/ssh72"
+git remote set-url origin "ssh://git@host.invalid/x.git"
+out=$(GIT_SSH_COMMAND="$T/ssh72" sdd new chore "Ssh" 2>&1 </dev/null) || fail "ssh new failed: $out"
+assert_contains "$out" '(could not reach it)'
+assert_contains "$(cat "$T/ssh72.log")" '-o BatchMode=yes -o ConnectTimeout=10'
+git remote set-url origin "$T/o72.git"
 # FR-72.1 a lost race: the origin moves between the read and the write; the loser reads again.
 git switch -q main
 mkdir "$T/bin72"

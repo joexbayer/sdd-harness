@@ -816,16 +816,18 @@ next_id() {
 # the loser reads again, 5 tries. Never prompts; on failure keeps _id and warns (FR-72.2).
 # FR-72.1 FR-72.2 FR-72.3
 reserve_id() {
+	# FR-72.2: ssh must not prompt (passphrase, host key) or hang on a dead host.
+	_ssh="${GIT_SSH_COMMAND:-$(git config core.sshCommand || printf ssh)} -o BatchMode=yes -o ConnectTimeout=10"
 	_ref=refs/sdd/next-id
 	_why='could not reach it'
 	_prev=none
 	_try=0
 	while [ $_try -lt 5 ]; do
 		_try=$((_try + 1))
-		_old=$(GIT_TERMINAL_PROMPT=0 git ls-remote "$1" "$_ref" 2>/dev/null) || break
+		_old=$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_ssh" git ls-remote "$1" "$_ref" 2>/dev/null) || break
 		_old=${_old%%[[:space:]]*}
 		if [ -n "$_old" ]; then
-			GIT_TERMINAL_PROMPT=0 git fetch -q "$1" "+$_ref:$_ref" 2>/dev/null || break
+			GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_ssh" git fetch -q "$1" "+$_ref:$_ref" 2>/dev/null || break
 			_old=$(git rev-parse -q --verify "$_ref") || break
 		fi
 		# A write that failed with the counter unmoved was refused, not lost to a racer.
@@ -840,7 +842,7 @@ reserve_id() {
 		_id=$((_last + 1))
 		[ "$_cur" -ge "$_last" ] && _id=$((_cur + 1))
 		_blob=$(printf '%s %s-%s-%s-%s\n' "$_id" "$(id -un)" "$(date +%s)" "$$" "$_try" | git hash-object -w --stdin) || break
-		if GIT_TERMINAL_PROMPT=0 git push -q "--force-with-lease=$_ref:$_old" "$1" "$_blob:$_ref" 2>/dev/null; then # C-4: new (id)
+		if GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_ssh" git push -q "--force-with-lease=$_ref:$_old" "$1" "$_blob:$_ref" 2>/dev/null; then # C-4: new (id)
 			return 0
 		fi
 		_prev=$_old
