@@ -83,5 +83,24 @@ Written first, seen to fail: `t_prompts_tests.sh` (FR-69.1 to 69.3, 69.5, 69.7, 
 - [x] T-69.6 Types offered, Review section wording, FR-69.12 FR-69.13 (files: .sdd/core/prompts/none.md, .sdd/core/prompts/review.md, .sdd/core/agents/skills/new.md, .sdd/core/agents/skills/review.md, .sdd/core/templates/feature.md, tests/t_prompts_tests.sh, tests/t_agents.sh; test: for t in prompts_tests agents new; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
+- FR-69.1: `common.sh` render keeps `{{if <fact>}}` blocks whose fact holds; `type_facts` (frs tasks security approval code verify) from the type's template, gates and the new `code = no` key. Test: `t_prompts_tests.sh`.
+- FR-69.2: `next.sh` prints the type prompt before the phase prompt. Test: `t_prompts_tests.sh` (a feature with a local `plan.feature.md`; fails with the two lines swapped).
+- FR-69.3: prompts tagged by fact; contract and amendment have `code = no` (no code rules), hotfix and chore get no approve line. Test: `t_prompts_tests.sh`, `t_role_guard.sh`.
+- FR-69.4: `hook.sh` stop message for types without approval. Test: `t_build_loop.sh`.
+- FR-69.5: one stop list in `prompts/build.md` and the build skill; two failed fixes on one assumption → write it under Built, try another way. Test: `t_prompts_tests.sh` (one stop list in the rendered feature build).
+- FR-69.6: `task.sh`: no tasks ends the loop; where the tasks gate blocks, "this type needs tasks: add the test-first pair". Test: `t_task.sh`.
+- FR-69.7: `finish.md` gives the fallback verifier `prompts/role-verifier.md` (override `.sdd/local/prompts/role-verifier.md`, no raw `{{cmd}}`). Test: `t_prompts_tests.sh`.
+- FR-69.8: `next.sh` expect: fail wording. Test: `t_expect.sh`.
+- FR-69.9: `by: <role>` with no role set. Test: `t_task.sh`.
+- FR-69.10: `templates/fix.md` has the test-first pair, `[type "fix"]` loses `tasks = off`, `plan_extra` flags a fix with no `expect: fail` task unless Test starts `none:`; new `prompts/plan.fix.md`. Test: `t_analyze.sh`.
+- FR-69.11: `plan_extra` flags an ID after `- `, `* ` or `**` unless it is defined at a line start. Test: `t_analyze.sh`.
+- FR-69.12: `prompts/none.md`, `skills/new.md` offer amendment, contract (and roadmap). Test: `t_prompts_tests.sh`.
+- FR-69.13: Review wording in `prompts/review.md`, `skills/review.md`, all templates. Test: `t_prompts_tests.sh`.
+- FR-69.14: `check.sh`, prompts and `specs/design.md` say when the check runs.
+- Deviations: new config key `code = no` (contract, amendment); `tests/lib.sh` `planned_item` takes a `tasks` argument and `done_tasks` ticks them (tests that ship a fix need it); `build.fix.md` reworded (Test is no longer first); "with the human" kept in the plan prompt's security line (a trim had dropped it); "(planner role)" cut to stay under the word ceiling.
+- Known limit: a spike still sees the feature line "Build exactly what the plan says" next to "explore the plan's question freely" (`t_role_guard` asserts it).
+- Security pass (the verifier, on the diff): `{{if}}` is read from prompt lines before item text is substituted, so item text cannot open a block; no eval reached; nothing exploitable.
+
+Verified by: claude-opus-5-5: 13 of 14 FRs proven (one stop list not met), 6 warnings (bullet-ID false positive, stray files, untested order, code rules on contract and amendment, old fixes without tasks) and 4 notes, all fixed with tests
 
 ## Review (optional)
