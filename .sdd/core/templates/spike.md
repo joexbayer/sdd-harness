@@ -19,5 +19,5 @@ e.g. "go: open feature X" or "no-go, because ...". This is the deliverable: only
 reaches the base branch, never the spike's code. -->
 
 ## Review (optional)
-<!-- The human's review notes: what to change, one per line. The agent works through them
+<!-- What to change, one per line (the agent writes what the human asks). The agent works through them
 and says under "## Built" what it changed for each. -->

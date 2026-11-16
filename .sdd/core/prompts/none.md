@@ -11,6 +11,8 @@ To start a change, pick the type that fits and run: {{cmd}} new <type> "short ti
   refactor  structure only: behaviour and existing tests stay the same
   spike     answer a question: only the findings are kept, never the code
   feature   new behaviour: a brief a teammate can read before any code exists
+  amendment change a constitution rule (specs/constitution.md)
+  contract  change an interface items build against (specs/contracts/)
   roadmap   a system in several items: plan their order once, then open each with
             {{cmd}} new --from R-<id>.<n> (only the plan lands)
 

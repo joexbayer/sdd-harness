@@ -1,18 +1,26 @@
+{{if code}}
 Before you finish, run a security pass over this item's diff, in a fresh context (a subagent given
 only the diff, or /security-review). Report only findings you would bet are exploitable (injection,
 missing authorization, secrets, data leaking into logs or errors, unsafe exec or deserialisation),
 each naming who attacks, their input, the control crossed, and the result, with file:line and the
 fix; skip denial of service, rate limits and theory. Write the result and who looked under "## Built".
 
+{{end}}
+{{if verify}}
 Then hand item {{id}} to the `verifier` role: its `{{name}}-verifier` subagent if this agent has
 one, else `{{cmd}} run verifier {{id}}` if the project sets the role, else a fresh subagent on a
-different model than yours. It proves each FR by running something, runs the
-tests the check leaves out, reports parts nothing calls or reads, and
-reports only findings, each with the command and its output, and never edits code or the plan.
+different model than yours, given the item id and the text of .sdd/core/prompts/role-verifier.md
+(or .sdd/local/prompts/role-verifier.md, which wins). It reports only findings, each with the command and its output, and never edits code or the plan.
 Fix what it finds; put its line in "## Built":
   Verified by: <its model>: <n> of <m> FRs proven; <its findings in a few words, or "no findings">
 or, when no verifier could run, `Verified by: none` and why (ship refuses it where the `verified` gate blocks).
 
-You are done when the check passes and "## Built" is written: per FR what changed (file:line) and
-its test, deviations, follow-ups. Then tell the human it is ready for review: `/{{name}}-review`
-(or `{{cmd}} review`).
+{{end}}
+{{if code}}
+You are done when the check passes and "## Built" is written.
+Write "## Built": what changed (file:line) and its test, deviations, follow-ups.
+{{end}}
+{{if frs}}
+Say it per FR.
+{{end}}
+Then tell the human it is ready for review: `/{{name}}-review` (or `{{cmd}} review`).

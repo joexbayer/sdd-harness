@@ -26,10 +26,15 @@ what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>
 ## Test
 <!-- The regression test (name and file) that fails now and passes after the fix. -->
 
+## Tasks
+<!-- The failing test first, then the fix; each one task:
+- [ ] T-{{id}}.1 Failing test for <the bug>, FR-{{id}}.1 (files: <test file>; test: <command>; expect: fail; size: S)
+- [ ] T-{{id}}.2 Fix <the bug>, FR-{{id}}.1 (files: <code files>; test: <same command>; size: S) -->
+
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 
 ## Review (optional)
-<!-- The human's review notes: what to change, one per line. The agent works through them
+<!-- What to change, one per line (the agent writes what the human asks). The agent works through them
 and says under "## Built" what it changed for each. -->

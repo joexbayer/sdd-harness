@@ -43,7 +43,7 @@ assert_contains "$out" 'Phase: build'
 # One phrase per rule: FR-42.2 the verifier hand-off, FR-51.1 the review hand-off names the skill,
 # FR-35.4 test rules, FR-55.5 duplicates may go, FR-20.1 stop after two failed fixes, FR-20.2
 # tests check behaviour (were t_discipline.sh); FR-55.7 a loose word ceiling.
-for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review: `/sdd-review`' \
+for p in 'ready for review: `/sdd-review`' \
 	'still pass if every function returned nothing' 'never from the code under test' \
 	'After two fixes resting on the same assumption fail' \
 	'Write just enough code to pass the test' 'extend an existing test' \
@@ -52,10 +52,26 @@ for p in 'tests the check leaves out' 'nothing calls or reads' 'ready for review
 	assert_contains "$out" "$p"
 done
 # FR-65.4 a wrong test command: stop and ask; FR-65.5 no claim of approval.
-assert_contains "$out" 'stop and ask the human (a changed plan is approved again if this type has approval)'
+# FR-69.5 one stopping rule: hands-off, stop only where a rule says so; no "without questions".
+assert_contains "$out" 'stop only where a rule says so'
+# One list of stop cases, stated once (the two-failures rule is not a stop).
+assert_eq "$(printf '%s\n' "$out" | grep -c 'top and ask')" 1 "(stop cases listed once)"
+assert_contains "$out" "Stop and ask the human only when a task's test command proves wrong"
+assert_contains "$out" 'a box cannot be ticked'
+assert_not_contains "$out" 'stop and write that assumption'
+assert_not_contains "$out" 'without questions'
+assert_not_contains "$out" 'if truly stuck'
+assert_contains "$out" 'voids any approval'
+# FR-69.7: no verifier role: the fresh subagent is given the brief by path, not a summary of it.
+assert_contains "$out" 'given the item id and the text of .sdd/core/prompts/role-verifier.md
+(or .sdd/local/prompts/role-verifier.md, which wins)'
+assert_not_contains "$out" 'reports parts nothing calls or reads'
+assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'in the plan part of the item file'
+assert_not_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'under "## What changes"'
+# The brief is read raw by the subagent: no unrendered {{ }} in it.
+assert_not_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" '{{'
 assert_contains "$out" 'The plan is settled and the human is not watching.'
 # FR-67.6 never tick by hand; FR-67.8 ship refuses Verified by: none where the verified gate blocks.
-assert_contains "$out" 'Never tick a box by hand: stop and ask the human, who may waive the task'
 assert_contains "$out" 'ship refuses it where the `verified` gate blocks'
 assert_not_contains "$out" 'approved the plan'
 assert_contains "$out" "A test that only repeats another's case may be deleted"
@@ -97,4 +113,117 @@ for d in README.md MIGRATE.md; do
 	grep -q 'git add .sdd AGENTS.md' "$SRC/$d" || fail "$d does not stage .sdd AGENTS.md by name"
 	grep -q '\.gitleaks\.toml' "$SRC/$d" || fail "$d does not name .gitleaks.toml"
 done
+
+# FR-69.1: {{if <fact>}} blocks print only when the fact holds for the type; FR-69.2: the type's own
+# prompt comes first. No block, no change.
+new_repo blocks
+mkdir -p .sdd/local/prompts
+{
+	for f in frs tasks security approval code verify nonsense; do printf '{{if %s}}\nHAS-%s\n{{end}}\n' "$f" "$f"; done
+	printf 'ALWAYS\n'
+} >.sdd/local/prompts/plan.append.md
+printf 'TYPE-FIRST\n' >.sdd/local/prompts/plan.hotfix.md
+sdd new hotfix "Down" >/dev/null 2>&1 || fail "new hotfix failed"
+out=$(sdd next 2>&1)
+for f in frs tasks security approval code verify; do
+	case $f in code) assert_contains "$out" "HAS-code" ;; *) assert_not_contains "$out" "HAS-$f" ;; esac
+done
+assert_not_contains "$out" 'HAS-nonsense'
+assert_not_contains "$out" '{{'
+assert_contains "$out" 'ALWAYS'
+before=${out%%TYPE-FIRST*}
+case $before in *'PLAN:'*) fail "type prompt not first: $before" ;; esac
+git checkout -q -b other main
+printf 'TYPE-FIRST\n' >.sdd/local/prompts/plan.feature.md
+sdd new feature "Wide" >/dev/null 2>&1 || fail "new feature failed"
+out=$(sdd next 2>&1)
+before=${out%%TYPE-FIRST*}
+case $out in *TYPE-FIRST*) ;; *) fail "no type prompt: $out" ;; esac
+case $before in *'PLAN:'*) fail "feature: type prompt not first: $before" ;; esac
+for f in frs tasks security approval code verify; do assert_contains "$out" "HAS-$f"; done
+assert_not_contains "$out" 'HAS-nonsense'
+git checkout -q -b spike-b main
+sdd new spike "Look" >/dev/null 2>&1 || fail "new spike failed"
+out=$(sdd next 2>&1)
+assert_not_contains "$out" 'HAS-code'
+assert_contains "$out" 'HAS-approval'
+# FR-69.3: `next` prints only the rules the type uses. Each type, plan and build, as the agent reads it.
+new_repo types
+typed() { # <type>: plan output in $P, build output in $Bd
+	git checkout -q main
+	sdd new "$1" "T $1" >/dev/null 2>&1 || fail "new $1 failed"
+	P=$(sdd next 2>&1)
+	f=$(set -- specs/changes/*-t-"$1"/item.md; echo "$1")
+	fill "$f" plan
+	git add -A && git commit -qm "docs: plan"
+	sdd approve >/dev/null 2>&1
+	git add -A && git commit -qm "docs: approve" >/dev/null 2>&1
+	Bd=$(sdd next 2>&1)
+}
+typed hotfix
+case $P in *'Hotfix: production is broken: fix first'*) ;; *) fail "hotfix plan: $P" ;; esac
+for p in 'write no code' 'FR-' 'Tasks' 'Security' 'approv' 'size:'; do assert_not_contains "$P" "$p"; done
+assert_not_contains "$Bd" 'verifier'
+assert_contains "$Bd" 'security pass'
+assert_not_contains "$Bd" 'sdd approve'
+assert_contains "$Bd" 'Never run `.sdd/bin/sdd ship`'
+typed chore
+assert_not_contains "$Bd" 'sdd approve'
+assert_not_contains "$P" 'approve'
+assert_not_contains "$P" 'The ask'
+assert_contains "$P" '## Security'
+assert_not_contains "$Bd" 'verifier'
+typed spike
+for p in 'Write just enough code' 'security pass' 'verifier' 'Add no dependency' 'Verify with'; do assert_not_contains "$Bd" "$p"; done
+assert_contains "$Bd" 'Spike: explore the plan'"'"'s question freely'
+for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
+typed roadmap
+assert_not_contains "$Bd" 'file:line'
+for p in 'Write just enough code' 'security pass' 'verifier' 'Verify with'; do assert_not_contains "$Bd" "$p"; done
+for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
+typed refactor
+for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
+assert_contains "$Bd" 'stop and ask the human: the change is not a pure refactor'
+assert_contains "$Bd" 'verifier'
+assert_contains "$Bd" 'stop only where a rule says so'
+typed contract
+assert_not_contains "$Bd" 'verifier'
+for p in 'Write just enough code' 'Add no dependency' 'No unbounded list'; do assert_not_contains "$Bd" "$p"; done
+assert_contains "$Bd" 'Write "## Built"'
+assert_contains "$Bd" 'Contract: write the files'
+typed fix
+assert_contains "$P" 'skip the regression task'
+assert_contains "$Bd" 'none when "## Test" starts with `none:`'
+assert_contains "$P" 'Scale: for each table'
+assert_contains "$Bd" 'verifier'
+typed feature
+assert_contains "$P" 'size:'
+assert_contains "$P" 'Each mitigation is an FR'
+assert_contains "$Bd" 'security pass'
+assert_contains "$Bd" 'Say it per FR'
+assert_contains "$Bd" "never bend the test to fit"
+assert_contains "$Bd" 'never tick one by hand; the human may waive it'
+assert_contains "$Bd" 'Never run `.sdd/bin/sdd approve`'
+typed amendment
+for p in 'Write just enough code' 'Add no dependency' 'No unbounded list'; do assert_not_contains "$Bd" "$p"; done
+assert_contains "$Bd" 'Amendment: edit specs/constitution.md'
+
+# FR-69.12: with no item open, every type is offered; the new skill also offers roadmap.
+new_repo none
+sdd sync claude >/dev/null 2>&1
+out=$(sdd next 2>&1)
+assert_contains "$out" 'amendment change a constitution rule (specs/constitution.md)'
+assert_contains "$out" 'contract  change an interface items build against'
+assert_contains "$(cat .claude/skills/sdd-new/SKILL.md)" 'amendment
+   (change a constitution rule), contract (change an interface items build against), roadmap'
+# FR-69.13: the Review section reads the same in templates, review prompt and review skill.
+sdd new feature "Wording" >/dev/null 2>&1 || fail "new failed"
+assert_contains "$(cat specs/changes/*-wording/item.md)" 'to change, one per line (the agent writes what the human asks)'
+assert_not_contains "$(cat specs/changes/*-wording/item.md)" "The human's review notes"
+rv=$(cat .claude/skills/sdd-review/SKILL.md)
+assert_contains "$rv" 'say under Built
+what you changed'
+assert_contains "$rv" 'call out every deviation, risk and doubt'
+assert_contains "$rv" 'write what they ask under "## Review"'
+assert_contains "$(cat .sdd/core/prompts/review.md)" 'write what they ask under "## Review"'
 echo ok

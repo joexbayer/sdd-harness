@@ -228,19 +228,25 @@ gate_level() {
 # render <file> <id> <title> <type>: substitute {{id}} {{title}} {{type}} {{date}}
 # {{cmd}} {{base}} {{name}} literally (no regex, so titles may contain any character). A line that
 # is just {{max-size}} becomes RENDER_SIZE (next sets it; FR-39.1), or nothing when that is empty.
+# Lines from {{if <fact>}} to {{end}} (each alone on its line; no nesting, no else) print only when
+# <fact> is a word of RENDER_FACTS (next sets it from type_facts; FR-69.1); an unknown fact hides.
 RENDER_DATE=
 RENDER_BASE=
+RENDER_FACTS=
 RENDER_SIZE=
 render() {
 	[ -n "$RENDER_DATE" ] || RENDER_DATE=$(date +%F)
 	[ -n "$RENDER_BASE" ] || RENDER_BASE=$(cfg sdd.base main)
 	R_ID=$2 R_TITLE=$3 R_TYPE=$4 R_DATE=$RENDER_DATE R_CMD=$CMD R_BASE=$RENDER_BASE R_NAME=$NAME \
-		R_SIZE=$RENDER_SIZE awk '
+		R_SIZE=$RENDER_SIZE R_FACTS=" $RENDER_FACTS " awk '
 	function repl(s, from, to,   out, i) {
 		out = ""
 		while ((i = index(s, from)) > 0) { out = out substr(s, 1, i - 1) to; s = substr(s, i + length(from)) }
 		return out s
 	}
+	/^\{\{if [a-z]+\}\}$/ { skip = !index(ENVIRON["R_FACTS"], " " substr($0, 6, length($0) - 7) " "); next }
+	$0 == "{{end}}" { skip = 0; next }
+	skip { next }
 	$0 == "{{max-size}}" { if (ENVIRON["R_SIZE"] != "") $0 = ENVIRON["R_SIZE"]; else next }
 	{
 		$0 = repl($0, "{{id}}", ENVIRON["R_ID"]); $0 = repl($0, "{{title}}", ENVIRON["R_TITLE"])
@@ -249,6 +255,20 @@ render() {
 		$0 = repl($0, "{{name}}", ENVIRON["R_NAME"])
 		print
 	}' "$1"
+}
+
+# type_facts <type>: the words that hold for the type, for the {{if}} blocks of a prompt (FR-69.1):
+# frs, tasks, security (its template has a SHALL line, a Tasks, a Security section), approval,
+# verify (that gate is not off), code (the type lands code).
+type_facts() {
+	if _t=$(sdd_path "templates/$1.md"); then
+		awk '/SHALL/ { r = 1 } /^## Tasks/ { t = 1 } /^## Security/ { s = 1 }
+			END { printf "%s%s%s", r ? " frs" : "", t ? " tasks" : "", s ? " security" : "" }' "$_t"
+	fi
+	[ "$(gate_level approved "$1")" = off ] || printf ' approval'
+	[ "$(gate_level verified "$1")" = off ] || printf ' verify'
+	[ "$(cfg "type.$1.lands" all)" = item ] || [ "$(cfg "type.$1.code" yes)" = no ] || printf ' code'
+	echo
 }
 
 slugify() {
@@ -490,6 +510,35 @@ plan_frs() {
 	plan_part "$IFILE" | uncomment | grep -oE "FR-$ID\.[0-9]+" | sort -u -t . -k 2,2n
 }
 
+# plan_extra: plan_findings' lines that need the plan text, not its facts: a fix with no `expect: fail`
+# task, unless its Test starts with "none:" (FR-69.10); an FR, US, D or Q ID of this item written
+# after "- ", "* " or "**" and not also defined at a line start: IDs are read only there (FR-69.11).
+plan_extra() {
+	plan_part "$IFILE" | uncomment | TY=${ITYPE:-} I=${ID:-} awk '
+	/^```/ { fence = !fence; next }
+	fence { next }
+	/^## / { sec = substr($0, 4); next }
+	{
+		if (match($0, "^(US|FR|D|Q)-" ENVIRON["I"] "\\.[0-9]+") && (RLENGTH == length($0) || substr($0, RLENGTH + 1, 1) !~ /[0-9.]/))
+			defd[substr($0, 1, RLENGTH)] = 1
+		pre = ""
+		if (substr($0, 1, 2) == "- " || substr($0, 1, 2) == "* ") pre = substr($0, 1, 2)
+		else if (substr($0, 1, 2) == "**") pre = "**"
+		if (pre != "") {
+			t = substr($0, length(pre) + 1)
+			if (match(t, "^(US|FR|D|Q)-" ENVIRON["I"] "\\.[0-9]+") && (RLENGTH == length(t) || substr(t, RLENGTH + 1, 1) !~ /[0-9.]/)) {
+				id = substr(t, 1, RLENGTH); nb++; bid[nb] = id
+				bmsg[nb] = id "\t\tstarts with \"" pre "\": IDs are read only at the start of a line"
+			}
+		}
+	}
+	sec == "Test" && NF && !seen { seen = 1; none = ($0 ~ /^none:/) }
+	index(sec, "Tasks") == 1 && /expect: fail/ { red = 1 }
+	END { for (i = 1; i <= nb; i++) if (!(bid[i] in defd)) print bmsg[i]
+		if (ENVIRON["TY"] == "fix" && !red && !none)
+		print "Tasks\t\tno expect: fail task: a fix proves the bug with a test that fails first (or start Test with \"none: <why>\")" }'
+}
+
 # plan_findings: the problems in a plan that need no judgement (FR-19.1), from parse_item's lines
 # on stdin (or IR_FACTS), in plan order: "<id>\t<short name>\t<problem>". An FR no task names
 # (when there are tasks), an FR with no example, an open question, an ID written twice, a task
@@ -549,6 +598,7 @@ plan_findings() {
 			for (j = 1; j <= m; j++) if (!(x[j] in fr)) say(i, "names " x[j] ", which the plan does not have")
 		}
 	}'
+	plan_extra
 }
 
 # AWK_ENTRY: entry_row(id, text) in awk: a roadmap entry (parse_item's "r" fact, text
@@ -893,6 +943,10 @@ item_phase() {
 		fi
 	fi
 }
+
+# needs_tasks: the type's tasks gate blocks, so an item with no tasks cannot ship (FR-69.6).
+needs_tasks() { [ "$(gate_level tasks "$ITYPE")" = block ]; }
+NEEDS_TASKS_MSG='this type needs tasks: add the test-first pair to the plan (the human approves it again)'
 
 # task_rows: the current item's tasks (IFILE, ID), one per line, in plan order:
 # "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>\t<size>\t<reason>\t<by>".

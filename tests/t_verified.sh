@@ -23,7 +23,8 @@ built_with() {
 	git commit -qam "docs: built"
 }
 
-planned_item fix "Retry"
+planned_item fix "Retry" tasks
+done_tasks
 # FR-22.2: once no task is open, the finish steps hand the item to the verifier.
 out=$(sdd next)
 assert_contains "$out" 'hand item 1 to the `verifier` role: its `sdd-verifier` subagent if this agent has'
@@ -72,7 +73,8 @@ assert_not_contains "$out" 'not verified'
 
 # FR-22.3: standard warns and ships; lite too (FR-62.3).
 setcfg sdd.profile standard
-planned_item fix "Backoff"
+planned_item fix "Backoff" tasks
+done_tasks
 echo backoff >backoff.txt && git add backoff.txt && git commit -qm "fix(2): backoff"
 built_with ''
 sdd review >/dev/null
@@ -80,14 +82,16 @@ out=$(sdd ship 2>&1) || fail "standard ship without a verifier failed: $out"
 assert_contains "$out" 'not verified (gate verified)'
 assert_contains "$out" 'shipped 2'
 setcfg sdd.profile lite
-planned_item fix "Jitter"
+planned_item fix "Jitter" tasks
+done_tasks
 echo jitter >jitter.txt && git add jitter.txt && git commit -qm "fix(3): jitter"
 built_with ''
 out=$(sdd ship 2>&1) || fail "lite ship failed: $out"
 assert_contains "$out" 'not verified (gate verified)'
 
 # FR-22.2: the finish gate holds the builder, not a verifier run (sdd run exports its role).
-planned_item fix "Cap"
+planned_item fix "Cap" tasks
+done_tasks
 echo cap >cap.txt && git add cap.txt && git commit -qm "fix(4): cap"
 sdd hook stop </dev/null >/dev/null 2>&1
 assert_eq $? 2 "(an unfinished build blocks the builder)"
@@ -96,7 +100,8 @@ echo ok
 
 # FR-62.1, FR-62.2: the phase line says verified only when it was; FR-62.3: lite warns at ship.
 new_repo honest
-planned_item fix "Honest"
+planned_item fix "Honest" tasks
+done_tasks
 f=$ITEM
 echo code >code.txt && git add -A && git commit -qm "fix(1): code"
 fill "$f" built && git commit -qam "docs(1): built" && sdd check >/dev/null 2>&1 || fail "check failed"

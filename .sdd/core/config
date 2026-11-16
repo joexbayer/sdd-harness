@@ -20,7 +20,7 @@
 #              builder (the verifier role) proved the requirements by running them
 #   reviewed   the code is what the human last saw in `sdd review` in this clone (a rebase that
 #              keeps the change keeps it reviewed; an item that changes no code needs none)
-#   tasks      the plan has tasks and every one is ticked (off for fix, refactor and amendment);
+#   tasks      the plan has tasks and every one is ticked (off for refactor and amendment);
 #              a ticked task needs a commit naming it in every profile, whatever this level
 #   depends    every item and roadmap entry in the item's `depends:` has shipped (an item ID like
 #              31, or an entry like R-30.1: the item opened from it); planning and building go on
@@ -65,6 +65,7 @@
 #   <gate>     a level that beats the profile's
 #   branch     branch name template (last part must be {id}-{slug})
 #   lands      "item" = only the archived item reaches the base branch, never the code
+#   code       "no" = the type changes no code (only files under specs/): no code rules in its prompts
 [type "hotfix"]
 	gates = planned check built
 	planned = warn
@@ -80,8 +81,7 @@
 	verified = block
 	reviewed = block
 	tasks = off
-[type "fix"]
-	tasks = off
+	code = no
 [type "refactor"]
 	tasks = off
 [type "spike"]
@@ -91,6 +91,7 @@
 	# Changes files under specs/contracts/, the interface items build against (item 26); lands
 	# no code, and the items using a changed contract go back to planning.
 	gates = planned analyzed approved check built reviewed
+	code = no
 [type "roadmap"]
 	# A system as items in order (R-<id>.<n> entries); like a spike, only the item lands.
 	gates = planned analyzed approved built
@@ -107,7 +108,8 @@
 	no-tests = No tests found
 	no-tests = Tests:[[:space:]]+0 total
 	# Seconds a check may take before `check` warns (never fails); 0 turns the warning off. The
-	# gate runs after every task: slow tests belong to their task's own test, not check.run.
+	# check runs at a task with no test of its own, at finish and at ship: slow tests belong to
+	# their task's own test, not check.run.
 	budget = 30
 	# `run` commands always run. `code` commands are skipped when every path the item changed
 	# matches a `docs` glob (a shell case pattern, where * also matches /). No default: what is

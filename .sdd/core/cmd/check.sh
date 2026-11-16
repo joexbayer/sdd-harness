@@ -42,7 +42,7 @@ esac
 budget=$(cfg check.budget 30)
 case $budget in '' | *[!0-9]*) warn "[check] budget is not a number of seconds: $budget"; budget=0 ;; esac
 if [ "$budget" -gt 0 ] && [ "$CHECK_SECS" -gt "$budget" ]; then
-	echo "⚠ the check took $CHECK_SECS s (budget $budget s): keep the gate fast. Slow tests (end-to-end, real hash cost, sleeps, network) belong to their task's test: mark them and leave them out of check.run; make cost settings (hash rounds, timeouts) configurable and minimal in tests, with one test on the real values"
+	echo "⚠ the check took $CHECK_SECS s (budget $budget s): keep the check fast: it runs at a task with no test of its own, at finish and at ship. Slow tests (end-to-end, real hash cost, sleeps, network) belong to their task's test: mark them and leave them out of check.run; make cost settings (hash rounds, timeouts) configurable and minimal in tests, with one test on the real values"
 fi
 no_articles
 exit $rc

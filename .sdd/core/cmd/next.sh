@@ -1,6 +1,6 @@
 # shellcheck shell=sh
-# next: agent-facing instructions for the current phase. Prints prompts/<phase>.md and then
-# prompts/<phase>.<type>.md; a file under local/ replaces its core twin, and
+# next: agent-facing instructions for the current phase. Prints prompts/<phase>.<type>.md and then
+# prompts/<phase>.md; a file under local/ replaces its core twin, and
 # local/prompts/<name>.append.md is added after it.
 [ $# -eq 0 ] || usage_die "usage: $NAME next"
 need_repo
@@ -44,6 +44,7 @@ title=$IR_TITLE
 echo "Item $ID ($ITYPE): $title"
 echo "File: $IFILE"
 echo "Phase: $PHASE ($WHY)"
+[ "$PHASE" != build ] || [ "$IR_TASKS" != 0 ] || ! needs_tasks || echo "No tasks: $NEEDS_TASKS_MSG"
 # FR-24.6: what this item waits for; it blocks only ship (D-24.2).
 waits_for "$IR_DEPENDS"
 [ -z "$WAITS" ] || echo "Waits for: $WAITS (plan and build on; ship waits until they have shipped)"
@@ -55,6 +56,7 @@ if [ "$WHYCODE" = task ]; then
 '
 	ids=
 	whats=
+	redok=
 	tab=$(printf '\t')
 	# The task_rows fields of each task, split without a process per field.
 	while IFS= read -r t; do
@@ -83,6 +85,7 @@ if [ "$WHYCODE" = task ]; then
 			;;
 		*) echo "Current task: $tid $what" ;;
 		esac
+		[ "$expect" != fail ] || redok="fails as planned"
 		ids="${ids:+$ids }$tid"
 		whats="${whats:+$whats; }$what"
 		[ -z "$files" ] || echo "  files   $files"
@@ -97,7 +100,10 @@ if [ "$WHYCODE" = task ]; then
 			echo "  expect  fail: write the test first: it must fail (the next task makes it pass)"
 		fi
 		# FR-36.1: the role that builds it, when not the builder.
-		[ -z "$by" ] || echo "  by      $by ($CMD run $by $ID)"
+		# FR-69.9: no such role (no tier): the builder does it.
+		if [ -z "$by" ]; then :
+		elif [ -n "$(cfg "role.$by.tier" '')" ]; then echo "  by      $by ($CMD run $by $ID)"
+		else echo "  by      $by (no such role here: do it yourself)"; fi
 		[ -z "$bad" ] || echo "  ✗       $bad: the human fixes the plan and approves it again"
 		for fr in $frs; do
 			printf '%s\n' "$IR_FACTS" | F=$fr awk -F '\t' '$1 == "fr" && $2 == ENVIRON["F"] {
@@ -109,10 +115,10 @@ BATCH
 	case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
 	echo
 	if [ "$ids" = "$tid" ]; then
-		echo "Do only this task. When its test passes, run: $CMD task done $tid, then commit the code and"
+		echo "Do only this task. When its test ${redok:-passes}, run: $CMD task done $tid, then commit the code and"
 		echo "$IFILE together with the task in the subject, e.g. $kind($ID): $tid $what"
 	else
-		echo "Do only these tasks, in order. As each one's test passes, run: $CMD task done <its id>. Then"
+		echo "Do only these tasks, in order. As each one's test passes${redok:+ (an expect: fail one: $redok)}, run: $CMD task done <its id>. Then"
 		echo "commit the code and $IFILE together, all the tasks in the subject, e.g. $kind($ID): $ids $whats"
 	fi
 	echo
@@ -135,8 +141,10 @@ if [ "$PHASE" = plan ]; then
   anything bigger; \`{{cmd}} analyze\` flags every task above M." ;;
 	esac
 fi
-prompt "$PHASE" "$ID" "$title" "$ITYPE"
+# shellcheck disable=SC2034 # read by render (common.sh)
+RENDER_FACTS=$(type_facts "$ITYPE")
 prompt "$PHASE.$ITYPE" "$ID" "$title" "$ITYPE"
+prompt "$PHASE" "$ID" "$title" "$ITYPE"
 # A filled-in plan waiting for approval: what analyze finds, for the agent to fix first (FR-19.3).
 case $WHYCODE in
 approval | changed | contract)

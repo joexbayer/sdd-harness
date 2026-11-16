@@ -13,7 +13,10 @@ record="$ST/checks/$ID.tasks"
 
 if [ $# -eq 0 ]; then
 	rows=$(task_rows)
-	[ -n "$rows" ] || { echo "item $ID has no tasks (add - [ ] T-$ID.1 … to the plan)"; exit 0; }
+	if [ -z "$rows" ]; then
+		if needs_tasks; then echo "item $ID has no tasks: $NEEDS_TASKS_MSG"; else echo "item $ID has no tasks"; fi
+		exit 0
+	fi
 	printf '%s\n' "$rows" | while IFS= read -r r; do
 		t=$(tsv 1 "$r")
 		box="[ ]"
@@ -33,7 +36,11 @@ if [ $# -eq 0 ]; then
 fi
 if [ "$1" = next ] && [ $# -eq 1 ]; then
 	rows=$(task_rows)
-	[ -n "$rows" ] || { echo "item $ID has no tasks (add - [ ] T-$ID.1 … to the plan)"; exit 0; }
+	if [ -z "$rows" ]; then
+		if needs_tasks; then echo "item $ID has no tasks: $NEEDS_TASKS_MSG"
+		else echo "item $ID has no tasks: the check and the write-up are next (see: $CMD next)"; fi
+		exit 0
+	fi
 	batch=$(printf '%s\n' "$rows" | task_batch)
 	[ -n "$batch" ] || { echo "no open tasks: the check and \"## Built\" are next (see: $CMD next)"; exit 0; }
 	echo "batch   $(printf '%s\n' "$batch" | cut -f1 | paste -sd ' ' -)"

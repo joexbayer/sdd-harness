@@ -60,6 +60,20 @@ planned_item() {
 	sdd new "$1" "$2" >/dev/null 2>&1 || fail "new $1 failed"
 	ITEM=$(for f in specs/changes/*/item.md; do grep -q "^title: $2\$" "$f" && echo "$f"; done)
 	fill "$ITEM" plan
+	# A fix always has tasks (item 69): "tasks" as a third argument writes its test-first pair.
+	if [ "${3:-}" = tasks ]; then
+		_n=$(sed -n 's/^id: //p' "$ITEM")
+		awk -v n="$_n" '{ print } $0 == "## Tasks" { print "- [ ] T-" n ".1 Red test (test: false; expect: fail; size: S)"; print "- [ ] T-" n ".2 Fix (test: true; size: S)"; print "" }' "$ITEM" >"$ITEM.tmp" && mv "$ITEM.tmp" "$ITEM"
+	fi
 	git add "$ITEM" && git commit -qm "docs: plan"
 	sdd approve >/dev/null 2>&1 || fail "approve failed"
+}
+
+# done_tasks: do the pair planned_item <type> "title" tasks wrote, and commit them by name, as ship
+# wants where the tasks gate is on.
+done_tasks() {
+	_n=$(sed -n 's/^id: //p' "$ITEM")
+	sdd task 'done' "T-$_n.1" >/dev/null 2>&1 || fail "task done T-$_n.1 failed"
+	sdd task 'done' "T-$_n.2" >/dev/null 2>&1 || fail "task done T-$_n.2 failed"
+	git add -A && git commit -qm "fix($_n): T-$_n.1 T-$_n.2 tasks"
 }

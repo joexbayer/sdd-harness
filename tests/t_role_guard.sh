@@ -40,7 +40,8 @@ assert_contains "$out" 'Build exactly what the plan says'
 assert_not_contains "$out" 'security pass'
 assert_not_contains "$out" 'You are done when'
 # FR-21.3: the build rules say approve, ship and tidy --remote are the human's.
-assert_contains "$out" 'Never run `.sdd/bin/sdd approve`, `.sdd/bin/sdd ship`, `.sdd/bin/sdd tidy --remote` or `.sdd/bin/sdd task waive`: they are the human'"'"'s.'
+assert_contains "$out" 'Never run `.sdd/bin/sdd approve`: it is the human'"'"'s.'
+assert_contains "$out" 'Never run `.sdd/bin/sdd ship`, `.sdd/bin/sdd tidy --remote` or `.sdd/bin/sdd task waive`: they are the human'"'"'s.'
 
 # FR-21.1: the run number is in the agent's environment, and the three verbs refuse with exit 2.
 head=$(git rev-parse HEAD)
