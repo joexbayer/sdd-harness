@@ -218,7 +218,7 @@ gate_level() {
 		if (!cfg_found) { gates = cfg_get("sdd.gates", "123"); if (!cfg_found) gates = "planned approved check built" }
 		if (!index(" " gates " ", " " g " ")) { print "off"; exit }
 		v = cfg_get("type." t "." g, "123"); if (cfg_found) { print v; exit }
-		p = cfg_get("sdd.profile", "123"); if (!cfg_found) p = "lite"
+		p = cfg_get("sdd.profile", "123"); if (!cfg_found) p = "standard"
 		v = cfg_get("profile." p "." g, "123"); print (cfg_found ? v : "off")
 	}'
 }

@@ -2,7 +2,7 @@
 # lookup order is project, user, then this file. Read with `git config -f`.
 
 [sdd]
-	profile = lite
+	profile = standard
 	base = main
 	branch = {type}/{id}-{slug}
 	gates = planned analyzed approved tasks check built verified reviewed depends

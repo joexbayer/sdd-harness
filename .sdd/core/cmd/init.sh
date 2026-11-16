@@ -70,7 +70,7 @@ detect_checks() {
 
 config="$target/config"
 if [ ! -f "$config" ]; then
-	git config -f "$config" sdd.profile lite
+	git config -f "$config" sdd.profile standard
 	git config -f "$config" sdd.base "$(detect_base)"
 	checks=$(detect_checks)
 	if [ -z "$checks" ] && [ -f Makefile ] && grep -q '^test:' Makefile; then checks='make test'; fi
@@ -89,7 +89,7 @@ if [ ! -f "$config" ]; then
 	else
 		echo "tip     install gitleaks and add 'run = gitleaks dir . --no-banner' under [check] to catch committed secrets"
 	fi
-	echo "wrote $DIRNAME/config (profile lite, base $(git config -f "$config" sdd.base))"
+	echo "wrote $DIRNAME/config (profile standard: ship blocks on an incomplete plan, open tasks and a missing write-up; lite only warns, strict also wants a verifier and your review)"
 fi
 
 

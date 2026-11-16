@@ -11,6 +11,8 @@ sdd new feature "Device login" >/dev/null 2>&1 || fail "new failed"
 f=specs/changes/1-device-login/item.md
 
 out=$(sdd status)
+# FR-73.2 the first line names the profile.
+assert_eq "$(printf '%s\n' "$out" | sed -n 1p)" '1 feature · Device login · feature/1-device-login · lite'
 assert_contains "$out" 'phase   plan'
 assert_contains "$out" 'to fill: Why, What changes, How, Security, Done when'
 out=$(sdd next)

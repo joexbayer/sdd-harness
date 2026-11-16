@@ -75,7 +75,7 @@ Written first, seen to fail: `t_init.sh` (FR-73.1, 73.3, 73.11, 73.12), `t_phase
 
 ## Tasks
 - [x] T-73.1 The standard default test fails first, FR-73.1 (files: tests/t_init.sh; test: SRC=$PWD SH=dash dash tests/t_init.sh; expect: fail; size: S)
-- [ ] T-73.2 Standard by default, named in status; the suite pins lite, FR-73.1 FR-73.2 (files: .sdd/core/cmd/init.sh, .sdd/core/config, .sdd/core/cmd/status.sh, tests/lib.sh, tests/t_init.sh, tests/t_phase.sh; test: for t in init phase gitcalls ship; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
+- [x] T-73.2 Standard by default, named in status; the suite pins lite, FR-73.1 FR-73.2 (files: .sdd/core/cmd/init.sh, .sdd/core/config, .sdd/core/cmd/status.sh, tests/lib.sh, tests/t_init.sh, tests/t_phase.sh; test: for t in init phase gitcalls ship; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 - [ ] T-73.3 init: a gate that can run, line endings, the closing lines, FR-73.3 FR-73.11 FR-73.12 (files: .sdd/core/cmd/init.sh, tests/t_init.sh; test: for t in init security install; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 - [ ] T-73.4 approve with no approval step; new: adoption committed, dirty tree, no commits, FR-73.4 FR-73.5 (files: .sdd/core/cmd/approve.sh, .sdd/core/cmd/new.sh, tests/t_phase.sh, tests/t_new.sh; test: for t in phase new open roadmap; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 - [ ] T-73.5 version, help for one verb, the two missing names, FR-73.6 (files: .sdd/bin/sdd, .sdd/core/cmd/help.sh, .sdd/core/agents/codex.sh, tests/t_query.sh; test: for t in query agents; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
