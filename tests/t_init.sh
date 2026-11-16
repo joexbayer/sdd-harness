@@ -38,7 +38,12 @@ assert_eq "$(grep -c '<!-- sdd:start -->' AGENTS.md)" 1
 # Python: pytest through the interpreter, since its script is often not on PATH.
 mkdir -p "$T/py" && cd "$T/py" || exit 1
 git init -q && printf '[pytest]\n' >pytest.ini && git add -A && git commit -qm init
-sdd init >/dev/null 2>&1
+# A stub python3 stands for an interpreter with (pyok) and without (pyno) pytest (FR-73.3).
+mkdir -p "$T/pyok" "$T/pyno"
+printf '#!/bin/sh\nexit 0\n' >"$T/pyok/python3"
+printf '#!/bin/sh\nexit 1\n' >"$T/pyno/python3"
+chmod +x "$T/pyok/python3" "$T/pyno/python3"
+(PATH="$T/pyok:$PATH"; sdd init >/dev/null 2>&1)
 assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ')" 'python3 -m pytest'
 
 # A repo with no detectable tests gets a warning, not a guess.
@@ -155,4 +160,57 @@ assert_eq "$(git config -f .sdd/core/config sdd.profile)" standard
 git config -f .sdd/config sdd.profile lite
 sdd init >/dev/null 2>&1
 assert_eq "$(git config -f .sdd/config sdd.profile)" lite
+
+# FR-73.3: pytest is not importable: unittest when the repo has test_*.py files, else a warning.
+fresh pyu
+printf '[pytest]\n' >pytest.ini && echo 'def test_a(): pass' >test_a.py
+out=$(PATH="$T/pyno:$PATH"; sdd init 2>&1)
+assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ')" 'python3 -m unittest'
+assert_not_contains "$out" 'no test command detected'
+fresh pyw
+printf '[pytest]\n' >pytest.ini
+out=$(PATH="$T/pyno:$PATH"; sdd init 2>&1)
+assert_contains "$out" 'sdd: warning: the gate "python3 -m pytest" will fail here: pytest is not installed (edit [check] run in .sdd/config)'
+# only test_*.py, no pytest config: unittest, not "no test command detected"
+fresh pyo
+echo 'def test_a(): pass' >test_a.py
+out=$(sdd init 2>&1)
+assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ')" 'python3 -m unittest'
+assert_not_contains "$out" 'no test command detected'
+# a guessed command whose first word is not on PATH: the same warning
+fresh nocargo
+printf '[package]\n' >Cargo.toml
+mkdir -p "$T/lim"
+for x in sh git sed awk grep paste cat cp rm mkdir diff ls sort tr cut dirname basename head tail find wc date uname id mktemp cksum tee expr env true false cmp mv touch tty printf test; do
+	p=$(command -v "$x") && [ -x "$p" ] && ln -sf "$p" "$T/lim/$x"
+done
+shp=$(command -v "$SH")
+out=$(env PATH="$T/lim" SDD_SH="$shp" "$shp" "$SRC/.sdd/bin/sdd" init 2>&1)
+assert_contains "$out" 'sdd: warning: the gate "cargo test" will fail here: cargo is not installed (edit [check] run in .sdd/config)'
+
+# FR-73.12: .gitattributes keeps .sdd/ and specs/ at LF; added once, the rest left alone.
+fresh ga
+printf '*.png binary' >.gitattributes
+sdd init >/dev/null 2>&1
+assert_eq "$(cat .gitattributes)" '*.png binary
+/.sdd/** text eol=lf
+/specs/** text eol=lf'
+sdd init >/dev/null 2>&1
+assert_eq "$(grep -c 'eol=lf' .gitattributes)" 2
+fresh ga2
+sdd init >/dev/null 2>&1
+assert_eq "$(cat .gitattributes)" '/.sdd/** text eol=lf
+/specs/** text eol=lf'
+
+# FR-73.11: uncommitted install: the commit, then sync, then new; committed: only new.
+fresh nx
+out=$(sdd init 2>&1)
+assert_contains "$out" 'next: git add .sdd AGENTS.md .gitattributes'
+assert_contains "$out" '&& git commit -m "chore: adopt sdd"'
+assert_contains "$out" 'then: .sdd/bin/sdd sync <'
+assert_contains "$out" 'then: .sdd/bin/sdd new <type> "title"'
+git add -A && git commit -qm adopt
+out=$(sdd init 2>&1)
+assert_not_contains "$out" 'git commit -m'
+assert_contains "$out" 'next: .sdd/bin/sdd new <type> "title"'
 exit 0
