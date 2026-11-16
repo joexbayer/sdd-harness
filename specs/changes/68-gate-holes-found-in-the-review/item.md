@@ -84,5 +84,21 @@ Each written first and seen to fail on main:
 - [x] T-68.5 PR path: item gates on new commits, dependencies in a PR, local base fast-forwarded, FR-68.5 FR-68.6 FR-68.9 (files: .sdd/core/cmd/ship.sh, .sdd/core/lib/common.sh, tests/t_forge.sh, tests/t_depends.sh; test: for t in forge depends ship; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: L)
 
 ## Built
+- FR-68.1: `common.sh` `tier_ok` bracket works in busybox ash. Test: `t_roles.sh` (no backslash, newline); passes in Alpine 3.20 (t_roles, t_run).
+- FR-68.2: `common.sh` fingerprint keeps `specs/contracts/`. Test: `t_contracts.sh`.
+- FR-68.3: `common.sh` bent tests read the first commit naming the task that has the file. Test: `t_task.sh`.
+- FR-68.4: `ship.sh` `type_guard`: the type at creation (followed across folder renames) must match. Test: `t_ship.sh` (relabel; relabel plus rename).
+- FR-68.5: `ship.sh` `item_gates`, called by the local path and by `pr_gates` (new commits, merge). Test: `t_forge.sh`.
+- FR-68.6: `common.sh` `AWK_DEPS`: reason `pr` counts as open. Test: `t_depends.sh`, `t_forge.sh`.
+- FR-68.7: `common.sh` `plan_part`, `plan_hash`, `missing_sections`, `item_read`, `tick_box` skip fences. Test: `t_phase.sh` (fenced `## Built`: task listed, counted by `ls --json`, ticked, approval voided by an edit).
+- FR-68.8: `task.sh`: `approved = warn` lets `task done` run. Test: `t_task.sh`.
+- FR-68.9: `ship.sh` `pr_ready` calls `ff_base`. Test: `t_forge.sh` (main fast-forwarded; a hand merge of origin/main on a stale main ships).
+- FR-68.10: `common.sh` JSON `esc()` writes `\u00XX`. Test: `t_query.sh`.
+- FR-68.11: `agents/skills/ship.md` no longer runs review. Test: `t_agents.sh`.
+- Deviations: with a forge, a first ship fetches and fast-forwards (`pr_ready`) before the item gates, so "behind origin/main" shows before gate warnings (FR-68.9 "before judging the item"). The merge ship now runs every item gate, `reviewed` included: under strict, a teammate merging from another clone must review there first.
+- Known limit: review run after a hand merge on a stale main, then ship, says "code changed since your review" once main is fast-forwarded; review again clears it.
+- Security pass (the verifier, on the diff): no eval, no remote text in a shell, no new input; one gate bypass (type relabel hidden by a folder rename) fixed with a test.
+
+Verified by: claude-sonnet-5-5: 11 of 11 FRs proven by reverting each fix; type guard bypassed by a folder rename and one fence hunk untested, both fixed with tests; timing tests 38 passed
 
 ## Review (optional)
