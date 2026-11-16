@@ -74,7 +74,7 @@ test("FR-53.20 items lists the open items of every repo with their facts", async
   assert.match(s.repos[0].fetched, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
   const login = s.items[1];
   for (const k of ["repo", "id", "type", "title", "status", "phase", "reason", "opened_by", "approved_by", "branch", "active",
-    "idle_days", "tasks_done", "tasks_total", "questions_open", "depends", "collides_with", "sdd", "sdd_vs_base"]) {
+    "idle_days", "tasks_done", "tasks_total", "questions_open", "depends", "sdd", "sdd_vs_base"]) {
     assert.ok(k in login, `missing ${k}`);
   }
   assert.deepEqual([login.repo, login.id, login.type, login.title, login.status, login.opened_by, login.branch,
@@ -157,7 +157,7 @@ function stub(rows: Partial<Row>[]) {
   let shows = 0;
   const full = rows.map((r, i) => ({ id: i + 1, type: "feature", status: "open", phase: "build", title: "T", branch: "origin/feature/x",
     source: "remote", opened_by: "kari", active: today(), tasks_done: 0, tasks_total: 0, questions_open: 0, depends: "",
-    collides_with: "", sdd: "0.1.0 (x)", sdd_vs_base: "same", ...r }));
+    sdd: "0.1.0 (x)", sdd_vs_base: "same", ...r }));
   const snap = { repo: "api", base: "main", ok: true, error: "", fetched: "2026-11-01T10:00:00Z", gen: 1, sdd: "0.1.0 (x)", rows: full, home: "", clone: "" };
   const ix = { names: () => ["api"], snapshot: (n: string) => (n === "api" ? snap : undefined), serverSdd: "0.1.0 (x)",
     show: async () => { shows++; return { repo: "api", id: 1 }; } } as unknown as RepoIndex;
@@ -165,12 +165,12 @@ function stub(rows: Partial<Row>[]) {
 }
 
 test("FR-53.22 an item line is at most 120 characters", async () => {
-  const s = stub([{ title: "A very long title ".repeat(12), depends: "22", collides_with: "origin/fix/1-typo" }]);
+  const s = stub([{ title: "A very long title ".repeat(12), depends: "22" }]);
   const r = await caller(s.ix)("items", {});
   const line = r.text.split("\n")[1];
   assert.ok(line.length <= 120, `${line.length}: ${line}`);
   assert.ok(line.startsWith("api 1 feature build · A very long title"), line);
-  assert.ok(line.endsWith("… · kari · idle 0d · depends 22 · id also on origin/fix/1-typo"), line);
+  assert.ok(line.endsWith("… · kari · idle 0d · depends 22"), line);
 });
 
 // FR-53.26: a bad input is refused by the schema before anything runs.

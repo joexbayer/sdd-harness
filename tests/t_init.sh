@@ -20,6 +20,9 @@ assert_file .sdd/bin/sdd
 assert_file .sdd/core/lib/common.sh
 assert_file .sdd/VERSION
 assert_eq "$(git config -f .sdd/config sdd.base)" main
+# FR-72.5 no mode key, in the new config or the defaults.
+assert_eq "$(git config -f .sdd/config --get sdd.mode)" ""
+assert_not_contains "$(cat .sdd/core/config)" "mode ="
 # Detected test commands; gitleaks joins them when installed on this machine (FR-12.6, t_security.sh).
 assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ' | paste -sd '|' -)" 'go vet ./...|go test ./...'
 assert_contains "$(cat AGENTS.md)" 'Keep this line.'
@@ -51,6 +54,9 @@ git init -q && echo x >x && git add x && git commit -qm init
 git switch -q -c feature/wip
 out=$(sdd init 2>&1)
 assert_eq "$(git config -f .sdd/config sdd.base)" main
+# FR-72.5 no mode key, in the new config or the defaults.
+assert_eq "$(git config -f .sdd/config --get sdd.mode)" ""
+assert_not_contains "$(cat .sdd/core/config)" "mode ="
 # FR-43.1: items branch from main, so an install committed only here would vanish on sdd new.
 assert_contains "$out" 'sdd: warning: you are on feature/wip, not the base main: new items branch from main, so commit this install on main (or merge it there) before sdd new'
 

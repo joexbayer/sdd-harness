@@ -788,7 +788,8 @@ EOF
 	done
 }
 
-# next_id: allocate an item id, unique across all worktrees of this clone.
+# next_id: allocate an item id, unique across all worktrees of this clone and, when the remote
+# answers, across clones (FR-72.1): the counter ref there holds the last id taken.
 next_id() {
 	_lock="$ST/lock"
 	_n=0
@@ -801,9 +802,53 @@ next_id() {
 	_seen=$(max_seen_id)
 	[ "$_seen" -gt "$_last" ] && _last=$_seen
 	_id=$((_last + 1))
+	_rem=$(cfg sdd.remote origin)
+	if git config --get "remote.$_rem.url" >/dev/null 2>&1; then
+		reserve_id "$_rem" "$_last"
+	fi
 	echo "$_id" >"$ST/next-id"
 	rmdir "$_lock"
 	echo "$_id"
+}
+
+# reserve_id <remote> <last>: set _id to one more than the larger of <last> and the number in the
+# remote's refs/sdd/next-id, and write it back with a lease so that only one of two writers wins;
+# the loser reads again, 5 tries. Never prompts; on failure keeps _id and warns (FR-72.2).
+# FR-72.1 FR-72.2 FR-72.3
+reserve_id() {
+	# FR-72.2: ssh must not prompt (passphrase, host key) or hang on a dead host.
+	_ssh="${GIT_SSH_COMMAND:-$(git config core.sshCommand || printf ssh)} -o BatchMode=yes -o ConnectTimeout=10"
+	_ref=refs/sdd/next-id
+	_why='could not reach it'
+	_prev=none
+	_try=0
+	while [ $_try -lt 5 ]; do
+		_try=$((_try + 1))
+		_old=$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_ssh" git ls-remote "$1" "$_ref" 2>/dev/null) || break
+		_old=${_old%%[[:space:]]*}
+		if [ -n "$_old" ]; then
+			GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_ssh" git fetch -q "$1" "+$_ref:$_ref" 2>/dev/null || break
+			_old=$(git rev-parse -q --verify "$_ref") || break
+		fi
+		# A write that failed with the counter unmoved was refused, not lost to a racer.
+		if [ "$_old" = "$_prev" ]; then
+			_why='it refused the write'
+			break
+		fi
+		_cur=0
+		# Only leading digits count: the content comes from the remote.
+		[ -z "$_old" ] || _cur=$(git cat-file blob "$_old" 2>/dev/null | sed -n '1s/^\([0-9][0-9]*\).*/\1/p')
+		[ -n "$_cur" ] || _cur=0
+		_id=$((_last + 1))
+		[ "$_cur" -ge "$_last" ] && _id=$((_cur + 1))
+		_blob=$(printf '%s %s-%s-%s-%s\n' "$_id" "$(id -un)" "$(date +%s)" "$$" "$_try" | git hash-object -w --stdin) || break
+		if GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_ssh" git push -q "--force-with-lease=$_ref:$_old" "$1" "$_blob:$_ref" 2>/dev/null; then # C-4: new (id)
+			return 0
+		fi
+		_prev=$_old
+	done
+	_id=$((_last + 1))
+	warn "id $_id is not reserved on $1 ($_why): another developer may take the same id"
 }
 
 # max_seen_id: highest id among item branches (local and remote, matched against the
@@ -1282,18 +1327,17 @@ function row_json() {
 		$1, esc($2), esc($3), esc($4), $5, $6, $7, esc($8), esc($9), esc($10)) \
 		sprintf(",\"questions_open\":%d,\"approved_by\":\"%s\",\"opened_by\":\"%s\",\"shipped\":\"%s\",\"active\":\"%s\",\"reason\":\"%s\"", \
 		$11, esc($12), esc($13), esc($14), esc($15), esc($16)) \
-		sprintf(",\"reason_code\":\"%s\",\"roadmap\":\"%s\",\"depends\":\"%s\",\"collides_with\":\"%s\"", esc($17), esc($18), esc($19), esc($20)) \
+		sprintf(",\"reason_code\":\"%s\",\"roadmap\":\"%s\",\"depends\":\"%s\"", esc($17), esc($18), esc($19)) \
 		($21 == "" ? "" : sprintf(",\"pr\":{\"number\":%d,\"state\":\"%s\",\"review\":\"%s\",\"ci\":\"%s\",\"url\":\"%s\"}", \
 			$21, esc($22), esc($23), esc($24), esc($25)))
 }
 '
 
 # item_sources: "<origin>\t<ref>\t<path>\t<blob>\t<collides>" for every item, the first source of
-# an id winning: archive (on the base branch), worktree (the current item), local and remote
+# item folder winning: archive (on the base branch), worktree (the current item), local and remote
 # branches, then base (specs/changes on the base branch). <blob> is the item file's hash in <ref>,
-# empty for the worktree (its file may have edits). <collides> (FR-53.1) names, comma-separated,
-# the first ref of each other item folder with the same id (two people's solo-mode ids): the same
-# folder on a local branch and its remote is the same item, not a collision.
+# empty for the worktree (its file may have edits). Two folders with one id are two items, both
+# listed (FR-72.4); <collides> is always empty.
 item_sources() {
 	_base=$(cfg sdd.base main)
 	# Everything but the worktree row follows from the branch tips alone: cached in
@@ -1333,10 +1377,9 @@ item_sources() {
 		# The id from the folder name, as id_of has it: the digits before its first "-".
 		d = $3; sub(/\/item\.md$/, "", d); sub(/.*\//, "", d); i = d; sub(/-.*/, "", i)
 		if (i == "" || i ~ /[^0-9]/ || i == d) next
-		if (!(i in win)) { win[i] = ++n; line[n] = $0; key[n] = i; fold[i SUBSEP d] = 1; next }
-		if (!((i SUBSEP d) in fold)) { fold[i SUBSEP d] = 1; cw[i] = cw[i] (cw[i] == "" ? "" : ",") $2 }
+		if (!((i SUBSEP d) in fold)) { fold[i SUBSEP d] = 1; line[++n] = $0 }
 	}
-	END { for (k = 1; k <= n; k++) print line[k] "\t" cw[key[k]] }'
+	END { for (k = 1; k <= n; k++) print line[k] "\t" }'
 }
 
 # AWK_TREE: `git ls-tree -r` lines to item_sources lines: every */item.md, as origin O and ref R.
@@ -1418,7 +1461,7 @@ item_facts() {
 #  1 id  2 type  3 status  4 phase  5 frs  6 tasks_done  7 tasks_total  8 title  9 branch
 # 10 origin  11 questions_open  12 approved_by  13 opened_by  14 shipped  15 active  16 reason
 # 17 reason_code (WHYCODE)  18 roadmap (R-<id>.<n> it was opened from)  19 depends (as written)
-# 20 collides_with (item_sources)
+# 20 unused (empty)
 # "active" is the shipped date, else the last commit on the branch (today if the working
 # tree has edits); "opened_by" is the author of the item's open commit.
 item_row() {

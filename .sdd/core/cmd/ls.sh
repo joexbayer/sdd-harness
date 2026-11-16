@@ -50,7 +50,7 @@ BEGIN { deps_load() }
 {
 	t = ($7 > 0) ? $6 "/" $7 : "-"
 	w = ($3 == "open" && $19 != "") ? deps_unmet($19) : ""
-	printf "%-4s %-9s %-8s %-8s FR %-3s T %-6s %s%s%s%s%s\n", $1, $2, $3, $4, $5, t, $8, ($9 == "" ? "" : "   " $9), ($26 == "" ? "" : " · " $26), (w == "" ? "" : " · waits for " w), ($20 == "" ? "" : " · id also on " $20)
+	printf "%-4s %-9s %-8s %-8s FR %-3s T %-6s %s%s%s%s\n", $1, $2, $3, $4, $5, t, $8, ($9 == "" ? "" : "   " $9), ($26 == "" ? "" : " · " $26), (w == "" ? "" : " · waits for " w)
 }'
 [ -z "$prwhy" ] || echo "pr      state unknown: $prwhy"
 echo "next    $CMD show <id>"

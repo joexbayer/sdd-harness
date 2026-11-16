@@ -71,7 +71,6 @@ detect_checks() {
 config="$target/config"
 if [ ! -f "$config" ]; then
 	git config -f "$config" sdd.profile lite
-	git config -f "$config" sdd.mode solo
 	git config -f "$config" sdd.base "$(detect_base)"
 	checks=$(detect_checks)
 	if [ -z "$checks" ] && [ -f Makefile ] && grep -q '^test:' Makefile; then checks='make test'; fi

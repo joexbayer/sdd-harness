@@ -97,8 +97,7 @@ assert_eq "$(printf '%s' "$j" | jq -c '.tasks | map(.files)')" '[[],["src/a.go",
 
 assert_eq "$(sdd show 1 --json | jq -r '.status')" shipped
 
-# FR-53.1: two people's clones gave out id 12 (kari on feature/12-login, ola on fix/12-typo). ls
-# keeps the row it shows today (the first source) and names the other branch.
+# FR-72.4: two clones gave out id 12 (kari on feature/12-login, ola on fix/12-typo): both are listed.
 cd "$T/mate" || exit 1
 for b in feature/12-login:Login:kari fix/12-typo:Typo:ola; do
 	br=${b%%:*} rest=${b#*:}
@@ -111,16 +110,23 @@ for b in feature/12-login:Login:kari fix/12-typo:Typo:ola; do
 done
 cd "$R" && git fetch -q origin
 json=$(sdd ls --json)
-assert_eq "$(printf '%s\n' "$json" | jq -s 'map(select(.id == 12)) | length')" 1 "(one row for id 12)"
-assert_eq "$(printf '%s\n' "$json" | jq -r 'select(.id == 12) | .branch + " " + .opened_by')" 'origin/feature/12-login kari'
-assert_eq "$(printf '%s\n' "$json" | jq -r 'select(.id == 12) | .collides_with')" 'origin/fix/12-typo'
-# The same item on a local branch and its remote is no collision.
-assert_eq "$(printf '%s\n' "$json" | jq -r 'select(.id == 2) | .collides_with')" ''
-assert_eq "$(sdd show 12 --json | jq -r '.collides_with')" 'origin/fix/12-typo'
-assert_eq "$(sdd show 2 --json | jq -r '.collides_with')" ''
-line=$(sdd ls | grep '^12 ')
-case $line in *' · id also on origin/fix/12-typo') ;; *) fail "ls line for 12 should end with the collision: $line" ;; esac
-assert_not_contains "$(sdd ls | grep '^2 ')" 'id also on'
+assert_eq "$(printf '%s\n' "$json" | jq -s 'map(select(.id == 12)) | length')" 2 "(two rows for id 12)"
+assert_eq "$(printf '%s\n' "$json" | jq -r 'select(.id == 12) | .branch + " " + .opened_by' | sort | paste -sd '|' -)" 'origin/feature/12-login kari|origin/fix/12-typo ola'
+assert_eq "$(sdd show 12 --json | jq -s 'length')" 2
+# FR-72.4 two items with one id: ls lists both, show prints each.
+git switch -q main
+for s in a b; do
+	mkdir -p "specs/archive/20-ident-$s"
+	printf -- '---\nid: 20\ntype: fix\ntitle: Ident %s\nstatus: shipped\n---\n# 20 Ident %s\n' "$s" "$s" >"specs/archive/20-ident-$s/item.md"
+done
+git add -A && git commit -qm "docs(20): two items, one id"
+out=$(sdd ls)
+assert_contains "$(printf '%s\n' "$out" | grep '^20 ' | head -n 1)" 'Ident a'
+assert_contains "$(printf '%s\n' "$out" | grep '^20 ' | tail -n 1)" 'Ident b'
+assert_eq "$(printf '%s\n' "$out" | grep -c '^20 ')" 2
+out=$(sdd show 20)
+assert_contains "$out" '20 fix · Ident a'
+assert_contains "$out" '20 fix · Ident b'
 
 sdd show 99 >/dev/null 2>&1
 assert_eq $? 1 "(unknown id)"

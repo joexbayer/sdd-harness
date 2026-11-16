@@ -89,11 +89,13 @@ run the real `curl … | sh` in a throwaway HOME.
   which is the current worktree.
 - Item files: the frontmatter must close with `---`. Without it `fm_set` adds nothing and
   `approve` fails with "could not commit". When rewriting an item with awk/head, keep line 7.
-- A teammate clone in a test picks its id from what it can see: push the local item
-  branches first, or both clones choose the same id (team IDs are a roadmap item).
+- Item ids (item 72): `new` reserves its id in `refs/sdd/next-id` on `sdd.remote` (default origin) when that
+  remote exists, so a test with a remote (bare origin, clone) gets ids from it. A remote that cannot be
+  reached gives a warning and the clone's own id. Push item branches is no longer needed for unique ids; to race,
+  shadow `git` on PATH (t_new.sh).
 - Pushes: `tests/constitution/c4-commits.sh` flags `git push` in code (quoted text and comments
   are dropped first, so messages telling the human what to run are fine). Allowed only on lines
-  marked `# C-4: tidy --remote` (tidy.sh) and `# C-4: ship (forge)` (ship.sh).
+  marked `# C-4: new (id)` (common.sh), `# C-4: tidy --remote` (tidy.sh) and `# C-4: ship (forge)` (ship.sh).
 - Tab-separated fields with empties (a PR with no review): never `IFS=<tab> read`, because tab
   is IFS whitespace and runs of tabs collapse, shifting later fields. Use `tsv <n> <line>`
   (lib/common.sh, `cut -f`) or awk -F '\t'.

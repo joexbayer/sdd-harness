@@ -53,7 +53,6 @@ function itemLine(it: Record<string, any>, rw: number, iw: number): string {
   if (it.questions_open > 0) tail.push(plural(it.questions_open, "open question"));
   if (it.idle_days !== null) tail.push(`idle ${it.idle_days}d`);
   if (it.depends) tail.push(`depends ${it.depends}`);
-  if (it.collides_with) tail.push(`id also on ${it.collides_with}`);
   const rest = ` · ${tail.join(" · ")}`;
   const room = WIDTH - head.length - 3 - rest.length;
   return cut(`${head} · ${cut(String(it.title), Math.max(room, 8))}${rest}`);
