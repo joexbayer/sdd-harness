@@ -2,9 +2,6 @@
 # C-4: only new, approve and ship create commits; no verb pushes, except new (its id counter ref),
 # tidy --remote and ship with a forge; nothing but a forge file talks to the forge.
 code=".sdd/core/cmd/*.sh .sdd/core/lib/*.sh .sdd/core/forges/*.sh"
-# shellcheck disable=SC2086 # $code is a list of globs
-c=$(grep -lE 'git (commit|commit-tree)( |$)' $code | sed 's|.*/||' | sort | paste -sd ' ' -)
-[ "$c" = "approve.sh new.sh ship.sh" ] || { echo "C-4: commits made by: $c"; exit 1; }
 # in_code <regex>: "file:line:text" lines where <regex> is in code, once quoted text and comments
 # (such as messages telling the human what to run) are dropped.
 in_code() {
@@ -14,6 +11,9 @@ in_code() {
 		gsub(/"[^"]*"/, "", c); gsub(/'\''[^'\'']*'\''/, "", c); sub(/#.*/, "", c)
 		if (c ~ ENVIRON["R"]) print }'
 }
+# Commits only in new, approve and ship (hints such as `git commit -m "..."` in a message are not code).
+c=$(in_code 'git (commit|commit-tree)( |$)' | sed 's|:.*||; s|.*/||' | sort -u | paste -sd ' ' -)
+[ "$c" = "approve.sh new.sh ship.sh" ] || { echo "C-4: commits made by: $c"; exit 1; }
 # Pushes only on the lines marked "# C-4: new (id)" (common.sh), "# C-4: tidy --remote" (tidy.sh) or
 # "# C-4: ship (forge)" (ship.sh).
 p=$(in_code 'git push' | grep -vE '^\.sdd/core/lib/common\.sh:[0-9]+:.*git push .*\$_ref.*# C-4: new \(id\)$' |
