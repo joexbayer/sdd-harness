@@ -2,9 +2,10 @@
 id: 70
 type: fix
 title: Server survives a stalled host and has safe defaults
-status: open
+status: shipped
 created: 2026-11-11
 approved: 763054552ba78033d099a2310d2000004c2ada2c 2026-11-11 joexbayer
+shipped: 2026-11-16
 ---
 # 70 Server survives a stalled host and has safe defaults
 
