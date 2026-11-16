@@ -53,5 +53,16 @@ Written first, seen to fail: `tests/t_new.sh` (two clones of a bare origin: ids 
 - [x] T-72.3 Shared ids are shown, not hidden; no mode key, FR-72.4 FR-72.5 (files: .sdd/core/cmd/ls.sh, .sdd/core/cmd/show.sh, .sdd/core/cmd/ship.sh, .sdd/core/cmd/init.sh, .sdd/core/config, tests/t_query.sh, tests/t_init.sh; test: for t in query init ship serve_clone; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 
 ## Built
+- FR-72.1: `common.sh` `reserve_id` (called by `next_id` inside its lock): `ls-remote`, fetch, then a push of blob `<n> <nonce>` with `--force-with-lease`, 5 tries. Test: `t_new.sh` (two clones → 1, 2; remote ahead; clone ahead; a lost race via a git wrapper). The verifier ran 10 rounds of simultaneous `new` in two clones: ids 1..20, no repeats.
+- FR-72.2: no answer or a refused write → the clone's own id and a warning naming the reason; `GIT_TERMINAL_PROMPT=0`, and ssh gets `-o BatchMode=yes -o ConnectTimeout=10` (on top of `GIT_SSH_COMMAND` or `core.sshCommand`). Test: `t_new.sh` (unreachable, refused by a pre-receive hook, ssh options, no remote).
+- FR-72.3: only leading digits of the ref's first line count. Test: `t_new.sh` (`x; rm -rf` → replaced, no shell error printed).
+- FR-72.4: `item_sources` keeps one source per folder, so `ls` lists both twins and `show <id>` prints each; `ship.sh` warns when the base has another folder with the id. Test: `t_query.sh`, `t_ship.sh`.
+- FR-72.5: `init.sh` and core `config` write no `mode`. Test: `t_init.sh`.
+- `tests/constitution/c4-commits.sh` allows the one `# C-4: new (id)` line.
+- Deviations: `collides_with` removed from `ls --json`, `show --json` and sdd-server's item line (its only reader); `show --json` prints one object per line for a shared id; the TSV keeps an always-empty `collides` column so field numbers stay; stale texts fixed in `tidy.sh` and the sdd-dev skill; `t_ship.sh` compares `ls-remote --heads`.
+- Known limits: with a shared id, `depends: <id>` and sdd-server's `show` take the first (archived) twin (D-72.3: a shared id now needs two people offline). A ref holding a number of 19+ digits overflows shell arithmetic: the id falls back or wraps negative once, and the next `new` recovers; only a teammate with push rights can write it.
+- Security pass (the verifier, on the diff): ref content is never evaluated (`x; rm -rf`, `$(touch …)` ran nothing); only a number and a nonce leave the machine.
+
+Verified by: claude-opus-5-5: 5 of 5 FRs proven, real race clean; sdd-server test broke on the removed collides_with, ssh could prompt or stall 76 s, refused write untested: all fixed with tests; overflow and twin lookups left as known limits
 
 ## Review (optional)
