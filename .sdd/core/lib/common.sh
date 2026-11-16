@@ -188,10 +188,10 @@ tier_file() {
 tier_get() { _tf=$(tier_file "$1") && git config -f "$_tf" --get "tier.$1.$2"; }
 
 # tier_ok <agent> <model>: names safe to use as a file name and inside YAML: an agent is a word,
-# a model has no spaces, quotes or newlines.
+# a model has no spaces, quotes or newlines. FR-68.1
 tier_ok() {
 	case $1 in '' | *[!a-z0-9-]*) return 1 ;; esac
-	case $2 in '' | *[!A-Za-z0-9._:/@[\]-]*) return 1 ;; esac
+	case $2 in '' | *[!]A-Za-z0-9._:/@[-]*) return 1 ;; esac
 }
 
 # cfg_mine <key> [default]: a tier or agent setting, the developer's own config first, then the
@@ -305,11 +305,13 @@ uncomment() {
 # missing_sections <file> <plan|built>: required "## " sections of that part with no
 # content. Sections marked "(optional)" are never required. Below "## Built" only
 # "## Review" and "## Waived" start a new section: agents put their own "## " headings inside Built.
+# A heading inside a code fence is text. FR-68.7
 missing_sections() {
 	uncomment "$1" | P=$2 awk '
 	function flush() { if (name != "" && want && !optional && !filled) print name }
+	/^```/ { fc = !fc }
 	built && /^## / && $0 !~ /^## (Review|Waived)/ { next }
-	/^## / {
+	!fc && /^## / {
 		flush(); name = substr($0, 4)
 		if (name == "Built") built = 1
 		want = (ENVIRON["P"] == "built") ? built : !built
@@ -319,9 +321,10 @@ missing_sections() {
 	END { flush() }'
 }
 
-# plan_part <file>: the body above "## Built" (frontmatter excluded).
+# plan_part <file>: the body above "## Built" (frontmatter excluded; a fenced one is plan text: FR-68.7).
 plan_part() {
-	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit } { print }' "$1"
+	awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } /^```/ { fc = !fc }
+		!fc && $0 == "## Built" { exit } { print }' "$1"
 }
 
 # extensions_on: the extensions turned on: team and user config add up (FR-61.3).
@@ -363,7 +366,7 @@ plan_hash() {
 		printf '%s\n' "$_ph"
 		return 0
 	fi
-	_ph=$(awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } $0 == "## Built" { exit }
+	_ph=$(awk 'NR == 1 && $0 == "---" { fm = 1; next } fm { if ($0 == "---") fm = 0; next } /^```/ { fc = !fc } !fc && $0 == "## Built" { exit }
 		/^- \[[xX]\] T-/ { $0 = "- [ ] T-" substr($0, 9) } { print }' "$1" | git hash-object --stdin) || return 1
 	case $1 in *' '* | '') ;; *)
 		[ -z "$_pc" ] || [ "$PWD" != "$ROOT" ] ||
@@ -670,18 +673,24 @@ current_item() {
 }
 
 # fingerprint: tree hash of the code in the working tree (untracked files included,
-# specs/ excluded: writing the plan or Built does not invalidate a check). Uses a
-# temporary copy of the index so the real index is never touched.
+# specs/ excluded but for specs/contracts/: writing the plan or Built does not invalidate a
+# check). Uses a temporary copy of the index so the real index is never touched.
 fingerprint() {
 	_idx=$(mktemp "${TMPDIR:-/tmp}/$NAME-index.XXXXXX") || return 1
 	_real=$(git rev-parse --path-format=absolute --git-path index)
 	if [ -f "$_real" ]; then cp "$_real" "$_idx"; else rm -f "$_idx"; fi
 	GIT_INDEX_FILE=$_idx git add -A >/dev/null 2>&1
-	GIT_INDEX_FILE=$_idx git rm -r -q --cached --ignore-unmatch -- "$SPECS" >/dev/null 2>&1
-	GIT_INDEX_FILE=$_idx git write-tree
+	fp_tree "$_idx"
 	_rc=$?
 	rm -f "$_idx"
 	return $_rc
+}
+
+# fp_tree <index>: drop specs/ but specs/contracts/ from a temporary index and write its tree, so
+# the working tree (fingerprint) and a ref (phase_check_passed) give the same tree. FR-68.2
+fp_tree() {
+	GIT_INDEX_FILE=$1 git rm -r -q --cached --ignore-unmatch -- "$SPECS" ":(exclude)$CONTRACTS" >/dev/null 2>&1
+	GIT_INDEX_FILE=$1 git write-tree
 }
 
 # code_changed: does this branch change anything outside specs/ (committed, staged,
@@ -784,8 +793,12 @@ check_passed_here() {
 # when a check was recorded for the item at all.
 phase_check_passed() {
 	[ -f "$ST/checks/$ID" ] || return 1
-	[ -z "${PHASE_REF:-}" ] || [ -n "$PHASE_FP" ] ||
-		PHASE_FP=$(git ls-tree "$PHASE_REF" | S=$SPECS awk -F '\t' '$2 != ENVIRON["S"]' | git mktree)
+	if [ -n "${PHASE_REF:-}" ] && [ -z "$PHASE_FP" ]; then
+		_idx=$(mktemp "${TMPDIR:-/tmp}/$NAME-index.XXXXXX") || return 1
+		rm -f "$_idx"
+		GIT_INDEX_FILE=$_idx git read-tree "$PHASE_REF" && PHASE_FP=$(fp_tree "$_idx")
+		rm -f "$_idx"
+	fi
 	check_passed_here "$ID" ${PHASE_FP:+"$PHASE_FP"}
 }
 
@@ -948,13 +961,13 @@ ir_batch() {
 	printf '%s\n' "$IR_FACTS" | awk -F '\t' "$AWK_TASK"'$1 == "task" && $2 ~ /^T-[0-9]+\.[0-9]+$/ { print task_row($2, $3, $4) }' | task_batch
 }
 
-# task_commit <task id>: the newest commit on this branch (since the base) whose subject names
-# the task, as a whole ID: T-4.1 is not T-4.10.
+# task_commit <task id> [all]: the newest commit on this branch (since the base) whose subject
+# names the task, as a whole ID: T-4.1 is not T-4.10. With "all": every such commit, oldest first.
 task_commit() {
-	git log --format='%h %s' "$(cfg sdd.base main)..HEAD" 2>/dev/null |
-		T=$1 awk '{ s = " " substr($0, index($0, " ") + 1) " "; t = ENVIRON["T"]
+	git log ${2:+--reverse} --format='%h %s' "$(cfg sdd.base main)..HEAD" 2>/dev/null |
+		T=$1 A=${2:-} awk '{ s = " " substr($0, index($0, " ") + 1) " "; t = ENVIRON["T"]
 			while ((i = index(s, t)) > 0) {
-				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; exit }
+				if (substr(s, i - 1, 1) !~ /[A-Za-z0-9.-]/ && substr(s, i + length(t), 1) !~ /[0-9]/) { print $1; if (ENVIRON["A"] == "") exit; break }
 				s = substr(s, i + length(t))
 			} }'
 }
@@ -976,16 +989,21 @@ unnamed_note() {
 	[ -z "$_u" ] || echo "⚠ ticked and committed, but no commit subject names them: $(joinlist "$_u"). Ship refuses this: name each task ID in a commit subject (amend that commit while it is the last one)."
 }
 
-# bent_tests: one line per file of a done `by: planner` task that changed after the commit naming
-# the task (later commits or the working tree), unless "## Built" names the file (FR-58.1).
+# bent_tests: one line per file of a done `by: planner` task that changed after the first commit
+# naming the task with the file (later commits or the working tree), unless "## Built" names the
+# file (FR-58.1).
 bent_tests() {
 	_built=$(awk '/^## Built/ { on = 1; next } /^## / { on = 0 } on' "$IFILE")
 	_tab=$(printf '\t')
 	task_rows | awk -F '\t' '$2 == "done" && $11 == "planner" { print $1 "\t" $4 }' |
 		while IFS="$_tab" read -r _t _files; do
-			_c=$(task_commit "$_t")
-			[ -n "$_c" ] || continue
+			_cs=$(task_commit "$_t" all)
+			[ -n "$_cs" ] || continue
 			for _f in $(printf '%s\n' "$_files" | tr ',' ' '); do
+				# FR-68.3: from the first commit naming the task that has the file.
+				_c=
+				for _k in $_cs; do git cat-file -e "$_k:$_f" 2>/dev/null && _c=$_k && break; done
+				[ -n "$_c" ] || continue
 				[ -n "$(git diff --name-only "$_c" -- "$_f")" ] || continue
 				printf '%s\n' "$_built" | grep -qF -- "$_f" && continue
 				echo "item $ID: $_t's test $_f (written by the planner) changed after it was written: undo it, or say why under \"## Built\" naming the file"
@@ -1192,15 +1210,16 @@ pr_table() {
 }
 
 # AWK_JSON: awk functions to prepend to a program. esc(s) makes s safe inside a JSON string
-# (character by character, because gsub's backslash handling differs between awks; tabs never
-# reach it, and CR from CRLF files is escaped). row_json() renders an item_row line ($1..$20,
+# (character by character, because gsub's backslash handling differs between awks; control
+# characters, CR from CRLF files included, become \u00XX: FR-68.10). row_json() renders an item_row line ($1..$20,
 # plus $21..$26 = a PR's number, state, review, ci, url, words when ls joined one) as the fields
 # every reader sees, so a new column is added here and nowhere else.
 AWK_JSON='function esc(s,   o, i, c) {
+	if (!esc_n) for (esc_n = 1; esc_n < 32; esc_n++) esc_t[sprintf("%c", esc_n)] = sprintf("\\u%04x", esc_n)
 	o = ""
 	for (i = 1; i <= length(s); i++) {
 		c = substr(s, i, 1)
-		if (c == "\\") o = o "\\\\"; else if (c == "\"") o = o "\\\""; else if (c == "\r") o = o "\\r"; else o = o c
+		if (c == "\\") o = o "\\\\"; else if (c == "\"") o = o "\\\""; else if (c in esc_t) o = o esc_t[c]; else o = o c
 	}
 	return o
 }
@@ -1534,8 +1553,9 @@ item_read() {
 	}
 	function whole(l) {
 		l = unc(l, "w")
+		if (l ~ /^```/) wfc = !wfc
 		if (mbuilt && l ~ /^## / && l !~ /^## (Review|Waived)/) return
-		if (l ~ /^## /) {
+		if (!wfc && l ~ /^## /) {
 			mflush(); mname = substr(l, 4)
 			if (mname == "Built") mbuilt = 1
 			mpart = mbuilt; mopt = (mname ~ /\(optional\)/ || mname == "Waived"); mfilled = 0; return
@@ -1551,7 +1571,8 @@ item_read() {
 		if (i && !((kk = substr($0, 1, i - 1)) in fm)) { v = substr($0, i + 1); sub(/^[ \t]+/, "", v); fm[kk] = v }
 		next
 	}
-	$0 == "## Built" { past = 1 }
+	/^```/ { pfc = !pfc }
+	!pfc && $0 == "## Built" { past = 1 }
 	past { next }
 	{ $0 = unc($0, "p") }
 	'"$AWK_PARSE"'
@@ -1631,6 +1652,7 @@ function deps_load(   n, l, i, f) {
 	n = split(ENVIRON["ROWS"], l, "\n")
 	for (i = 1; i <= n; i++) {
 		if (split(l[i], f, "\t") < 19) continue
+		if (f[17] == "pr") f[3] = "open" # FR-68.6: in a PR, not merged
 		if (!(f[1] in ist)) { ist[f[1]] = f[3]; iti[f[1]] = f[8] }
 		if (f[18] != "" && deps_rank(f[3]) > deps_rank(est[f[18]])) { est[f[18]] = f[3]; eid[f[18]] = f[1]; eti[f[18]] = f[8] }
 	}

@@ -29,7 +29,16 @@ assert_eq $? 1 "(ship of a contract item with code)"
 assert_contains "$out" 'item 1: a contract item lands no code'
 git rm -q app.js && git commit -qm "no code"
 assert_contains "$(sdd check 2>&1)" '✓ check passed'
-sdd ship >/dev/null 2>&1 || fail "ship contract failed: $(sdd ship 2>&1)"
+# FR-68.2: an item file edit keeps the pass; a contract edit voids it, in the working tree and
+# judged from main (ls reads the branch's committed tree).
+echo 'More.' >>"$c" && git commit -qam "docs(1): more"
+assert_not_contains "$(sdd status)" 'no passing check'
+git switch -q main && assert_contains "$(sdd ls | grep '^1 ')" 'review' && git switch -q contract/1-orders-api
+printf 'openapi: 3.1.0\npaths: {/o: {}}\n' >specs/contracts/orders-api.yaml && git commit -qam "docs(1): edit contract"
+assert_contains "$(sdd status)" 'no passing check for the current code'
+git switch -q main && assert_contains "$(sdd ls | grep '^1 ')" 'build' && git switch -q contract/1-orders-api
+out=$(sdd ship 2>&1) || fail "ship contract failed: $out"
+assert_contains "$out" '✓ check passed'
 git cat-file -e main:specs/contracts/orders-api.yaml || fail "the contract must land on main"
 git switch -q main
 

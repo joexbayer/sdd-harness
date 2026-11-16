@@ -137,4 +137,25 @@ assert_contains "$out" '-The task names a.sh.'
 assert_contains "$out" '+The task names b.sh.'
 out=$(sdd approve 2>&1) || fail "re-approve failed: $out"
 assert_contains "$out" '+The task names b.sh.'
+
+# FR-68.7: a plan quoting the item format (a fenced "## Built") is plan text: its task is listed and
+# ticked, the real Built section is still empty, and a plan edit below the fence voids the approval.
+new_repo fence
+sdd new fix "Fence" >/dev/null 2>&1
+f=specs/changes/1-fence/item.md
+fill "$f" plan
+awk '{ print } /^## Must not change$/ { print "The layout:"; print "```"; print "## Built"; print "what the agent writes"; print "```" }
+/^## Test$/ { print "- [ ] T-1.1 Below the fence (test: true)"; print "" }' "$f" >"$T/p" && cp "$T/p" "$f"
+git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
+assert_contains "$(sdd task)" '[ ] T-1.1 Below the fence'
+assert_contains "$(sdd ls --json)" '"tasks_total":1'
+sdd task 'done' T-1.1 >/dev/null 2>&1 || fail "T-1.1 failed: $(sdd task 'done' T-1.1 2>&1)"
+grep -q '^- \[x\] T-1.1 Below' "$f" || fail "T-1.1 not ticked"
+git commit -qam "fix(1): T-1.1 below the fence"
+sdd check >/dev/null 2>&1
+assert_contains "$(sdd status)" '"## Built" is not written yet'
+setcfg profile.lite.built block
+assert_contains "$(sdd ship 2>&1)" 'item 1: "## Built" is not written yet'
+sed 's/^- \[x\] T-1.1 Below the fence/- [x] T-1.1 Below the fence, renamed/' "$f" >"$T/p" && cp "$T/p" "$f"
+assert_contains "$(sdd status)" 'the plan changed after approval'
 exit 0

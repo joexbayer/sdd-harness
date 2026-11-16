@@ -53,6 +53,9 @@ cd "$R" && git fetch -q origin
 git switch -q main
 mkdir -p specs/archive/9-gone
 printf -- '---\nid: 9\ntype: chore\ntitle: Gone\r\nstatus: dropped\n---\n# 9 Gone\n' >specs/archive/9-gone/item.md
+# 10: dropped; its title holds a pasted colour code (ESC).
+mkdir -p specs/archive/10-red
+printf -- '---\nid: 10\ntype: chore\ntitle: Red \033[31m\nstatus: dropped\n---\n# 10 Red\n' >specs/archive/10-red/item.md
 git add -A && git commit -qm "drop 9"
 
 out=$(sdd ls) || fail "ls failed: $out"
@@ -63,6 +66,10 @@ assert_not_contains "$out" 'origin/feature/2-two'
 assert_not_contains "$out" 'Gone'
 assert_contains "$(sdd ls --all)" 'dropped'
 assert_eq "$(sdd ls --all --json | jq -r 'select(.id == 9) | .title')" "$(printf 'Gone\r')"
+# FR-68.10: a control character is escaped as \u00XX: the line parses, the title holds the code.
+assert_contains "$(sdd ls --all --json | grep '"id":10,')" '"title":"Red \u001b[31m"'
+assert_eq "$(sdd ls --all --json | jq -r 'select(.id == 10) | .title')" "$(printf 'Red \033[31m')"
+assert_eq "$(sdd show 10 --json | jq -r '.title')" "$(printf 'Red \033[31m')"
 
 # --json: one object per line, fixed keys, counts equal to plain grep on the same file.
 json=$(sdd ls --json)

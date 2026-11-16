@@ -88,18 +88,99 @@ cleanup() {
 }
 
 # pr_ready: what was checked is what lands. The branch must contain the remote base (GitHub
-# merges into it) and the local base must have nothing the remote lacks (it is fast-forwarded
-# after the merge).
+# merges into it) and the local base must have nothing the remote lacks. The local base is
+# fast-forwarded to the remote's, so a teammate's changes there are not this item's (FR-68.9).
 pr_ready() {
 	git fetch -q "$remote" "$base" || die "could not fetch $remote/$base"
 	git merge-base --is-ancestor "$base" "$remote/$base" ||
 		die "$base has commits $remote/$base lacks; push or reset $base first (PRs land on $remote/$base)"
+	ff_base "$remote/$base"
 	git merge-base --is-ancestor "$remote/$base" HEAD ||
 		die "$BRANCH is behind $remote/$base: git merge $remote/$base (or rebase, if never pushed), then $CMD ship"
 }
 
-# pr_gates: the gates the local ship also applies to this code: the constitution and the check.
+# type_guard: the type an item was opened with stays its type (D-68.1). FR-68.4
+type_guard() {
+	_ip="$SPECS/changes/${IDIR##*/}/item.md"
+	# --follow: a folder rename must not pass for the item's creation.
+	_add=$(git log --follow --diff-filter=A --name-only --format=%H -- "$_ip" | sed '/^$/d' | tail -n 2)
+	[ -n "$_add" ] || return 0
+	_was=$(git show "$(printf '%s\n' "$_add" | head -n 1):$(printf '%s\n' "$_add" | tail -n 1)" | fm_get type)
+	[ "$_was" = "$ITYPE" ] || fail "item $ID was opened as $_was: its type cannot change (now $ITYPE); open a new item"
+}
+
+# item_gates: the gates that look at the item, for a first ship and (FR-68.5) for new commits on
+# a PR or its merge.
+item_gates() {
+	[ -z "$(missing_sections "$IFILE" plan)" ] ||
+		gate planned "item $ID: the plan is incomplete (empty: $(joinlist "$(missing_sections "$IFILE" plan)"))"
+	if [ "$(gate_level approved "$ITYPE")" != off ]; then
+		if ! approval_ok; then
+			gate approved "item $ID: the plan is not approved, or changed since (the human runs: $CMD approve)"
+		else
+			first=$(git log --reverse --format=%H --grep="^docs($ID): approve plan" "$base..HEAD" | head -n 1)
+			early=$([ -n "$first" ] && git log --format=%h "$base..$first" -- . ":(exclude)$SPECS")
+			[ -z "$early" ] || gate approved "item $ID: code was committed before the plan was approved ($(joinlist "$early"))"
+		fi
+	fi
+	[ -z "$(missing_sections "$IFILE" built)" ] || gate built "item $ID: \"## Built\" is not written yet"
+	# FR-22.3: someone other than the builder proved the requirements (the verifier, see finish.md).
+	[ "$(gate_level verified "$ITYPE")" = off ] || verified ||
+		gate verified "item $ID: not verified (gate verified): \"## Built\" needs a \"Verified by: <model>: …\" line, not none (the verifier step in $CMD next)"
+	# FR-22.4: the code ships as the human last saw it in $CMD review here; a rebase keeps its patch
+	# id. An item that changes no code has nothing to see.
+	if [ "$(gate_level reviewed "$ITYPE")" != off ]; then
+		seen="$ST/checks/$ID.reviewed"
+		now=$(review_print)
+		if [ "$(printf '%s\n' "$now" | sed -n 1p)" = patch= ]; then
+			:
+		elif [ ! -f "$seen" ]; then
+			gate reviewed "item $ID: not reviewed in this clone (gate reviewed): run $CMD review"
+		elif [ "$(sed -n 1p "$seen")" != "$(printf '%s\n' "$now" | sed -n 1p)" ]; then
+			since=$(printf '%s\n' "$now" | awk -F '\t' 'FNR == 1 { next } NR == FNR { was[$0] = 1; next }
+				{ is[$0] = 1; if (!($0 in was)) p[$2] = 1 } END { for (l in was) if (!(l in is)) { split(l, f, "\t"); p[f[2]] = 1 } for (x in p) print x }' "$seen" - | sort)
+			gate reviewed "item $ID: code changed since your review${since:+ ($(joinlist "$since"))} (gate reviewed): run $CMD review"
+		fi
+	fi
+	# FR-24.6: an item ships after the items and roadmap entries it depends on (D-24.2: only ship waits).
+	if [ "$(gate_level depends "$ITYPE")" != off ]; then
+		waits_for "$(fm_get depends "$IFILE")"
+		[ -z "$WAITS" ] || gate depends "item $ID: waits for $WAITS (gate depends)"
+	fi
+	# Tasks: sdd ticks a box when its test passes, git proves it: a ticked task needs a commit
+	# naming it, in every profile, and, when that commit is yours, the note task done left in this
+	# clone (a teammate's tick was proven on their machine). Features also need tasks, all ticked.
+	trows=$(task_rows)
+	unproven=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' |
+		while IFS= read -r t; do waived "$t" || [ -n "$(task_commit "$t")" ] || echo "$t"; done)
+	[ -z "$unproven" ] || fail "item $ID: ticked, but no commit names them: $(joinlist "$unproven") (put the task ID in the commit subject)"
+	# FR-58.1: a test the planner wrote is the contract; the builder may not quietly change it.
+	bent=$(bent_tests)
+	[ -z "$bent" ] || fail "$bent"
+	me=$(git config user.name)
+	byhand=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r t; do
+		grep -qx "$t" "$ST/checks/$ID.tasks" 2>/dev/null && continue
+		! waived "$t" || continue
+		[ "$(git log -1 --format=%an "$(task_commit "$t")")" != "$me" ] || echo "$t"
+	done)
+	[ -z "$byhand" ] || fail "item $ID: ticked without $CMD task done: $(joinlist "$byhand") (untick them and run task done)"
+	if [ "$(gate_level tasks "$ITYPE")" != off ]; then
+		[ -n "$trows" ] || gate tasks "item $ID: the plan has no tasks (- [ ] T-$ID.1 …)"
+		open=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "open" { print $1 }')
+		# A task whose line sdd cannot read (task_rows) is refused, ticked or not.
+		unread=$(printf '%s\n' "$trows" | awk -F '\t' '$8 != "" { s = s (s == "" ? "" : "; ") $1 " (" $8 ")" } END { print s }')
+		tmsg=
+		[ -z "$open" ] || tmsg="tasks not done: $(joinlist "$open")"
+		[ -z "$unread" ] || tmsg="${tmsg:+$tmsg; }tasks $NAME cannot read: $unread"
+		[ -z "$tmsg" ] || gate tasks "item $ID: $tmsg"
+	fi
+}
+
+# pr_gates: the gates the local ship also applies to this code: the item's, the constitution and
+# the check.
 pr_gates() {
+	item_gates # FR-68.5, FR-68.6
+	type_guard
 	guard=$(constitution_guard) || die "item $ID: $guard"
 	: >"$ST/checks/$ID.articles.log"
 	check_articles "$ST/checks/$ID.articles.log" || die "item $ID: $(printf '%s\n' "$CHECK_ARTICLES" | paste -sd ';' -)"
@@ -180,69 +261,13 @@ fi
 archive="$SPECS/archive/${IDIR##*/}"
 [ ! -e "$archive" ] || die "$archive already exists"
 
-# The gates that look at the item.
-[ -z "$(missing_sections "$IFILE" plan)" ] ||
-	gate planned "item $ID: the plan is incomplete (empty: $(joinlist "$(missing_sections "$IFILE" plan)"))"
-if [ "$(gate_level approved "$ITYPE")" != off ]; then
-	if ! approval_ok; then
-		gate approved "item $ID: the plan is not approved, or changed since (the human runs: $CMD approve)"
-	else
-		first=$(git log --reverse --format=%H --grep="^docs($ID): approve plan" "$base..HEAD" | head -n 1)
-		early=$([ -n "$first" ] && git log --format=%h "$base..$first" -- . ":(exclude)$SPECS")
-		[ -z "$early" ] || gate approved "item $ID: code was committed before the plan was approved ($(joinlist "$early"))"
-	fi
-fi
-[ -z "$(missing_sections "$IFILE" built)" ] || gate built "item $ID: \"## Built\" is not written yet"
-# FR-22.3: someone other than the builder proved the requirements (the verifier, see finish.md).
-[ "$(gate_level verified "$ITYPE")" = off ] || verified ||
-	gate verified "item $ID: not verified (gate verified): \"## Built\" needs a \"Verified by: <model>: …\" line, not none (the verifier step in $CMD next)"
-# FR-22.4: the code ships as the human last saw it in $CMD review here; a rebase keeps its patch
-# id. An item that changes no code has nothing to see.
-if [ "$(gate_level reviewed "$ITYPE")" != off ]; then
-	seen="$ST/checks/$ID.reviewed"
-	now=$(review_print)
-	if [ "$(printf '%s\n' "$now" | sed -n 1p)" = patch= ]; then
-		:
-	elif [ ! -f "$seen" ]; then
-		gate reviewed "item $ID: not reviewed in this clone (gate reviewed): run $CMD review"
-	elif [ "$(sed -n 1p "$seen")" != "$(printf '%s\n' "$now" | sed -n 1p)" ]; then
-		since=$(printf '%s\n' "$now" | awk -F '\t' 'FNR == 1 { next } NR == FNR { was[$0] = 1; next }
-			{ is[$0] = 1; if (!($0 in was)) p[$2] = 1 } END { for (l in was) if (!(l in is)) { split(l, f, "\t"); p[f[2]] = 1 } for (x in p) print x }' "$seen" - | sort)
-		gate reviewed "item $ID: code changed since your review${since:+ ($(joinlist "$since"))} (gate reviewed): run $CMD review"
-	fi
-fi
-# FR-24.6: an item ships after the items and roadmap entries it depends on (D-24.2: only ship waits).
-if [ "$(gate_level depends "$ITYPE")" != off ]; then
-	waits_for "$(fm_get depends "$IFILE")"
-	[ -z "$WAITS" ] || gate depends "item $ID: waits for $WAITS (gate depends)"
-fi
-# Tasks: sdd ticks a box when its test passes, git proves it: a ticked task needs a commit
-# naming it, in every profile, and, when that commit is yours, the note task done left in this
-# clone (a teammate's tick was proven on their machine). Features also need tasks, all ticked.
-trows=$(task_rows)
-unproven=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' |
-	while IFS= read -r t; do waived "$t" || [ -n "$(task_commit "$t")" ] || echo "$t"; done)
-[ -z "$unproven" ] || fail "item $ID: ticked, but no commit names them: $(joinlist "$unproven") (put the task ID in the commit subject)"
-# FR-58.1: a test the planner wrote is the contract; the builder may not quietly change it.
-bent=$(bent_tests)
-[ -z "$bent" ] || fail "$bent"
-me=$(git config user.name)
-byhand=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r t; do
-	grep -qx "$t" "$ST/checks/$ID.tasks" 2>/dev/null && continue
-	! waived "$t" || continue
-	[ "$(git log -1 --format=%an "$(task_commit "$t")")" != "$me" ] || echo "$t"
-done)
-[ -z "$byhand" ] || fail "item $ID: ticked without $CMD task done: $(joinlist "$byhand") (untick them and run task done)"
-if [ "$(gate_level tasks "$ITYPE")" != off ]; then
-	[ -n "$trows" ] || gate tasks "item $ID: the plan has no tasks (- [ ] T-$ID.1 …)"
-	open=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "open" { print $1 }')
-	# A task whose line sdd cannot read (task_rows) is refused, ticked or not.
-	unread=$(printf '%s\n' "$trows" | awk -F '\t' '$8 != "" { s = s (s == "" ? "" : "; ") $1 " (" $8 ")" } END { print s }')
-	tmsg=
-	[ -z "$open" ] || tmsg="tasks not done: $(joinlist "$open")"
-	[ -z "$unread" ] || tmsg="${tmsg:+$tmsg; }tasks $NAME cannot read: $unread"
-	[ -z "$tmsg" ] || gate tasks "item $ID: $tmsg"
-fi
+lands=$(cfg "type.$ITYPE.lands" all)
+# With a forge, GitHub merges into the remote base: the branch must already contain it (no
+# rebase, which would rewrite commits a PR or a teammate may already have). It is fetched before
+# the gates judge the item (FR-68.9).
+[ -z "$forge" ] || [ "$lands" = item ] || pr_ready
+item_gates
+type_guard
 # The constitution blocks in every profile.
 guard=$(constitution_guard) || fail "item $ID: $guard"
 
@@ -250,7 +275,7 @@ pre=$(git rev-parse HEAD)
 
 # A spike's code never lands: only its archived item reaches the base branch. A roadmap's neither
 # (it has none): its entries open from the base branch once it is there (FR-24.1).
-if [ "$(cfg "type.$ITYPE.lands" all)" = item ]; then
+if [ "$lands" = item ]; then
 	fm_set "$IFILE" status shipped
 	fm_set "$IFILE" shipped "$(date +%F)"
 	git commit -q -m "docs($ID): ship $ITYPE \"$title\"" -- "$IFILE" || fail "could not commit $IFILE"
@@ -275,11 +300,7 @@ if [ "$(cfg "type.$ITYPE.lands" all)" = item ]; then
 	exit 0
 fi
 
-# With a forge, GitHub merges into the remote base: the branch must already contain it (no
-# rebase, which would rewrite commits a PR or a teammate may already have).
-if [ -n "$forge" ]; then
-	pr_ready
-elif ! git merge-base --is-ancestor "$base" HEAD; then
+if [ -z "$forge" ] && ! git merge-base --is-ancestor "$base" HEAD; then
 	git rebase -q "$base" >/dev/null 2>&1 || {
 		git rebase --abort >/dev/null 2>&1
 		die "rebase onto $base hit conflicts; resolve with: git rebase $base, then $CMD ship"
