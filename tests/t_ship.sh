@@ -16,6 +16,7 @@ fill "$ITEM" built
 git commit -qam "docs(1): built"
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'shipped 1 into main'
+assert_contains "$out" 'next    git push origin main' # FR-73.9: a remote exists
 assert_eq "$(git symbolic-ref --short HEAD)" main
 git rev-parse -q --verify refs/heads/fix/1-off-by-one >/dev/null && fail "item branch should be deleted"
 assert_file code.txt
@@ -172,4 +173,43 @@ git switch -q fix/1-ident-b
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'warning: id 1 is also 1-ident-a on main'
 assert_file specs/archive/1-ident-b/item.md
+
+# --- FR-73.9: a failing check shows the last 5 lines of its log; a local ship with no remote
+# suggests no push; a linked worktree's cleanup hint quotes a path with a space.
+new_repo "my app"
+planned_item fix "Loud"
+echo fixed >fix.txt && git add fix.txt && git commit -qm "fix(1): code"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+setcfg --replace-all check.run 'for i in 1 2 3 4 5 6 7; do echo "line $i"; echo; done; exit 1'
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(failing check)"
+assert_contains "$out" 'check failed (log: '
+assert_contains "$out" 'line 7'
+assert_contains "$out" 'line 4'
+assert_not_contains "$out" 'line 3'
+setcfg --replace-all check.run 'echo ok'
+out=$(sdd ship 2>&1) || fail "ship failed: $out"
+assert_not_contains "$out" 'git push'
+new_repo "my app2"
+sdd new fix "Wt" --worktree >/dev/null 2>&1 || fail "new --worktree failed"
+cd "$T/my app2.1" || exit 1
+f=$(echo specs/changes/1-*/item.md)
+fill "$f" plan && git add -A && git commit -qm "docs(1): plan"
+sdd approve >/dev/null 2>&1 || fail "approve failed"
+echo fixed >fix.txt && git add fix.txt && git commit -qm "fix(1): code"
+fill "$f" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1) || fail "ship from a worktree failed: $out"
+assert_contains "$out" "cleanup cd '/"
+assert_contains "$out" "my app2' && .sdd/bin/sdd tidy"
+
+# --- FR-73.8: a hand tick is told first, even with no commit naming the task.
+new_repo hand
+planned_item fix "Hand" tasks
+sed 's/^- \[ \] T-1.1 /- [x] T-1.1 /' "$ITEM" >"$T/f" && cp "$T/f" "$ITEM"
+fill "$ITEM" built
+git commit -qam "fix(1): ticked by hand"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(a hand tick)"
+assert_contains "$out" 'ticked without .sdd/bin/sdd task done: T-1.1 (untick them and run task done)'
+assert_not_contains "$out" 'no commit names them'
 exit 0
