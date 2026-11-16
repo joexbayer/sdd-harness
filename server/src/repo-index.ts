@@ -4,7 +4,7 @@
 import { join } from "node:path";
 import type { Repo } from "./config.ts";
 import { baseBranch, ensureClone, fetchRepo, git, projectConfig } from "./mirror.ts";
-import { sddHome, sddJson } from "./sdd.ts";
+import { LS_MS, SHOW_MS, sddHome, sddJson } from "./sdd.ts";
 import { branchVersions, type VsBase } from "./versions.ts";
 import { readFileSync } from "node:fs";
 
@@ -28,7 +28,11 @@ export class RepoIndex {
   private shows = new Map<string, Record<string, unknown>>();
   private gen = 0;
 
-  constructor(o: { data: string; knownHosts: string; bundled: string; repos: Repo[] }) {
+  // FR-70.3: the time limits of the bundled sdd's `ls` (the index) and `show`.
+  private limits: { ls: number; show: number };
+
+  constructor(o: { data: string; knownHosts: string; bundled: string; repos: Repo[]; limits?: { ls: number; show: number } }) {
+    this.limits = o.limits ?? { ls: LS_MS, show: SHOW_MS };
     this.data = o.data;
     this.knownHosts = o.knownHosts;
     this.bundled = o.bundled;
@@ -67,7 +71,7 @@ export class RepoIndex {
       }
       const base = await baseBranch(clone);
       const home = await sddHome(this.data, repo.name, this.bundled, await projectConfig(clone, base));
-      const rows = (await sddJson(home, clone, ["ls", "--json", "--all"])) as Row[];
+      const rows = (await sddJson(home, clone, ["ls", "--json", "--all"], this.limits.ls)) as Row[];
       // An item on a branch gets that branch's version; on the base or in the archive, the base's.
       const onBranch = (r: Row) => r.branch !== "" && (r.source === "remote" || r.source === "local");
       const v = await branchVersions(clone, base, [...new Set(rows.filter(onBranch).map((r) => r.branch))]);
@@ -101,7 +105,7 @@ export class RepoIndex {
     const key = `${name}\0${s.gen}\0${id}`;
     let shown = this.shows.get(key);
     if (!shown) {
-      shown = (await sddJson(s.home, s.clone, ["show", String(id), "--json"]))[0] as Record<string, unknown>;
+      shown = (await sddJson(s.home, s.clone, ["show", String(id), "--json"], this.limits.show))[0] as Record<string, unknown>;
       this.shows.set(key, shown);
     }
     const out: Record<string, unknown> = { repo: name, ...shown };

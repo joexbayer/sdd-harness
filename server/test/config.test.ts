@@ -53,9 +53,9 @@ test("FR-53.4 reads the plan's config example", async () => {
   });
 });
 
-test("FR-53.4 defaults: listen :8080, data /data, fetch-interval 60", async () => {
+test("FR-53.4 defaults: listen 127.0.0.1:8080 (FR-70.4), data /data, fetch-interval 60", async () => {
   const c = await loadConfig(await cfgFile(minimal));
-  assert.equal(c.listen, ":8080");
+  assert.equal(c.listen, "127.0.0.1:8080");
   assert.equal(c.data, "/data");
   assert.equal(c.fetchInterval, 60);
   assert.deepEqual(c.repos, []);

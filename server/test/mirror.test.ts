@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { baseBranch, ensureClone, fetchRepo, projectConfig } from "../src/mirror.ts";
+import { baseBranch, ensureClone, fetchRepo, projectConfig, sshEnv } from "../src/mirror.ts";
 import { makeRepo, sshd } from "./fixtures.ts";
 
 const refs = (dir: string, pattern: string) =>
@@ -230,4 +230,10 @@ test("FR-63.6 lock removal does not follow a symlink out of the clone", async ()
   await symlink(outside, join(dir, ".git", "refs", "remotes", "evil"));
   await fetchRepo(repo, dir, "");
   assert.equal(existsSync(lock), true);
+});
+
+// FR-70.1: a host that accepts and never answers must not hold ssh (and the fetch) for ever.
+test("FR-70.1 ssh gets a connect timeout and keepalives", () => {
+  const cmd = sshEnv({ name: "api", url: "x", key: "/k" }, "/kh").GIT_SSH_COMMAND;
+  assert.ok(cmd.includes("-o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3"), cmd);
 });

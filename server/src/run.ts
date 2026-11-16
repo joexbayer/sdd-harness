@@ -1,30 +1,50 @@
-// run: one subprocess with an argv (child_process.execFile, never a shell), a timeout and an
+// run: one subprocess with an argv (child_process.spawn, never a shell), a timeout and an
 // output cap. It never rejects: a failure is a non-zero code with the reason in stderr.
-import { execFile, type ExecFileException } from "node:child_process";
+import { spawn } from "node:child_process";
 
 export interface RunResult { code: number; stdout: string; stderr: string }
 
+// FR-70.2: the child leads its own process group (detached), so a timeout kills it and everything
+// it started; the group is only ever the one of the child this call spawned.
 export function run(cmd: string, args: string[], o: { cwd?: string; env: Record<string, string>;
   timeoutMs: number; maxBytes: number; input?: string }): Promise<RunResult> {
   return new Promise((resolve) => {
-    const child = execFile(cmd, args, { cwd: o.cwd, env: o.env, timeout: o.timeoutMs, maxBuffer: o.maxBytes,
-      killSignal: "SIGKILL", encoding: "utf8" }, (err, stdout, stderr) => {
-      if (!err) return resolve({ code: 0, stdout, stderr });
-      const e = err as ExecFileException & { code?: number | string | null };
-      let code = typeof e.code === "number" ? e.code : 1;
-      let why = "";
-      if (e.code === "ENOENT") {
-        code = 127;
-        why = `${cmd}: not found`;
-      } else if (e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
-        why = `${cmd}: output over ${o.maxBytes} bytes`;
-      } else if (e.killed) {
-        why = `${cmd}: timed out after ${o.timeoutMs / 1000} s`;
+    const child = spawn(cmd, args, { cwd: o.cwd, env: o.env, detached: true, stdio: ["pipe", "pipe", "pipe"] });
+    const out: Buffer[] = [];
+    const err: Buffer[] = [];
+    let outN = 0, errN = 0;
+    let why = "";
+    let failed: NodeJS.ErrnoException | undefined;
+    const killGroup = (reason: string) => {
+      if (why === "") why = reason;
+      const pid = child.pid;
+      if (pid !== undefined && pid > 0) {
+        try { process.kill(-pid, "SIGKILL"); } catch { /* group already gone */ }
       }
-      if (code === 0) code = 1;
+    };
+    const timer = setTimeout(() => killGroup(`${cmd}: timed out after ${o.timeoutMs / 1000} s`), o.timeoutMs);
+    const collect = (chunks: Buffer[], n: number, d: Buffer): number => {
+      if (n >= o.maxBytes) return n;
+      chunks.push(d.subarray(0, o.maxBytes - n));
+      if (n + d.length > o.maxBytes) killGroup(`${cmd}: output over ${o.maxBytes} bytes`);
+      return n + d.length;
+    };
+    child.stdout.on("data", (d: Buffer) => { outN = collect(out, outN, d); });
+    child.stderr.on("data", (d: Buffer) => { errN = collect(err, errN, d); });
+    child.stdin.on("error", () => {}); // a child that exits without reading its input
+    child.on("error", (e: NodeJS.ErrnoException) => { failed = e; });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      const stdout = Buffer.concat(out).toString("utf8");
+      const stderr = Buffer.concat(err).toString("utf8");
+      if (failed?.code === "ENOENT") return resolve({ code: 127, stdout, stderr: `${cmd}: not found\n${stderr}` });
+      if (failed && why === "") why = `${cmd}: ${failed.message}`;
+      let code = status ?? 1;
+      if (why !== "" && code === 0) code = 1;
       resolve({ code, stdout, stderr: why === "" ? stderr : `${why}\n${stderr}` });
     });
-    if (o.input !== undefined) child.stdin?.end(o.input);
+    if (o.input !== undefined) child.stdin.end(o.input);
+    else child.stdin.end();
   });
 }
 

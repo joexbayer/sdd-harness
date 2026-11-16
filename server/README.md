@@ -4,6 +4,11 @@ A small server your team runs on its own domain. Agents ask it what everyone is 
 across all your repos and unmerged branches, over MCP. Nobody has to fetch anything or read a
 markdown file. It is read-only: git stays the only way anything changes.
 
+Not on npm yet: until it is published, run it from a checkout of this repo:
+`cd server && npm ci && node src/cli.ts serve --config ./sdd-server.conf` (Node 22.18 or newer).
+The `npx sdd-server@0.1.0 …` and `npm install -g` lines below, the Docker image (it installs the
+package) and the step 1 URL (its tag) work once it is published.
+
 ```
  your agent ──HTTPS + your token──▶ Caddy ──▶ sdd-server ──git fetch every 60 s──▶ GitHub / GitLab
                                               runs its bundled sdd `ls --json` on each clone
@@ -27,17 +32,18 @@ You need a host with Docker, a DNS name for it, and a read-only deploy key per r
 ```sh
 # 1. DNS: an A (and AAAA) record sdd.example.com → the host; ports 80 and 443 open for Caddy.
 mkdir -p /opt/sdd-server/keys && cd /opt/sdd-server
-curl -fsSLO https://raw.githubusercontent.com/joexbayer/sdd-harness/v0.1.0/server/deploy/{Dockerfile,compose.yaml,Caddyfile,sdd-server.conf.example}
+curl -fsSLO https://raw.githubusercontent.com/joexbayer/sdd-harness/server-v0.1.0/server/deploy/{Dockerfile,compose.yaml,Caddyfile,sdd-server.conf.example}
 
 # 2. A read-only deploy key per repo (GitHub refuses one key on two repos)
 ssh-keygen -t ed25519 -N '' -C sdd-server@api -f keys/api
+chown -R 1000:1000 keys                                                  # the container's user; keys stay 0600
 gh repo deploy-key add keys/api.pub --repo acme/api --title sdd-server   # read-only unless --allow-write
 #    (GitLab: Settings → Repository → Deploy keys, without "Grant write permissions")
 
 # 3. The git host's published ssh keys, not a trust-on-first-use scan
 curl -fsS https://api.github.com/meta | jq -r '.ssh_keys[] | "github.com " + .' > known_hosts
 
-# 4. A token per person: prints the token once, and the lines to paste into the config
+# 4. A token per person (needs Node 22+ on this machine): prints the token once, and the lines to paste
 npx sdd-server@0.1.0 token kari
 npx sdd-server@0.1.0 token ola
 
@@ -63,6 +69,7 @@ touching the network):
 
 ```ini
 [server]
+	# Docker: Caddy is another container, so listen on every interface. Without Docker, leave it out: the default is 127.0.0.1:8080.
 	listen = :8080
 	public-host = sdd.example.com
 	data = /data
@@ -82,7 +89,7 @@ touching the network):
 
 | key | meaning |
 |---|---|
-| `server.listen` | address and port to listen on, default `:8080` |
+| `server.listen` | address and port to listen on, default `127.0.0.1:8080` (this machine only; `:8080` is every interface) |
 | `server.public-host` | the name clients use (the `Host` the server accepts, besides loopback names). Required |
 | `server.data` | where the clones live, default `/data`. A cache of git: delete it and the next start re-clones |
 | `server.known-hosts` | the ssh `known_hosts` file; an unknown host key fails the clone |
@@ -103,7 +110,7 @@ with `public-host = localhost` (Node 22 or newer, git, ssh and a POSIX sh with a
 | upgrade | set `SDD_SERVER_VERSION` in compose.yaml, then `docker compose up -d --build`. Roll back the same way |
 | back up | only `sdd-server.conf` and `keys/`, into the team's secret store. The `sdd-data` volume is a cache of git |
 | logs and health | `docker compose logs sdd-server` (JSON lines: who called which tool, never the token or the results); `/healthz` (no token, no repo names) for an uptime monitor |
-| without Docker | `npm install -g sdd-server@0.1.0`, a `sdd-server` system user, `deploy/sdd-server.service` (set `data = /var/lib/sdd-server`), and Caddy on the host proxying to `127.0.0.1:8080` |
+| without Docker | `npm install -g sdd-server@0.1.0`, a `sdd-server` system user, `deploy/sdd-server.service` (set `data = /var/lib/sdd-server`; set `ExecStart` to the path `command -v sdd-server` prints), and Caddy on the host proxying to `127.0.0.1:8080` |
 
 `sdd-server` subcommands: `serve`, `check [--offline]`, `token <name>`, `health` (the container's
 healthcheck) and `version`. The config defaults to `/etc/sdd-server/config`.
@@ -162,4 +169,4 @@ check take longer than the check's budget and run as release steps.
 3. `sh scripts/linux-check.sh`. A failure stops the release.
 4. `npm publish --provenance`. `prepack` builds `dist/` and bundles `.sdd/bin`, `.sdd/core` and a
    `VERSION` stamped `<version> (<12-char commit>)` into `sdd/`.
-5. Tag the commit `v<version>` and check `npx sdd-server@<version> version`.
+5. Tag the commit `server-v<version>` (`v<version>` is sdd's own namespace) and check `npx sdd-server@<version> version`.

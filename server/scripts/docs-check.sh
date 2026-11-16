@@ -20,4 +20,16 @@ for cmd in serve check token health version; do
 	case $usage in *"sdd-server $cmd"*) ;; *) fail "the CLI's usage lacks $cmd" ;; esac
 	grep -q "\`$cmd" "$server/README.md" || fail "README.md does not name the $cmd subcommand"
 done
+# FR-70.6 to FR-70.8: deploy files and README that work as written.
+grep -q '^[[:space:]]*init: true' "$server/deploy/compose.yaml" || fail "compose.yaml lacks init: true"
+grep -q '^StateDirectory=sdd-server$' "$server/deploy/sdd-server.service" || fail "the unit lacks StateDirectory=sdd-server"
+if grep -q '^ReadWritePaths' "$server/deploy/sdd-server.service"; then fail "the unit still has ReadWritePaths"; fi
+grep -q 'chown -R 1000:1000 keys' "$server/README.md" || fail "README.md lacks the chown of keys to uid 1000"
+grep -q 'Not on npm yet' "$server/README.md" || fail "README.md lacks the not-on-npm note"
+grep -q 'server-v<version>' "$server/README.md" || fail "README.md does not tag releases server-v<version>"
+grep -A4 'Not on npm yet' "$server/README.md" | grep -q 'step 1 URL' ||
+	fail "README.md's not-on-npm note does not name the step 1 URL"
+grep -q 'needs Node 22+' "$server/README.md" || fail "README.md's token step does not name Node 22+"
+grep -q 'command -v sdd-server' "$server/deploy/sdd-server.service" || fail "the unit does not say how to find the binary"
+grep -q 'every interface' "$server/deploy/sdd-server.conf.example" || fail "the conf example does not say why it listens on every interface"
 echo "docs-check: ok"

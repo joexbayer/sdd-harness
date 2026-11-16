@@ -2,11 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { RepoIndex } from "../src/repo-index.ts";
 import { FIXED_PATH, gitEnv } from "../src/mirror.ts";
-import { BUNDLED, makeRepo, type Fixture } from "./fixtures.ts";
+import { sddJson, LS_MS, SHOW_MS } from "../src/sdd.ts";
+import { BUNDLED, makeRepo, tmp, type Fixture } from "./fixtures.ts";
 
 async function team(): Promise<Fixture> {
   const f = await makeRepo();
@@ -149,4 +150,30 @@ test("FR-63.3 show says a configured repo is not indexed yet, with the error", a
   await ix.rebuild(ix.repos[0]);
   await assert.rejects(ix.show("gone", 1, false), { message: /^repo gone is not indexed yet: .*(does not exist|does not appear to be a git repository)/ });
   await assert.rejects(ix.show("web", 1, false), { message: "repo web is not indexed yet: waiting for the first fetch" });
+});
+
+// FR-70.3: `ls` (the index) gets 10 minutes, `show` 60 s; the limit is sddJson's parameter.
+test("FR-70.3 sddJson takes its time limit as a parameter, ls 10 minutes and show 60 s", async () => {
+  const home = await tmp();
+  await mkdir(join(home, "bin"));
+  await writeFile(join(home, "bin", "sdd"), `sleep 2\necho '{"ok":1}'\n`);
+  assert.deepEqual(await sddJson(home, home, ["ls"], 10_000), [{ ok: 1 }]);
+  await assert.rejects(sddJson(home, home, ["ls"], 1000), /timed out after 1 s/);
+  assert.equal(LS_MS, 600_000);
+  assert.equal(SHOW_MS, 60_000);
+});
+
+// FR-70.3: the index runs under the ls limit and show under the show limit, not the other way.
+test("FR-70.3 the index uses the ls limit and show the show limit", async () => {
+  const f = await makeRepo();
+  const fake = await tmp();
+  await mkdir(join(fake, "bin"));
+  await mkdir(join(fake, "core"));
+  await writeFile(join(fake, "VERSION"), "0.0.0-fake\n");
+  await writeFile(join(fake, "bin", "sdd"), `sleep 2\ncase $1 in\nls) echo '{"id":1,"status":"open","branch":"","source":"base","title":"x"}' ;;\nshow) echo '{"id":1}' ;;\nesac\n`);
+  const ix = new RepoIndex({ data: join(f.root, "data"), knownHosts: "", bundled: fake,
+    repos: [{ name: "api", url: f.origin, key: join(f.root, "no-key") }], limits: { ls: 20_000, show: 1000 } });
+  await ix.rebuild(ix.repos[0]);
+  assert.equal(ix.snapshot("api")!.ok, true, ix.snapshot("api")!.error);
+  await assert.rejects(ix.show("api", 1, false), /timed out after 1 s/);
 });

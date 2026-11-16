@@ -5,7 +5,9 @@ import { join } from "node:path";
 import { errorLine, run } from "./run.ts";
 import { gitEnv } from "./mirror.ts";
 
-const SDD_MS = 60_000;
+// FR-70.3 a big repo's index takes minutes; one item's show stays short.
+export const LS_MS = 600_000;
+export const SHOW_MS = 60_000;
 const SDD_CAP = 32 << 20;
 const fresh = new Set<string>();
 
@@ -28,9 +30,9 @@ export async function sddHome(data: string, repo: string, bundled: string, proje
 }
 
 // sddJson: run `sdd <args>` in the clone and parse its JSON lines.
-export async function sddJson(home: string, clone: string, args: string[]): Promise<unknown[]> {
+export async function sddJson(home: string, clone: string, args: string[], timeoutMs: number): Promise<unknown[]> {
   const r = await run("/bin/sh", [join(home, "bin", "sdd"), ...args],
-    { cwd: clone, env: gitEnv(), timeoutMs: SDD_MS, maxBytes: SDD_CAP });
+    { cwd: clone, env: gitEnv(), timeoutMs, maxBytes: SDD_CAP });
   if (r.code !== 0) throw new Error(errorLine(r));
   return r.stdout.split("\n").filter((l) => l.trim() !== "").map((l) => JSON.parse(l) as unknown);
 }

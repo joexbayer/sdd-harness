@@ -24,7 +24,8 @@ export function failingRepos(cfg: Config, ix: RepoIndex): number {
   }).length;
 }
 
-const bearerOf = (req: http.IncomingMessage) => /^Bearer (\S+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+// FR-70.5
+const bearerOf = (req: http.IncomingMessage) => /^Bearer (\S+)$/i.exec(req.headers.authorization ?? "")?.[1] ?? "";
 
 export function listen(cfg: Config, ix: RepoIndex, log: Log): http.Server {
   const mcp = createMcpHandler(() => buildServer(ix, log));

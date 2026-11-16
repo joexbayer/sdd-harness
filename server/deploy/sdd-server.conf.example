@@ -1,6 +1,7 @@
 # sdd-server config (git-config format; read once at start: restart after a change).
 # Copy to sdd-server.conf, then set your domain, your repos and your team's tokens.
 [server]
+	# Docker: Caddy is another container, so listen on every interface (the compose file publishes nothing).
 	listen = :8080
 	public-host = sdd.example.com
 	data = /data

@@ -6,7 +6,7 @@ import http from "node:http";
 import { join } from "node:path";
 import { newToken } from "../src/auth.ts";
 import type { Config } from "../src/config.ts";
-import { failingRepos, listen } from "../src/http.ts";
+import { failingRepos, hostPort, listen } from "../src/http.ts";
 import { RepoIndex } from "../src/repo-index.ts";
 import { BUNDLED, freePort, makeRepo, type Fixture } from "./fixtures.ts";
 import { rpcResult } from "./mcp.ts";
@@ -213,4 +213,20 @@ test("FR-53.14 token prints a new token and its config lines; a bad config exits
   const name = await run(["token", "Shop API"]);
   assert.equal(name.code, 2);
   assert.equal(name.err, 'sdd-server: token "Shop API": name must match [a-z0-9][a-z0-9-]{0,62}\n');
+});
+
+// FR-70.5: the scheme is case-insensitive (RFC 9110); the token compare is unchanged.
+test("FR-70.5 the Bearer scheme is accepted in any case", async () => {
+  for (const scheme of ["bearer", "BEARER", "Bearer"]) {
+    const r = await post(itemsCall, { authorization: `${scheme} ${kari.token}` });
+    assert.equal(r.status, 200, scheme);
+  }
+  assert.equal((await post(itemsCall, { authorization: `Basic ${kari.token}` })).status, 401);
+  assert.equal((await post(itemsCall, { authorization: `bearer ${kari.token} x` })).status, 401);
+});
+
+// FR-70.4: no listen means loopback only; an explicit ":8080" still means every interface.
+test("FR-70.4 hostPort: loopback default's host is 127.0.0.1, an explicit :8080 binds every interface", () => {
+  assert.deepEqual(hostPort("127.0.0.1:8080"), { host: "127.0.0.1", port: 8080 });
+  assert.deepEqual(hostPort(":8080"), { host: undefined, port: 8080 });
 });
