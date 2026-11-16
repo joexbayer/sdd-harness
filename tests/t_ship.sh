@@ -6,7 +6,7 @@ new_repo
 git init -q --bare "$T/remote.git"
 git remote add origin "$T/remote.git"
 git push -q origin main
-remote_before=$(git ls-remote origin)
+remote_before=$(git ls-remote --heads origin)
 
 # --- the whole loop in one checkout: plan, approve, build, write up, ship
 planned_item fix "Off by one"
@@ -124,7 +124,7 @@ assert_eq $? 1 "(a shipped spike cannot ship twice)"
 git switch -q main
 assert_not_contains "$(sdd status)" 'Try queue'
 
-assert_eq "$(git ls-remote origin)" "$remote_before" "(ship must never push)"
+assert_eq "$(git ls-remote --heads origin)" "$remote_before" "(ship must never push)"
 
 # --- FR-7.4: a branch pushed before ship rebased it differs from its pushed copy (git branch -d
 # would refuse), yet every commit is on main, so ship deletes it.

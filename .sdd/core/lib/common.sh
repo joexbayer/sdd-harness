@@ -788,7 +788,8 @@ EOF
 	done
 }
 
-# next_id: allocate an item id, unique across all worktrees of this clone.
+# next_id: allocate an item id, unique across all worktrees of this clone and, when the remote
+# answers, across clones (FR-72.1): the counter ref there holds the last id taken.
 next_id() {
 	_lock="$ST/lock"
 	_n=0
@@ -801,9 +802,51 @@ next_id() {
 	_seen=$(max_seen_id)
 	[ "$_seen" -gt "$_last" ] && _last=$_seen
 	_id=$((_last + 1))
+	_rem=$(cfg sdd.remote origin)
+	if git config --get "remote.$_rem.url" >/dev/null 2>&1; then
+		reserve_id "$_rem" "$_last"
+	fi
 	echo "$_id" >"$ST/next-id"
 	rmdir "$_lock"
 	echo "$_id"
+}
+
+# reserve_id <remote> <last>: set _id to one more than the larger of <last> and the number in the
+# remote's refs/sdd/next-id, and write it back with a lease so that only one of two writers wins;
+# the loser reads again, 5 tries. Never prompts; on failure keeps _id and warns (FR-72.2).
+# FR-72.1 FR-72.2 FR-72.3
+reserve_id() {
+	_ref=refs/sdd/next-id
+	_why='could not reach it'
+	_prev=none
+	_try=0
+	while [ $_try -lt 5 ]; do
+		_try=$((_try + 1))
+		_old=$(GIT_TERMINAL_PROMPT=0 git ls-remote "$1" "$_ref" 2>/dev/null) || break
+		_old=${_old%%[[:space:]]*}
+		if [ -n "$_old" ]; then
+			GIT_TERMINAL_PROMPT=0 git fetch -q "$1" "+$_ref:$_ref" 2>/dev/null || break
+			_old=$(git rev-parse -q --verify "$_ref") || break
+		fi
+		# A write that failed with the counter unmoved was refused, not lost to a racer.
+		if [ "$_old" = "$_prev" ]; then
+			_why='it refused the write'
+			break
+		fi
+		_cur=0
+		# Only leading digits count: the content comes from the remote.
+		[ -z "$_old" ] || _cur=$(git cat-file blob "$_old" 2>/dev/null | sed -n '1s/^\([0-9][0-9]*\).*/\1/p')
+		[ -n "$_cur" ] || _cur=0
+		_id=$((_last + 1))
+		[ "$_cur" -ge "$_last" ] && _id=$((_cur + 1))
+		_blob=$(printf '%s %s-%s-%s-%s\n' "$_id" "$(id -un)" "$(date +%s)" "$$" "$_try" | git hash-object -w --stdin) || break
+		if GIT_TERMINAL_PROMPT=0 git push -q "--force-with-lease=$_ref:$_old" "$1" "$_blob:$_ref" 2>/dev/null; then # C-4: new (id)
+			return 0
+		fi
+		_prev=$_old
+	done
+	_id=$((_last + 1))
+	warn "id $_id is not reserved on $1 ($_why): another developer may take the same id"
 }
 
 # max_seen_id: highest id among item branches (local and remote, matched against the

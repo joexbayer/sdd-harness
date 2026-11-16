@@ -2,7 +2,7 @@
 # tidy [--remote] [--dry-run]: remove the worktrees and branches of items that are shipped or
 # dropped on the base branch, when git proves nothing is lost; keep the rest and say why.
 # --remote (human-only, first argument only, so an ask rule's prefix always matches) also
-# deletes their remote branches: the one push C-4 allows.
+# deletes their remote branches: one of the pushes C-4 allows.
 remote=
 dry=
 [ "${1:-}" = --remote ] && remote=1 && shift
