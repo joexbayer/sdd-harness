@@ -144,4 +144,15 @@ fresh d
 out=$("$SH" "$T/plain/.sdd/bin/sdd" init 2>&1)
 assert_eq "$(cat .sdd/VERSION)" "$v"
 assert_not_contains "$out" 'the sdd you install from'
+
+# FR-73.1: a new config is standard and says what that means; the core default is standard; an
+# existing config keeps its profile.
+fresh std
+out=$(sdd init 2>&1)
+assert_eq "$(git config -f .sdd/config sdd.profile)" standard
+assert_contains "$out" 'wrote .sdd/config (profile standard: ship blocks on an incomplete plan, open tasks and a missing write-up; lite only warns, strict also wants a verifier and your review)'
+assert_eq "$(git config -f .sdd/core/config sdd.profile)" standard
+git config -f .sdd/config sdd.profile lite
+sdd init >/dev/null 2>&1
+assert_eq "$(git config -f .sdd/config sdd.profile)" lite
 exit 0
