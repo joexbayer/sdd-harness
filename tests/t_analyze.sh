@@ -169,3 +169,9 @@ assert_contains "$out" '✗ FR-2.2: starts with "**": IDs are read only at the s
 assert_contains "$out" '✗ D-2.1: starts with "* ": IDs are read only at the start of a line'
 assert_contains "$out" '✗ Q-2.1: starts with "- ": IDs are read only at the start of a line'
 assert_not_contains "$out" 'T-2.1: starts with'
+# FR-69.11: a bullet that repeats an ID already defined at a line start is not flagged.
+git checkout -q main
+sdd new feature "Defined" >/dev/null 2>&1 || fail "new feature failed"
+d=specs/changes/3-defined/item.md
+plan "$d" 'FR-3.1 WHEN a user asks THE SYSTEM SHALL answer.\n  e.g. ask → answer\n- FR-3.1: tests/t_x.sh' '' '' '- [ ] T-3.1 Build, FR-3.1 (test: true)'
+assert_not_contains "$(sdd analyze 2>&1)" 'FR-3.1: starts with'

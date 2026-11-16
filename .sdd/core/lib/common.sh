@@ -512,25 +512,30 @@ plan_frs() {
 
 # plan_extra: plan_findings' lines that need the plan text, not its facts: a fix with no `expect: fail`
 # task, unless its Test starts with "none:" (FR-69.10); an FR, US, D or Q ID of this item written
-# after "- ", "* " or "**": IDs are read only at the start of a line (FR-69.11).
+# after "- ", "* " or "**" and not also defined at a line start: IDs are read only there (FR-69.11).
 plan_extra() {
 	plan_part "$IFILE" | uncomment | TY=${ITYPE:-} I=${ID:-} awk '
 	/^```/ { fence = !fence; next }
 	fence { next }
 	/^## / { sec = substr($0, 4); next }
 	{
+		if (match($0, "^(US|FR|D|Q)-" ENVIRON["I"] "\\.[0-9]+") && (RLENGTH == length($0) || substr($0, RLENGTH + 1, 1) !~ /[0-9.]/))
+			defd[substr($0, 1, RLENGTH)] = 1
 		pre = ""
 		if (substr($0, 1, 2) == "- " || substr($0, 1, 2) == "* ") pre = substr($0, 1, 2)
 		else if (substr($0, 1, 2) == "**") pre = "**"
 		if (pre != "") {
 			t = substr($0, length(pre) + 1)
-			if (match(t, "^(US|FR|D|Q)-" ENVIRON["I"] "\\.[0-9]+") && (RLENGTH == length(t) || substr(t, RLENGTH + 1, 1) !~ /[0-9.]/))
-				print substr(t, 1, RLENGTH) "\t\tstarts with \"" pre "\": IDs are read only at the start of a line"
+			if (match(t, "^(US|FR|D|Q)-" ENVIRON["I"] "\\.[0-9]+") && (RLENGTH == length(t) || substr(t, RLENGTH + 1, 1) !~ /[0-9.]/)) {
+				id = substr(t, 1, RLENGTH); nb++; bid[nb] = id
+				bmsg[nb] = id "\t\tstarts with \"" pre "\": IDs are read only at the start of a line"
+			}
 		}
 	}
 	sec == "Test" && NF && !seen { seen = 1; none = ($0 ~ /^none:/) }
 	index(sec, "Tasks") == 1 && /expect: fail/ { red = 1 }
-	END { if (ENVIRON["TY"] == "fix" && !red && !none)
+	END { for (i = 1; i <= nb; i++) if (!(bid[i] in defd)) print bmsg[i]
+		if (ENVIRON["TY"] == "fix" && !red && !none)
 		print "Tasks\t\tno expect: fail task: a fix proves the bug with a test that fails first (or start Test with \"none: <why>\")" }'
 }
 
