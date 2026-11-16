@@ -2,6 +2,7 @@
 # sdd run builder show the batch, FR-17.5 unknown task attributes make the task unreadable.
 . "$SRC/tests/lib.sh"
 new_repo
+use_narrowbot
 
 sdd new feature "Orders paging" >/dev/null 2>&1
 f=specs/changes/1-orders-paging/item.md

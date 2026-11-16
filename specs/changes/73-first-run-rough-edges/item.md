@@ -81,7 +81,7 @@ Written first, seen to fail: `t_init.sh` (FR-73.1, 73.3, 73.11, 73.12), `t_phase
 - [x] T-73.5 version, help for one verb, the two missing names, FR-73.6 (files: .sdd/bin/sdd, .sdd/core/cmd/help.sh, .sdd/core/agents/codex.sh, tests/t_query.sh; test: for t in query agents; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 - [x] T-73.6 Tasks in order; clearer refusals at task done and ship; ship's messages, FR-73.7 FR-73.8 FR-73.9 (files: .sdd/core/cmd/task.sh, .sdd/core/cmd/ship.sh, .sdd/core/cmd/tidy.sh, tests/t_task.sh, tests/t_expect.sh, tests/t_ship.sh; test: for t in task expect ship forge tidy batch build_loop; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 - [x] T-73.7 review hides gates that are off, FR-73.10 (files: .sdd/core/cmd/review.sh, tests/t_verified.sh; test: for t in verified reviewed; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
-- [ ] T-73.8 narrowbot leaves core, FR-73.13 (files: .sdd/core/cmd/run.sh, .sdd/core/cmd/help.sh, tests/t_run.sh, tests/t_batch.sh, tests/t_build_loop.sh, tests/t_role_guard.sh; test: for t in run batch build_loop role_guard agents roles usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
+- [x] T-73.8 narrowbot leaves core, FR-73.13 (files: .sdd/core/cmd/run.sh, .sdd/core/cmd/help.sh, tests/t_run.sh, tests/t_batch.sh, tests/t_build_loop.sh, tests/t_role_guard.sh; test: for t in run batch build_loop role_guard agents roles usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 
 ## Built
 

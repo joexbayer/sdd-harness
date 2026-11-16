@@ -4,6 +4,7 @@
 # names are played here by a script, with a stub builder, to show they make that loop.
 . "$SRC/tests/lib.sh"
 new_repo
+use_narrowbot
 
 # FR-17.4: the skill text, for every agent; the Claude hint names the builder subagent.
 setcfg role.builder.tier small && setcfg tier.small.agent claude && setcfg tier.small.model haiku

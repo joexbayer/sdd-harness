@@ -41,6 +41,13 @@ new_repo() {
 	git add -A && git commit -qm "install sdd"
 }
 
+# use_narrowbot: the adapter for a private agent lives in this repo's .sdd/local/agents, not in the
+# core that init copies (FR-73.13); a test that runs it puts it into the repo it works in.
+use_narrowbot() {
+	mkdir -p .sdd/local/agents && cp "$SRC/.sdd/local/agents/narrowbot.sh" .sdd/local/agents/ &&
+		git add .sdd/local && git commit -qm "test: narrowbot adapter" || fail "could not install the narrowbot adapter"
+}
+
 # setcfg <git-config args...>: change the project config and commit it (ship needs a clean tree).
 setcfg() { git config -f .sdd/config "$@" && git commit -qm "test: config" -- .sdd/config; }
 
