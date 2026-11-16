@@ -52,6 +52,7 @@ cd "$R" && git fetch -q origin
 # 9: dropped, in the archive; its title line ends in CR (a CRLF edit), which JSON must escape.
 git switch -q main
 mkdir -p specs/archive/9-gone
+echo 'specs/archive/9-gone/* -text' >>.git/info/attributes # keep the CR: init's eol=lf would strip it
 printf -- '---\nid: 9\ntype: chore\ntitle: Gone\r\nstatus: dropped\n---\n# 9 Gone\n' >specs/archive/9-gone/item.md
 # 10: dropped; its title holds a pasted colour code (ESC).
 mkdir -p specs/archive/10-red
@@ -132,4 +133,16 @@ sdd show 99 >/dev/null 2>&1
 assert_eq $? 1 "(unknown id)"
 sdd show >/dev/null 2>&1
 assert_eq $? 2 "(usage)"
+
+# FR-73.6: version, one verb's help, and the two names help was missing.
+assert_eq "$(sdd --version)" "$(cat .sdd/VERSION)"
+assert_eq "$(sdd version)" "$(cat .sdd/VERSION)"
+out=$(sdd help ship)
+assert_eq "$(printf '%s\n' "$out" | wc -l | tr -d ' ')" 2
+assert_contains "$out" 'sdd ship '
+assert_not_contains "$out" 'sdd approve'
+assert_contains "$(sdd help new)" 'sdd new --from'
+assert_contains "$(sdd help nope)" 'sdd approve'
+assert_contains "$(sdd help)" 'sdd extension [list|add|remove <n>]'
+assert_contains "$(sdd sync codex 2>&1)" '-ship, -run, -audit-states'
 exit 0

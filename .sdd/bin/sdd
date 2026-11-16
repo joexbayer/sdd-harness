@@ -31,6 +31,7 @@ fi
 
 case $cmd in
 -h | --help) cmd=help ;;
+-V | --version | version) cat "$SDD_HOME/VERSION" && exit 0 ;;
 *[!a-z-]*) usage_die "unknown command: $cmd (try: $NAME help)" ;;
 esac
 script=$(sdd_path "cmd/$cmd.sh") || usage_die "unknown command: $cmd (try: $NAME help)"
