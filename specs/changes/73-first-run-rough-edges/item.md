@@ -84,5 +84,22 @@ Written first, seen to fail: `t_init.sh` (FR-73.1, 73.3, 73.11, 73.12), `t_phase
 - [x] T-73.8 narrowbot leaves core, FR-73.13 (files: .sdd/core/cmd/run.sh, .sdd/core/cmd/help.sh, tests/t_run.sh, tests/t_batch.sh, tests/t_build_loop.sh, tests/t_role_guard.sh; test: for t in run batch build_loop role_guard agents roles usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 
 ## Built
+- FR-73.1, 73.2: `init` and core config default to `profile = standard`; `status` names the profile on its first line; `tests/lib.sh` `new_repo` pins lite. Test: `t_init.sh`, `t_phase.sh`.
+- FR-73.3: pytest probed with `python3 -c 'import pytest'`; without it and with `test_*.py` (found skipping `.git`, `node_modules`), `python3 -m unittest`, with a warning that it runs only `TestCase` classes in packages; a guessed command not on PATH warns. Test: `t_init.sh` (stub `python3`).
+- FR-73.4: `approve` on a type with no approval gate says so, commits nothing. Test: `t_phase.sh`.
+- FR-73.5: `new` refuses before the adoption commit and in a repo with no commits; warns on a dirty tree (up to 5 paths). Test: `t_new.sh`.
+- FR-73.6: `--version`, `version`, `help <verb>`; `extension list` and codex's run skill named. Test: `t_query.sh`.
+- FR-73.7: `task done` refuses while an earlier task is open, after the task's own checks. Test: `t_task.sh`; `t_task`, `t_expect`, `t_batch` fixtures reordered or hand-ticked to run in order.
+- FR-73.8: ship reports hand-ticked tasks first; a passing `expect: fail` test says "write the failing test first" when only the task's files changed and no code is committed since the base, else the old revert advice. Test: `t_task.sh`, `t_expect.sh`, `t_ship.sh`.
+- FR-73.9: a failing check at ship prints the log's last 5 non-blank lines; no push hint without a remote, and the hint names `sdd.remote`; quoted cleanup paths (`shq` in `common.sh`, used by ship, tidy, open). Test: `t_ship.sh`, `t_forge.sh`.
+- FR-73.10: `review` leaves out the lines of gates that are off. Test: `t_verified.sh`.
+- FR-73.11, 73.12: `init` ends with the commit, sync, new lines (`$CMD`; `.gitleaks.toml` added when written); writes `.gitattributes` LF lines for `.sdd/` and `specs/`. This repo: `* text=auto eol=lf`. Test: `t_init.sh`; `t_query` CRLF fixture marked `-text`.
+- FR-73.13: narrowbot in this repo's `.sdd/local/agents/` (linted via `.sdd/config`); `init` lists the agents of the install it wrote; `.sdd/local export-ignore` keeps it out of release tarballs. Test: `t_agents.sh`, `t_run.sh` (`use_narrowbot`), `t_init.sh`.
+- `tests/constitution/c4-commits.sh`: the commit scan ignores quoted text, as the push scan does (`init` prints a `git commit -m` hint); a real commit in `init.sh` still fails it.
+- Not done (D-73.2): refactors editing tests, `task done` on a task with no change, `init` on a detached HEAD.
+- Known: `t_perf` (SDD_PERF) is over budget on `main` too under machine load (`next` ~0.37 s vs 0.2 s); not caused here.
+- Security pass (the verifier, on the diff): init runs no project code (`import pytest`, `command -v` only); log lines go to the user's terminal; `.gitattributes` text is fixed.
+
+Verified by: claude-opus-5-5: 13 of 13 FRs proven by revert; FR-73.5 tests were dead after an early exit 0, narrowbot still listed by init and in tarballs, unittest silently runs 0 plain tests, push hint ignored sdd.remote: all fixed with tests
 
 ## Review (optional)
