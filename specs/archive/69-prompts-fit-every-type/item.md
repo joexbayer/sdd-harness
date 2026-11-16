@@ -2,9 +2,10 @@
 id: 69
 type: fix
 title: Prompts fit every type
-status: open
+status: shipped
 created: 2026-11-11
 approved: ae23ff9431009cf0bec83c25331c12e0c019497a 2026-11-11 joexbayer
+shipped: 2026-11-16
 ---
 # 69 Prompts fit every type
 
