@@ -20,7 +20,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
   Cases that share one rule share one FR, one example per case.
 {{end}}
 {{if security}}
-- Security: go through the questions in "## Security". Name each new dependency and why; check that it
+- Security: go through the questions in "## Security" with the human. Name each new dependency and why; check that it
   exists in the official registry under exactly that name and is maintained. Prefer the framework's own auth,
   escaping and crypto.
 {{end}}
