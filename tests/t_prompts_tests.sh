@@ -185,4 +185,23 @@ assert_contains "$Bd" "A task's test command that proves wrong: stop and ask the
 assert_contains "$Bd" 'Never tick a box by hand: stop and ask the human, who may waive the task'
 typed amendment
 assert_contains "$Bd" 'Amendment: edit specs/constitution.md'
+
+# FR-69.12: with no item open, every type is offered; the new skill also offers roadmap.
+new_repo none
+sdd sync claude >/dev/null 2>&1
+out=$(sdd next 2>&1)
+assert_contains "$out" 'amendment change a constitution rule (specs/constitution.md)'
+assert_contains "$out" 'contract  change an interface items build against'
+assert_contains "$(cat .claude/skills/sdd-new/SKILL.md)" 'amendment
+   (change a constitution rule), contract (change an interface items build against), roadmap'
+# FR-69.13: the Review section reads the same in templates, review prompt and review skill.
+sdd new feature "Wording" >/dev/null 2>&1 || fail "new failed"
+assert_contains "$(cat specs/changes/*-wording/item.md)" 'to change, one per line (the agent writes what the human asks)'
+assert_not_contains "$(cat specs/changes/*-wording/item.md)" "The human's review notes"
+rv=$(cat .claude/skills/sdd-review/SKILL.md)
+assert_contains "$rv" 'say under Built
+what you changed'
+assert_contains "$rv" 'call out every deviation, risk and doubt'
+assert_contains "$rv" 'write what they ask under "## Review"'
+assert_contains "$(cat .sdd/core/prompts/review.md)" 'write what they ask under "## Review"'
 echo ok

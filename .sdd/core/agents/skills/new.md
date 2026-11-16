@@ -6,8 +6,9 @@ description: Start a change with {{name}} before any code is written. Use when t
 1. Run `{{cmd}} status`. If an item is already open for this, continue it with `{{cmd}} next`.
 2. Pick the change type from what the user asked for (the words after /{{name}}-new, if any):
    feature (new behaviour), fix (wrong behaviour), hotfix (production is broken), refactor
-   (structure only), chore (dependencies, config, docs), spike (answer a question). Propose
-   it with a short title in one line and wait for a yes, e.g.
+   (structure only), chore (dependencies, config, docs), spike (answer a question), amendment
+   (change a constitution rule), contract (change an interface items build against), roadmap
+   (a system in several items). Propose it with a short title in one line and wait for a yes, e.g.
    `That's a feature: "Pagination for the orders page". Start it?`
    If the request is unclear, ask what they want first. Under ~20 lines with no behaviour
    change needs no item: say so, and just commit it as `chore: …`.
