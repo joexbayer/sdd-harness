@@ -10,7 +10,8 @@ built() {
 	git commit -qam "docs: built"
 }
 
-planned_item fix "Cache"
+planned_item fix "Cache" tasks
+done_tasks
 setcfg sdd.profile strict
 mkdir -p src && echo a >src/a.js && echo b >src/b.js && git add src && git commit -qm "fix(1): cache"
 built
@@ -41,7 +42,8 @@ assert_not_contains "$out" 'review'
 assert_contains "$out" 'shipped 1'
 
 # FR-22.4: lite warns and ships.
-planned_item fix "Evict"
+planned_item fix "Evict" tasks
+done_tasks
 setcfg sdd.profile lite
 echo c >src/c.js && git add src && git commit -qm "fix(2): evict"
 built
@@ -50,7 +52,8 @@ assert_contains "$out" 'not reviewed in this clone (gate reviewed)'
 assert_contains "$out" 'shipped 2'
 
 # FR-22.4: an item that changes no code (docs only) has nothing to review.
-planned_item fix "Docs only"
+planned_item fix "Docs only" tasks
+done_tasks
 built
 out=$(sdd ship 2>&1) || fail "docs-only ship failed: $out"
 assert_not_contains "$out" 'review'

@@ -510,6 +510,30 @@ plan_frs() {
 	plan_part "$IFILE" | uncomment | grep -oE "FR-$ID\.[0-9]+" | sort -u -t . -k 2,2n
 }
 
+# plan_extra: plan_findings' lines that need the plan text, not its facts: a fix with no `expect: fail`
+# task, unless its Test starts with "none:" (FR-69.10); an FR, US, D or Q ID of this item written
+# after "- ", "* " or "**": IDs are read only at the start of a line (FR-69.11).
+plan_extra() {
+	plan_part "$IFILE" | uncomment | TY=${ITYPE:-} I=${ID:-} awk '
+	/^```/ { fence = !fence; next }
+	fence { next }
+	/^## / { sec = substr($0, 4); next }
+	{
+		pre = ""
+		if (substr($0, 1, 2) == "- " || substr($0, 1, 2) == "* ") pre = substr($0, 1, 2)
+		else if (substr($0, 1, 2) == "**") pre = "**"
+		if (pre != "") {
+			t = substr($0, length(pre) + 1)
+			if (match(t, "^(US|FR|D|Q)-" ENVIRON["I"] "\\.[0-9]+") && (RLENGTH == length(t) || substr(t, RLENGTH + 1, 1) !~ /[0-9.]/))
+				print substr(t, 1, RLENGTH) "\t\tstarts with \"" pre "\": IDs are read only at the start of a line"
+		}
+	}
+	sec == "Test" && NF && !seen { seen = 1; none = ($0 ~ /^none:/) }
+	index(sec, "Tasks") == 1 && /expect: fail/ { red = 1 }
+	END { if (ENVIRON["TY"] == "fix" && !red && !none)
+		print "Tasks\t\tno expect: fail task: a fix proves the bug with a test that fails first (or start Test with \"none: <why>\")" }'
+}
+
 # plan_findings: the problems in a plan that need no judgement (FR-19.1), from parse_item's lines
 # on stdin (or IR_FACTS), in plan order: "<id>\t<short name>\t<problem>". An FR no task names
 # (when there are tasks), an FR with no example, an open question, an ID written twice, a task
@@ -569,6 +593,7 @@ plan_findings() {
 			for (j = 1; j <= m; j++) if (!(x[j] in fr)) say(i, "names " x[j] ", which the plan does not have")
 		}
 	}'
+	plan_extra
 }
 
 # AWK_ENTRY: entry_row(id, text) in awk: a roadmap entry (parse_item's "r" fact, text

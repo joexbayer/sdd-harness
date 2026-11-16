@@ -16,7 +16,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
 - Fill every section above "## Built".
 {{if frs}}
 - Requirements: `FR-{{id}}.1 WHEN <trigger> THE SYSTEM SHALL
-  <response>`, each with an "e.g." example; never renumber.
+  <response>`, each with an "e.g." example; never renumber. IDs start their line (no `- ` or bold).
   Cases that share one rule share one FR, one example per case.
 {{end}}
 {{if security}}
@@ -29,11 +29,10 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
 {{end}}
 {{if tasks}}
 - End the plan with small, ordered tasks under "## Tasks", each naming its files, FRs,
-  `size: S|M|L` and a test that can pass before later tasks exist (new, or extending an
-  existing one). An `expect: fail` task (or `expect: fail "<text>"`, the text its red run must print; give it when known, e.g. `expect: fail "goldens 0"`) only
+  `size: S|M|L` and a test that can pass before later tasks exist (new or extended). An `expect: fail` task (or `expect: fail "<text>"`, the text its red run must print; give it when known, e.g. `expect: fail "goldens 0"`) only
   writes the failing test; its code is the next task. Sizes: S a few lines, M a sitting, L a big
   one; consecutive S tasks share a builder. A
-  test-first task can be `by: planner` (planner role): the planner writes the test. The builder may be a small model that sees only its batch: say what it needs to know.
+  test-first task can be `by: planner` (planner role): the planner writes the test. The builder may be a small model seeing only its batch: say what it needs.
 {{max-size}}
 - Names several tasks share (tables, routes, signatures, file paths) are fixed in the plan and
   pinned by a test in the task that first defines them.
@@ -56,7 +55,7 @@ PLAN: this is the human's time. Plan and decide together; write no code yet. Be 
   `{{cmd}} analyze` and fix what it lists.
 {{end}}
 {{if frs}}
-- Ask how this change can be fully verified, and design for that: each FR proven by running
+- Ask how this change can be fully verified, design for that: each FR proven by running
   something. If one can't be, change the design or say what the human must check. Precise enough to
   build without asking.
 {{end}}

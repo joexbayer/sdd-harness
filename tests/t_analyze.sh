@@ -143,3 +143,29 @@ setcfg build.max-size M
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Every task is size S or M'
 assert_not_contains "$out" 'at most about 3 FRs'
+
+# FR-69.10: a fix proves the bug with a test that fails first, or says why not.
+new_repo fixes
+sdd new fix "Crash" >/dev/null 2>&1
+h=specs/changes/1-crash/item.md
+assert_contains "$(cat "$h")" '## Tasks'
+assert_contains "$(cat "$h")" 'expect: fail'
+fill "$h" plan
+out=$(sdd analyze 2>&1)
+assert_contains "$out" '✗ Tasks: no expect: fail task: a fix proves the bug with a test that fails first (or start Test with "none: <why>")'
+awk '{ print } $0 == "## Tasks" { print "- [ ] T-1.1 Red test, FR-1.1 (test: true; expect: fail; size: S)"; print "- [ ] T-1.2 Fix, FR-1.1 (test: true; size: S)" }' "$h" >"$T/h" && cp "$T/h" "$h"
+assert_not_contains "$(sdd analyze 2>&1)" 'no expect: fail task'
+grep -v 'T-1\.[12] ' "$h" | awk '{ print } $0 == "## Test" { print "none: a typo in a message" }' >"$T/h" && cp "$T/h" "$h"
+assert_not_contains "$(sdd analyze 2>&1)" 'no expect: fail task'
+
+# FR-69.11: IDs are read only at the start of a line; a bullet or bold before one is flagged, a task line is not.
+git add -A && git commit -qm "docs: fix plan" && git checkout -q main
+sdd new feature "Bullets" >/dev/null 2>&1 || fail "new feature failed"
+b=specs/changes/2-bullets/item.md
+plan "$b" '- FR-2.1 WHEN a user asks THE SYSTEM SHALL answer.\n  e.g. ask → answer\n**FR-2.2** WHEN x THE SYSTEM SHALL y.\n* D-2.1 a decision' '' '- Q-2.1 Which? → recommend: this.' '- [ ] T-2.1 Build, FR-2.1 (test: true)'
+out=$(sdd analyze 2>&1)
+assert_contains "$out" '✗ FR-2.1: starts with "- ": IDs are read only at the start of a line'
+assert_contains "$out" '✗ FR-2.2: starts with "**": IDs are read only at the start of a line'
+assert_contains "$out" '✗ D-2.1: starts with "* ": IDs are read only at the start of a line'
+assert_contains "$out" '✗ Q-2.1: starts with "- ": IDs are read only at the start of a line'
+assert_not_contains "$out" 'T-2.1: starts with'

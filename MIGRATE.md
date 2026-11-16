@@ -74,6 +74,7 @@ items, with a clean tree: `sdd init`. Uninstall the command: `rm -r ~/.local/bin
 (each repo keeps its own `.sdd/`). It replaces `.sdd/bin` and
 `.sdd/core`, keeps your config and `.sdd/local/`, and stamps `.sdd/VERSION` with the source
 commit. Review the diff, commit, then `sync` again. Never copy `.sdd/` by hand.
+An open fix now needs tasks (the first an `expect: fail` test) and, where the plan changes, approval again.
 
 ## Make it yours
 

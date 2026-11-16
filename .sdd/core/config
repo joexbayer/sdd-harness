@@ -20,7 +20,7 @@
 #              builder (the verifier role) proved the requirements by running them
 #   reviewed   the code is what the human last saw in `sdd review` in this clone (a rebase that
 #              keeps the change keeps it reviewed; an item that changes no code needs none)
-#   tasks      the plan has tasks and every one is ticked (off for fix, refactor and amendment);
+#   tasks      the plan has tasks and every one is ticked (off for refactor and amendment);
 #              a ticked task needs a commit naming it in every profile, whatever this level
 #   depends    every item and roadmap entry in the item's `depends:` has shipped (an item ID like
 #              31, or an entry like R-30.1: the item opened from it); planning and building go on
@@ -79,8 +79,6 @@
 	built = block
 	verified = block
 	reviewed = block
-	tasks = off
-[type "fix"]
 	tasks = off
 [type "refactor"]
 	tasks = off
