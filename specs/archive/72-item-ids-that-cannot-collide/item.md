@@ -2,10 +2,11 @@
 id: 72
 type: fix
 title: Item ids that cannot collide
-status: open
+status: shipped
 created: 2026-11-11
 depends: 71
 approved: 9eefca2ca82155e1b16fa6ced875524362a1a939 2026-11-11 joexbayer
+shipped: 2026-11-16
 ---
 # 72 Item ids that cannot collide
 
