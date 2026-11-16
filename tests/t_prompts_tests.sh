@@ -53,16 +53,23 @@ for p in 'ready for review: `/sdd-review`' \
 done
 # FR-65.4 a wrong test command: stop and ask; FR-65.5 no claim of approval.
 # FR-69.5 one stopping rule: hands-off, stop only where a rule says so; no "without questions".
-assert_contains "$out" 'stop only where a rule below says so'
+assert_contains "$out" 'stop only where a rule says so'
+# One list of stop cases, stated once (the two-failures rule is not a stop).
+assert_eq "$(printf '%s\n' "$out" | grep -c 'top and ask')" 1 "(stop cases listed once)"
+assert_contains "$out" "Stop and ask the human only when a task's test command proves wrong"
+assert_contains "$out" 'a box cannot be ticked'
+assert_not_contains "$out" 'stop and write that assumption'
 assert_not_contains "$out" 'without questions'
 assert_not_contains "$out" 'if truly stuck'
 assert_contains "$out" 'voids any approval'
 # FR-69.7: no verifier role: the fresh subagent is given the brief by path, not a summary of it.
 assert_contains "$out" 'given the item id and the text of .sdd/core/prompts/role-verifier.md
-(.sdd/local/ wins)'
+(or .sdd/local/prompts/role-verifier.md, which wins)'
 assert_not_contains "$out" 'reports parts nothing calls or reads'
 assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'in the plan part of the item file'
 assert_not_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'under "## What changes"'
+# The brief is read raw by the subagent: no unrendered {{ }} in it.
+assert_not_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" '{{'
 assert_contains "$out" 'The plan is settled and the human is not watching.'
 # FR-67.6 never tick by hand; FR-67.8 ship refuses Verified by: none where the verified gate blocks.
 assert_contains "$out" 'ship refuses it where the `verified` gate blocks'
@@ -127,8 +134,12 @@ assert_contains "$out" 'ALWAYS'
 before=${out%%TYPE-FIRST*}
 case $before in *'PLAN:'*) fail "type prompt not first: $before" ;; esac
 git checkout -q -b other main
+printf 'TYPE-FIRST\n' >.sdd/local/prompts/plan.feature.md
 sdd new feature "Wide" >/dev/null 2>&1 || fail "new feature failed"
 out=$(sdd next 2>&1)
+before=${out%%TYPE-FIRST*}
+case $out in *TYPE-FIRST*) ;; *) fail "no type prompt: $out" ;; esac
+case $before in *'PLAN:'*) fail "feature: type prompt not first: $before" ;; esac
 for f in frs tasks security approval code verify; do assert_contains "$out" "HAS-$f"; done
 assert_not_contains "$out" 'HAS-nonsense'
 git checkout -q -b spike-b main
@@ -154,26 +165,35 @@ case $P in *'Hotfix: production is broken: fix first'*) ;; *) fail "hotfix plan:
 for p in 'write no code' 'FR-' 'Tasks' 'Security' 'approv' 'size:'; do assert_not_contains "$P" "$p"; done
 assert_not_contains "$Bd" 'verifier'
 assert_contains "$Bd" 'security pass'
+assert_not_contains "$Bd" 'sdd approve'
+assert_contains "$Bd" 'Never run `.sdd/bin/sdd ship`'
 typed chore
+assert_not_contains "$Bd" 'sdd approve'
 assert_not_contains "$P" 'approve'
 assert_not_contains "$P" 'The ask'
 assert_contains "$P" '## Security'
 assert_not_contains "$Bd" 'verifier'
 typed spike
 for p in 'Write just enough code' 'security pass' 'verifier' 'Add no dependency' 'Verify with'; do assert_not_contains "$Bd" "$p"; done
-assert_contains "$Bd" 'Spike: explore freely'
+assert_contains "$Bd" 'Spike: explore the plan'"'"'s question freely'
 for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
 typed roadmap
+assert_not_contains "$Bd" 'file:line'
 for p in 'Write just enough code' 'security pass' 'verifier' 'Verify with'; do assert_not_contains "$Bd" "$p"; done
 for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
 typed refactor
 for p in 'FR-' '## Tasks' 'size:' '## Security'; do assert_not_contains "$P" "$p"; done
 assert_contains "$Bd" 'stop and ask the human: the change is not a pure refactor'
 assert_contains "$Bd" 'verifier'
+assert_contains "$Bd" 'stop only where a rule says so'
 typed contract
 assert_not_contains "$Bd" 'verifier'
+for p in 'Write just enough code' 'Add no dependency' 'No unbounded list'; do assert_not_contains "$Bd" "$p"; done
+assert_contains "$Bd" 'Write "## Built"'
 assert_contains "$Bd" 'Contract: write the files'
 typed fix
+assert_contains "$P" 'skip the regression task'
+assert_contains "$Bd" 'none when "## Test" starts with `none:`'
 assert_contains "$P" 'Scale: for each table'
 assert_contains "$Bd" 'verifier'
 typed feature
@@ -181,9 +201,11 @@ assert_contains "$P" 'size:'
 assert_contains "$P" 'Each mitigation is an FR'
 assert_contains "$Bd" 'security pass'
 assert_contains "$Bd" 'Say it per FR'
-assert_contains "$Bd" "A task's test command that proves wrong: stop and ask the human; never bend"
-assert_contains "$Bd" 'Never tick a box by hand: stop and ask the human, who may waive the task'
+assert_contains "$Bd" "never bend the test to fit"
+assert_contains "$Bd" 'never tick one by hand; the human may waive it'
+assert_contains "$Bd" 'Never run `.sdd/bin/sdd approve`'
 typed amendment
+for p in 'Write just enough code' 'Add no dependency' 'No unbounded list'; do assert_not_contains "$Bd" "$p"; done
 assert_contains "$Bd" 'Amendment: edit specs/constitution.md'
 
 # FR-69.12: with no item open, every type is offered; the new skill also offers roadmap.

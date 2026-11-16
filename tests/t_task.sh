@@ -345,4 +345,12 @@ sdd new fix "Plain" >/dev/null 2>&1
 out=$(sdd task next)
 assert_contains "$out" 'item 1 has no tasks: the check and the write-up are next (see: .sdd/bin/sdd next)'
 assert_not_contains "$out" 'add'
+# FR-69.6: where the tasks gate blocks, an item with no tasks is told to get them (an old open fix).
+new_repo needtasks
+planned_item fix "Old"
+setcfg sdd.profile standard
+for c in 'task next' 'task' 'next'; do
+	out=$(sdd $c 2>&1)
+	assert_contains "$out" 'needs tasks: add the test-first pair to the plan (the human approves it again)'
+done
 exit 0

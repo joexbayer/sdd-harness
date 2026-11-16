@@ -16,8 +16,8 @@ You run the build; builders do the tasks. Loop until no task is open:
 4. Make sure a commit names the batch: when `git status` shows changes, commit the code and the
    item file together, every task ID of the batch in the subject, e.g.
    `feat(<id>): T-n.a T-n.b <what>`.
-5. On the first failure (a builder reports one, a task's test fails, `task done` refuses) stop:
-   report to the user what failed and its log, and do not start the next batch.
+5. When a builder reports a failure, a task's test fails or `task done` refuses, have it fixed
+   before the next batch. Stop only in the three cases below.
 
 Then run `{{cmd}} next` and follow it until `{{cmd}} check` passes and "## Built" is written.
 Work hands-off: stop only for a task's test that proves wrong, a box that cannot be ticked, or a

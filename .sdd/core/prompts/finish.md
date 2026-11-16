@@ -10,7 +10,7 @@ fix; skip denial of service, rate limits and theory. Write the result and who lo
 Then hand item {{id}} to the `verifier` role: its `{{name}}-verifier` subagent if this agent has
 one, else `{{cmd}} run verifier {{id}}` if the project sets the role, else a fresh subagent on a
 different model than yours, given the item id and the text of .sdd/core/prompts/role-verifier.md
-(.sdd/local/ wins). It reports only findings, each with the command and its output, and never edits code or the plan.
+(or .sdd/local/prompts/role-verifier.md, which wins). It reports only findings, each with the command and its output, and never edits code or the plan.
 Fix what it finds; put its line in "## Built":
   Verified by: <its model>: <n> of <m> FRs proven; <its findings in a few words, or "no findings">
 or, when no verifier could run, `Verified by: none` and why (ship refuses it where the `verified` gate blocks).
@@ -18,8 +18,8 @@ or, when no verifier could run, `Verified by: none` and why (ship refuses it whe
 {{end}}
 {{if code}}
 You are done when the check passes and "## Built" is written.
-{{end}}
 Write "## Built": what changed (file:line) and its test, deviations, follow-ups.
+{{end}}
 {{if frs}}
 Say it per FR.
 {{end}}

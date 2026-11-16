@@ -16,7 +16,7 @@ assert_contains "$(cat "$k")" 'the `sdd-builder` subagent if this agent has one'
 assert_contains "$(cat "$k")" '`.sdd/bin/sdd run builder <id>`'
 assert_contains "$(cat "$k")" 'run `.sdd/bin/sdd task done <T-id>` yourself'
 assert_contains "$(cat "$k")" 'every task ID of the batch in the subject'
-assert_contains "$(cat "$k")" 'On the first failure'
+assert_contains "$(cat "$k")" 'When a builder reports a failure'
 # FR-69.5: one stopping rule, the three cases.
 assert_contains "$(cat "$k")" "stop only for a task's test that proves wrong, a box that cannot be ticked, or a
 refactor that must change a test"
@@ -24,7 +24,7 @@ assert_not_contains "$(cat "$k")" 'do not stop to ask'
 # FR-69.6 no tasks ends the loop; FR-69.9 a `by:` batch goes to that role.
 assert_contains "$(cat "$k")" '"no open tasks" or "has no tasks" ends the loop'
 assert_contains "$(cat "$k")" 'A batch marked `by: <role>` goes to that'
-assert_contains "$(cat "$k")" 'do not start the next batch'
+assert_contains "$(cat "$k")" 'before the next batch. Stop only in the three cases below.'
 assert_contains "$(cat "$k")" 'until `.sdd/bin/sdd check` passes and "## Built" is written'
 assert_contains "$(cat "$k")" 'subagent type `sdd-builder`, one call per batch'
 assert_file .claude/agents/sdd-builder.md

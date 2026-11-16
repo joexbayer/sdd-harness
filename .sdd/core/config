@@ -65,6 +65,7 @@
 #   <gate>     a level that beats the profile's
 #   branch     branch name template (last part must be {id}-{slug})
 #   lands      "item" = only the archived item reaches the base branch, never the code
+#   code       "no" = the type changes no code (only files under specs/): no code rules in its prompts
 [type "hotfix"]
 	gates = planned check built
 	planned = warn
@@ -80,6 +81,7 @@
 	verified = block
 	reviewed = block
 	tasks = off
+	code = no
 [type "refactor"]
 	tasks = off
 [type "spike"]
@@ -89,6 +91,7 @@
 	# Changes files under specs/contracts/, the interface items build against (item 26); lands
 	# no code, and the items using a changed contract go back to planning.
 	gates = planned analyzed approved check built reviewed
+	code = no
 [type "roadmap"]
 	# A system as items in order (R-<id>.<n> entries); like a spike, only the item lands.
 	gates = planned analyzed approved built

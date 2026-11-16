@@ -267,7 +267,7 @@ type_facts() {
 	fi
 	[ "$(gate_level approved "$1")" = off ] || printf ' approval'
 	[ "$(gate_level verified "$1")" = off ] || printf ' verify'
-	[ "$(cfg "type.$1.lands" all)" = item ] || printf ' code'
+	[ "$(cfg "type.$1.lands" all)" = item ] || [ "$(cfg "type.$1.code" yes)" = no ] || printf ' code'
 	echo
 }
 
@@ -943,6 +943,10 @@ item_phase() {
 		fi
 	fi
 }
+
+# needs_tasks: the type's tasks gate blocks, so an item with no tasks cannot ship (FR-69.6).
+needs_tasks() { [ "$(gate_level tasks "$ITYPE")" = block ]; }
+NEEDS_TASKS_MSG='this type needs tasks: add the test-first pair to the plan (the human approves it again)'
 
 # task_rows: the current item's tasks (IFILE, ID), one per line, in plan order:
 # "<task id>\t<open|done>\t<what>\t<files>\t<test>\t<expect>\t<FR ids>\t<bad>\t<size>\t<reason>\t<by>".

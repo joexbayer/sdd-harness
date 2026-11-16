@@ -44,6 +44,7 @@ title=$IR_TITLE
 echo "Item $ID ($ITYPE): $title"
 echo "File: $IFILE"
 echo "Phase: $PHASE ($WHY)"
+[ "$PHASE" != build ] || [ "$IR_TASKS" != 0 ] || ! needs_tasks || echo "No tasks: $NEEDS_TASKS_MSG"
 # FR-24.6: what this item waits for; it blocks only ship (D-24.2).
 waits_for "$IR_DEPENDS"
 [ -z "$WAITS" ] || echo "Waits for: $WAITS (plan and build on; ship waits until they have shipped)"
