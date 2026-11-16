@@ -167,6 +167,7 @@ printf '[pytest]\n' >pytest.ini && echo 'def test_a(): pass' >test_a.py
 out=$(PATH="$T/pyno:$PATH"; sdd init 2>&1)
 assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ')" 'python3 -m unittest'
 assert_not_contains "$out" 'no test command detected'
+assert_contains "$out" 'sdd: warning: "python3 -m unittest" runs only unittest.TestCase classes'
 fresh pyw
 printf '[pytest]\n' >pytest.ini
 out=$(PATH="$T/pyno:$PATH"; sdd init 2>&1)
@@ -175,8 +176,10 @@ assert_contains "$out" 'sdd: warning: the gate "python3 -m pytest" will fail her
 fresh pyo
 echo 'def test_a(): pass' >test_a.py
 out=$(sdd init 2>&1)
+assert_not_contains "$out" narrowbot # FR-73.13: the agents of this install, not of the source
 assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks ')" 'python3 -m unittest'
 assert_not_contains "$out" 'no test command detected'
+assert_contains "$out" 'sdd: warning: "python3 -m unittest" runs only unittest.TestCase classes'
 # a guessed command whose first word is not on PATH: the same warning
 fresh nocargo
 printf '[package]\n' >Cargo.toml

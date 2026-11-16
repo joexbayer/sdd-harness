@@ -71,12 +71,14 @@ detect_checks() {
 			echo 'python3 -m pytest'
 		elif [ -n "$_py" ]; then
 			echo 'python3 -m unittest'
+			warn "\"python3 -m unittest\" runs only unittest.TestCase classes in packages: install pytest if your tests are plain functions"
 		else
 			echo 'python3 -m pytest'
 			warn "the gate \"python3 -m pytest\" will fail here: pytest is not installed (edit [check] run in $DIRNAME/config)"
 		fi
 	elif [ -n "$_py" ]; then
 		echo 'python3 -m unittest'
+		warn "\"python3 -m unittest\" runs only unittest.TestCase classes in packages: install pytest if your tests are plain functions"
 	fi
 	return 0
 }
@@ -196,8 +198,8 @@ if [ -n "$(git status --porcelain -- "$DIRNAME" AGENTS.md .gitattributes .gitlea
 	add="$DIRNAME AGENTS.md .gitattributes"
 	git ls-files --error-unmatch .gitleaks.toml >/dev/null 2>&1 || ! [ -f .gitleaks.toml ] || add="$add .gitleaks.toml"
 	echo "next: git add $add && git commit -m \"chore: adopt $NAME\""
-	echo "then: $CMD sync <$(agents | paste -sd '|' -)>"
+	echo "then: $CMD sync <$(SDD_HOME=$target; agents | paste -sd '|' -)>"
 	echo "then: $CMD new <type> \"title\""
 else
-	echo "next: $CMD new <type> \"title\"   (optional: $CMD sync <$(agents | paste -sd '|' -)>)"
+	echo "next: $CMD new <type> \"title\"   (optional: $CMD sync <$(SDD_HOME=$target; agents | paste -sd '|' -)>)"
 fi

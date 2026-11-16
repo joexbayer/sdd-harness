@@ -212,4 +212,13 @@ out=$(sdd ship 2>&1)
 assert_eq $? 1 "(a hand tick)"
 assert_contains "$out" 'ticked without .sdd/bin/sdd task done: T-1.1 (untick them and run task done)'
 assert_not_contains "$out" 'no commit names them'
+# FR-73.9: the push hint names the configured remote, not origin.
+new_repo
+git init -q --bare "$T/up.git" && git remote add upstream "$T/up.git" && git push -q upstream main
+setcfg sdd.remote upstream
+planned_item fix "Up"
+echo up >up.txt && git add up.txt && git commit -qm "fix(1): code"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1) || fail "ship failed: $out"
+assert_contains "$out" 'next    git push upstream main'
 exit 0

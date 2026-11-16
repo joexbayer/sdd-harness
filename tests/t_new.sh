@@ -161,7 +161,6 @@ assert_not_contains "$out" 'not reserved'
 mkdir -p "$HOME/bin"
 ln -s "$SRC/.sdd/bin/sdd" "$HOME/bin/sdd"
 "$SH" "$HOME/bin/sdd" help | grep -q 'Humans plan and review' || fail "symlinked sdd failed"
-exit 0
 
 # FR-73.5: refuses while the install is not committed on the base; no commits at all; no warning
 # for a clean tree or --worktree.

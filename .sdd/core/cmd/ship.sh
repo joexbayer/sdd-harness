@@ -14,11 +14,11 @@ fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
 
 base=$(cfg sdd.base main)
 # FR-73.9: no push hint without a remote.
+remote=$(cfg sdd.remote origin)
 push_hint=
-git remote get-url origin >/dev/null 2>&1 && push_hint="git push origin $base   ·   "
+git remote get-url "$remote" >/dev/null 2>&1 && push_hint="git push $remote $base   ·   "
 title=$(fm_get title "$IFILE")
 pre=
-remote=$(cfg sdd.remote origin)
 forge=
 if forge_load; then
 	why=$(forge_ready) || die "ship goes through $FORGE_NAME (forge = $(cfg sdd.forge)): $why"
@@ -338,4 +338,4 @@ if [ -n "$forge" ]; then
 fi
 ff_base "$(git rev-parse HEAD)"
 cleanup "shipped $ID into $base (local)"
-[ -z "$push_hint" ] || echo "next    git push origin $base"
+[ -z "$push_hint" ] || echo "next    git push $remote $base"
