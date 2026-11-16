@@ -9,6 +9,11 @@ current_item || die "not on an item branch (see: $CMD status)"
 fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
 [ "$(fm_get status "$IFILE")" = open ] || die "item $ID is not open"
 
+# FR-73.4: a type with no approval gate (chore, hotfix) has nothing to approve.
+if [ "$(gate_level approved "$ITYPE")" = off ]; then
+	echo "item $ID ($ITYPE) has no approval step: tell the agent to build"
+	exit 0
+fi
 missing=$(missing_sections "$IFILE" plan)
 [ -z "$missing" ] || die "the plan is incomplete (empty: $(joinlist "$missing"))"
 if approval_ok; then

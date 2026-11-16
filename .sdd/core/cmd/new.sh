@@ -47,8 +47,20 @@ case $title in *'
 '*) usage_die "the title must be one line" ;; esac
 
 base=$(cfg sdd.base main)
+# FR-73.5: a repo with no commits, and an install not yet on the base, each say what to do.
+git rev-parse -q --verify HEAD >/dev/null 2>&1 ||
+	die "this repo has no commits yet: commit your files first (git add -A && git commit -m init), then $DIRNAME and AGENTS.md"
 git rev-parse -q --verify "refs/heads/$base^{commit}" >/dev/null ||
 	die "base branch '$base' not found or has no commits (set base under [sdd] in $DIRNAME/config)"
+git rev-parse -q --verify "$base:$DIRNAME/bin/$NAME" >/dev/null 2>&1 ||
+	die "$NAME is not committed on $base yet: git add $DIRNAME AGENTS.md && git commit -m \"chore: adopt $NAME\""
+if [ $wt -eq 0 ]; then
+	dirty=$(git status --porcelain 2>/dev/null | cut -c4- | sed -n '1,5p' | paste -sd ',' - | sed 's/,/, /g')
+	if [ -n "$dirty" ]; then
+		[ "$(git status --porcelain | wc -l)" -le 5 ] || dirty="$dirty, …"
+		warn "uncommitted changes come along to the new branch: $dirty"
+	fi
+fi
 
 id=$(next_id) || exit 1
 slug=$(slugify "$title")

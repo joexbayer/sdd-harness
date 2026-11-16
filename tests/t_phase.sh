@@ -160,4 +160,12 @@ setcfg profile.lite.built block
 assert_contains "$(sdd ship 2>&1)" 'item 1: "## Built" is not written yet'
 sed 's/^- \[x\] T-1.1 Below the fence/- [x] T-1.1 Below the fence, renamed/' "$f" >"$T/p" && cp "$T/p" "$f"
 assert_contains "$(sdd status)" 'the plan changed after approval'
+
+# FR-73.4: a chore has no approval step: it says so and commits nothing.
+git checkout -q -- . && git switch -q main
+out=$(sdd new chore "Tidy up" 2>&1) || fail "new chore failed: $out"
+before=$(git rev-parse HEAD)
+out=$(sdd approve 2>&1) || fail "approve on a chore failed: $out"
+assert_contains "$out" '(chore) has no approval step: tell the agent to build'
+assert_eq "$(git rev-parse HEAD)" "$before"
 exit 0
