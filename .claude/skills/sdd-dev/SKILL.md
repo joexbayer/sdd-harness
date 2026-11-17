@@ -242,7 +242,7 @@ A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git c
 
 ## Evaluating sdd with a real agent (narrowbot + qwen)
 Unit tests don't show whether a mid-size model can follow sdd. To find out, run narrowbot headless:
-`~/narrowbot-bench/narrow-sdd.sh REPO OUT PROMPT_FILE`. It runs qwen3-coder-30b with
+a runner script kept outside this repo (`<runner> REPO OUT PROMPT_FILE`). It runs qwen3-coder-30b with
 `project-check-command = .sdd/bin/sdd check`, isolated config, and the key from env or
 `~/.config/narrowbot/api.key`. OUT gets `events.jsonl` (spec: narrowbot repo
 `docs/design/json-events.md`), `rc` and `diff.patch`. diff.patch leaves out untracked files,
