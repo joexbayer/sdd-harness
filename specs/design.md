@@ -42,8 +42,7 @@ replacing the team's git host.
 | type | hotfix, fix, chore, refactor, spike, feature. Each has its own template and gates |
 | phase | derived: describe → (approve) → build → (review) → ship |
 | check | your test/lint commands. Passing them is the main gate |
-| profile | lite (default), standard, strict. Sets how hard each gate is |
-| mode | solo (default) or team. Decides where IDs come from and how approval works |
+| profile | standard (default), lite, strict. Sets how hard each gate is |
 | constitution | `specs/constitution.md`: a system's ground truths, each an article `C-n` with a reason and its enforcement (a check command or human review); changed only by an amendment |
 
 ## 4. Layout
@@ -136,7 +135,7 @@ built on git state instead of edit counters.
 | plan approved before build (not chore, hotfix) | you, content-hash pinned | you, content-hash pinned | non-author |
 | failing test first (fix, feature tasks) | – | block | block |
 | trace: every FR has a test naming it | – | warn | block |
-| verifier ran: a `Verified by:` line under Built, not `none` (`verified`) | – | warn | block |
+| verifier ran: a `Verified by:` line under Built, not `none` (`verified`) | warn | warn | block |
 | code unchanged since the human's `sdd review` in this clone (`reviewed`) | warn | warn | block |
 | every `depends:` ref has shipped (`depends`; not hotfix) | warn | block | block |
 | trust gate, env allowlist, role profiles | – | – | on |
@@ -216,7 +215,7 @@ readers ignore keys they do not know.
 |---|---|
 | 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary`, `open`, `tidy`, `task`, `run`, `usage` |
 | 2 standard | `approve`, `trace`, `drop` |
-| 3 team | team IDs, `ship` via PR, `sdd-server` (MCP), CI job |
+| 3 team | remote-held IDs, `ship` via PR, `sdd-server` (MCP), CI job |
 | 4 knowledge | `kb search/links/add/accept/tidy`, `explain` |
 | 5 strict | `trust`, env allowlist, role profiles, `upgrade` with checksums |
 
@@ -283,7 +282,7 @@ own agent and model:
 Roles run as subagents where the agent has them: `sync claude` writes
 `.claude/agents/sdd-<role>.md` (the tier's model; "run `sdd next` and do that step") for every
 role on a Claude tier, and the `sdd-run` skill hands a role to its subagent. Other roles (a
-coder model through narrowbot) run through `sdd run <role> <id>`: `agents/<agent>.sh` builds the
+coder model through narrowbot, whose adapter lives in this repo's `.sdd/local/agents/`, not in core, item 73) run through `sdd run <role> <id>`: `agents/<agent>.sh` builds the
 headless command (`claude -p`, `narrowbot --json` today; `codex exec`, `opencode run`, … later)
 with only the tier's `args`. With usage tracking on (`[usage] track = true`; off by default), every run, either way, is one line in this clone's
 `.git/sdd/runs.tsv` (tokens from the agent's final JSON, or summed from a subagent's transcript
@@ -342,8 +341,8 @@ the change keeps the id. The record is per clone: a teammate's review is the PR'
 
 Team mode adds:
 
-- remote-claimed IDs
-- `ship` opens a PR whose body points at the item file
+- IDs reserved in the remote ref `refs/sdd/next-id` (no config switch; item 72)
+- `ship` runs its gates, then opens a PR whose body points at the item file (new commits and the merge run them again)
 - approval is a review by someone other than the author
 - CI runs the gates, and nobody can skip them
 
@@ -464,7 +463,7 @@ supported and needs more of the human's review.
 | 16 | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrowbot, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
 | 17 | task batches: `size: S\|M\|L` on tasks, `sdd task next` groups consecutive small ones (`[build] batch`), `next` and `sdd run builder` show the batch, the `sdd-build` skill loops one builder per batch until no task is open; unknown task attributes are refused | "now let's build" works the whole item without a subagent per tiny task |
 | 24 | multi-item plans: a `roadmap` type whose `R-` entries open items (`new --from`), `depends:` in an item's frontmatter, ready entries in `next`, entry states in `show`, what an item waits for in `next`/`status`/`ls`, and the `depends` ship gate | a complex system is many items in an order |
-| later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
+| later | team mode: PR review as plan approval (Q-0.1) | approval by someone other than the author |
 | later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | 26 | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model, any format); a `contract` item lands only the contract; items name `contracts:` and approval pins their ids, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
 | 30-40 | the experiment: a complex multi-phase app, Opus plans and a coder model builds tasks, a scripted human answers and approves, measured against an Opus-only baseline. Done 2026-10-30: Opus as builder shipped, qwen needs supervision (kb/experiment-results.md) | proves plan big, build small with numbers |

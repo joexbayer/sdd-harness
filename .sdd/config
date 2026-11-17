@@ -1,6 +1,5 @@
 [sdd]
 	profile = lite
-	mode = solo
 	base = main
 	forge = github
 [check]
