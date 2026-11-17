@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/joexbayer/sdd-harness/main/install.
 cd your-repo && git switch main
 sdd init                    # copies .sdd/ into the repo, writes .sdd/config (profile standard), adds a block to AGENTS.md
 sdd sync claude             # skills and hooks for Claude Code (or: codex)
-git add .sdd AGENTS.md
+git add .sdd AGENTS.md .gitattributes
 [ -f .gitleaks.toml ] && git add .gitleaks.toml
 git commit -m "chore: adopt sdd"
 ```

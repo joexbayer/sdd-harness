@@ -36,7 +36,7 @@ jobs:
       - run: .sdd/bin/sdd check
 
   # Alpine 3.20 ships Node 20, too old for the server's tests (Node 22.18+, run on the other two),
-  # so this job runs the shell lines of `[check] run` from .sdd/config.
+  # so this job runs every `[check] run` line from .sdd/config except the npm one.
   alpine:
     runs-on: ubuntu-latest
     container: alpine:3.20
@@ -45,5 +45,4 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { fetch-depth: 0 }
       - run: git config --global --add safe.directory "$PWD" && git config --global user.name ci && git config --global user.email ci@example.com
-      - run: shellcheck -s sh -S warning install.sh .sdd/bin/sdd .sdd/core/lib/common.sh .sdd/core/cmd/*.sh .sdd/core/agents/*.sh .sdd/local/agents/*.sh .sdd/core/forges/*.sh tests/*.sh tests/constitution/*.sh
-      - run: sh tests/run.sh /bin/sh dash
+      - run: git config -f .sdd/config --get-all check.run | grep -v npm | while IFS= read -r c; do sh -c "$c" || exit 1; done
