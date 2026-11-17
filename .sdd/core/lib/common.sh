@@ -15,6 +15,13 @@ PHASE_REF=
 die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 1; }
 usage_die() { printf '%s: %s\n' "$NAME" "$*" >&2; exit 2; }
 warn() { printf '%s: warning: %s\n' "$NAME" "$*" >&2; }
+# shq <path>: the path as it can be pasted into a shell: quoted only when it needs it (FR-73.9).
+shq() {
+	case $1 in
+	*[!A-Za-z0-9_./:@%+=,~-]* | '') printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")" ;;
+	*) printf '%s' "$1" ;;
+	esac
+}
 joinlist() { printf '%s\n' "$1" | paste -sd ',' - | sed 's/,/, /g'; }
 # human_only <verb>: refuse inside a role run (sdd run sets SDD_RUN for its agent; "-" when usage
 # tracking is off): approve, ship and tidy --remote are the human's (FR-21.1). It stops a careless
@@ -218,7 +225,7 @@ gate_level() {
 		if (!cfg_found) { gates = cfg_get("sdd.gates", "123"); if (!cfg_found) gates = "planned approved check built" }
 		if (!index(" " gates " ", " " g " ")) { print "off"; exit }
 		v = cfg_get("type." t "." g, "123"); if (cfg_found) { print v; exit }
-		p = cfg_get("sdd.profile", "123"); if (!cfg_found) p = "lite"
+		p = cfg_get("sdd.profile", "123"); if (!cfg_found) p = "standard"
 		v = cfg_get("profile." p "." g, "123"); print (cfg_found ? v : "off")
 	}'
 }

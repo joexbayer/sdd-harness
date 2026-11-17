@@ -173,6 +173,7 @@ awk -F '\t' -v OFS='\t' '$2 == 2 { $3 = "CLOSED" } { print }' "$T/gh/prs" >"$T/g
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(closed)"
 assert_contains "$out" 'PR #2 is closed'
+assert_contains "$out" 'or abandon the item: git branch -D fix/2-' # FR-73.9
 
 # FR-68.6, FR-68.9: item 3 depends on 2, whose PR closed unmerged; a teammate amended the
 # constitution and added team.txt on origin/main.

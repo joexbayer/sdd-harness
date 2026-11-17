@@ -63,19 +63,38 @@ detect_checks() {
 	if [ -f Gemfile ]; then
 		if [ -x bin/rails ]; then echo 'bin/rails test'; elif [ -d spec ]; then echo 'bundle exec rspec'; fi
 	fi
-	# python3 -m: pip often installs pytest without putting its script on PATH.
-	{ [ -f pyproject.toml ] || [ -f pytest.ini ] || [ -f setup.py ]; } && echo 'python3 -m pytest'
+	# python3 -m: pip often installs pytest without putting its script on PATH. Without pytest the
+	# standard library's runner takes over when there are test_*.py files (FR-73.3).
+	_py=$(find . -name 'test_*.py' -not -path './.git/*' -not -path './node_modules/*' 2>/dev/null | head -n 1)
+	if [ -f pyproject.toml ] || [ -f pytest.ini ] || [ -f setup.py ]; then
+		if python3 -c 'import pytest' >/dev/null 2>&1; then
+			echo 'python3 -m pytest'
+		elif [ -n "$_py" ]; then
+			echo 'python3 -m unittest'
+			warn "\"python3 -m unittest\" runs only unittest.TestCase classes in packages: install pytest if your tests are plain functions"
+		else
+			echo 'python3 -m pytest'
+			warn "the gate \"python3 -m pytest\" will fail here: pytest is not installed (edit [check] run in $DIRNAME/config)"
+		fi
+	elif [ -n "$_py" ]; then
+		echo 'python3 -m unittest'
+		warn "\"python3 -m unittest\" runs only unittest.TestCase classes in packages: install pytest if your tests are plain functions"
+	fi
 	return 0
 }
 
 config="$target/config"
 if [ ! -f "$config" ]; then
-	git config -f "$config" sdd.profile lite
+	git config -f "$config" sdd.profile standard
 	git config -f "$config" sdd.base "$(detect_base)"
 	checks=$(detect_checks)
 	if [ -z "$checks" ] && [ -f Makefile ] && grep -q '^test:' Makefile; then checks='make test'; fi
 	if [ -n "$checks" ]; then
-		printf '%s\n' "$checks" | while IFS= read -r c; do git config -f "$config" --add check.run "$c"; done
+		printf '%s\n' "$checks" | while IFS= read -r c; do
+			git config -f "$config" --add check.run "$c"
+			command -v "${c%% *}" >/dev/null 2>&1 ||
+				warn "the gate \"$c\" will fail here: ${c%% *} is not installed (edit [check] run in $DIRNAME/config)"
+		done
 		echo "checks: $(printf '%s\n' "$checks" | paste -sd ',' - | sed 's/,/, /g')"
 		echo "gate    $(printf '%s\n' "$checks" | paste -sd ',' - | sed 's/,/, /g') runs before every ship. Your real per-change gate? If not, edit [check] run in $DIRNAME/config"
 	else
@@ -89,7 +108,7 @@ if [ ! -f "$config" ]; then
 	else
 		echo "tip     install gitleaks and add 'run = gitleaks dir . --no-banner' under [check] to catch committed secrets"
 	fi
-	echo "wrote $DIRNAME/config (profile lite, base $(git config -f "$config" sdd.base))"
+	echo "wrote $DIRNAME/config (profile standard: ship blocks on an incomplete plan, open tasks and a missing write-up; lite only warns, strict also wants a verifier and your review)"
 fi
 
 
@@ -119,6 +138,13 @@ EOF
 		echo "tip     .gitleaks.toml: add '^\\.claude/worktrees/' to its allowlist paths, or gitleaks also scans agents' worktree copies of the repo"
 	fi
 fi
+# FR-73.12: Git for Windows checks files out with CRLF (core.autocrlf), which breaks sh scripts and
+# the --- block of items: keep both trees at LF. Each line is added once; the rest is left alone.
+for _l in "/$DIRNAME/** text eol=lf" "/$SPECS/** text eol=lf"; do
+	grep -qxF "$_l" .gitattributes 2>/dev/null && continue
+	[ -z "$(tail -c 1 .gitattributes 2>/dev/null)" ] || echo >>.gitattributes
+	printf '%s\n' "$_l" >>.gitattributes
+done
 # Items branch from the base, so an install committed only on another branch vanishes on new.
 base=$(git config -f "$config" sdd.base)
 cur=$(current_branch)
@@ -168,4 +194,12 @@ case $(git remote get-url origin 2>/dev/null) in
 		echo "tip     origin is on GitHub: add 'forge = github' under [sdd] in $DIRNAME/config to ship through pull requests"
 	;;
 esac
-echo "next: $CMD new <type> \"title\"   (optional: $CMD sync <$(agents | paste -sd '|' -)>)"
+if [ -n "$(git status --porcelain -- "$DIRNAME" AGENTS.md .gitattributes .gitleaks.toml 2>/dev/null)" ]; then
+	add="$DIRNAME AGENTS.md .gitattributes"
+	git ls-files --error-unmatch .gitleaks.toml >/dev/null 2>&1 || ! [ -f .gitleaks.toml ] || add="$add .gitleaks.toml"
+	echo "next: git add $add && git commit -m \"chore: adopt $NAME\""
+	echo "then: $CMD sync <$(SDD_HOME=$target; agents | paste -sd '|' -)>"
+	echo "then: $CMD new <type> \"title\""
+else
+	echo "next: $CMD new <type> \"title\"   (optional: $CMD sync <$(SDD_HOME=$target; agents | paste -sd '|' -)>)"
+fi

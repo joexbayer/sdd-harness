@@ -25,15 +25,20 @@ else
 	echo "plan    approved ${ap#* }, CHANGED since: re-approve or revert the plan"
 fi
 
-if check_passed_here "$ID"; then
+# FR-73.10: only the gates this type uses.
+if [ "$(gate_level check "$ITYPE")" = off ]; then
+	:
+elif check_passed_here "$ID"; then
 	echo "check   ✓ passed for this exact code ($(sed -n 's/^at=//p' "$ST/checks/$ID"))"
 elif [ -f "$ST/checks/$ID" ]; then
 	echo "check   ✗ last result: $(sed -n 's/^result=//p' "$ST/checks/$ID"), or the code changed since; run: $CMD check"
 else
 	echo "check   never run; run: $CMD check"
 fi
-vline=$(verified_by)
-echo "verify  ${vline:-Verified by: (missing)}"
+if [ "$(gate_level verified "$ITYPE")" != off ]; then
+	vline=$(verified_by)
+	echo "verify  ${vline:-Verified by: (missing)}"
+fi
 # FR-67.3: every waiver, however it was written.
 awk '/^## / { on = ($0 == "## Waived"); next } on && /^- T-/ { sub(/^- /, "waived  "); print }' "$IFILE"
 unnamed_note

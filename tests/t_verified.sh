@@ -55,6 +55,7 @@ echo retry >retry.txt && git add retry.txt && git commit -qm "fix(1): retry"
 sdd check >/dev/null 2>&1 || fail "check failed"
 built_with ''
 assert_contains "$(sdd review)" 'Verified by: (missing)'
+assert_contains "$(sdd review)" 'check   '
 # FR-22.3: strict blocks a missing line and "none", naming the gate.
 setcfg sdd.profile strict
 out=$(sdd ship 2>&1)
@@ -119,6 +120,10 @@ fill "$r" built && git commit -qam "docs(2): built" && sdd check >/dev/null 2>&1
 out=$(sdd next 2>&1)
 assert_contains "$out" 'Phase: review (written up; walk through it with:'
 assert_not_contains "$out" 'NOT verified'
+# FR-73.10: review leaves out the lines of gates that are off for the type (roadmap: no check, no verifier).
+out=$(sdd review 2>&1)
+assert_not_contains "$out" 'verify  '
+assert_not_contains "$out" 'check   '
 # FR-62.3: unverified in the default profile: a warning, and it still ships.
 git switch -q fix/1-honest
 out=$(sdd ship 2>&1) || fail "lite must still ship: $out"

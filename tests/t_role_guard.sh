@@ -3,6 +3,7 @@
 # FR-21.4 sdd usage keeps a batch's row aligned.
 . "$SRC/tests/lib.sh"
 new_repo
+use_narrowbot
 setcfg usage.track true
 setcfg role.builder.tier small && setcfg tier.small.agent narrowbot && setcfg tier.small.model m
 

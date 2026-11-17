@@ -145,4 +145,17 @@ git init -q && echo x >x && git add x && git commit -qm init
 cp -R "$SRC/.sdd" .tool
 out=$(SDD_SH=$SH "$SH" .tool/bin/sdd init 2>&1) || fail "init via renamed folder failed: $out"
 assert_contains "$(cat AGENTS.md)" '.tool/bin/sdd next'
+
+# FR-73.13: an install carries no adapter for a private agent; this repo's own lives in .sdd/local.
+mkdir -p "$T/fresh" && cd "$T/fresh" || exit 1
+git init -q && echo x >x && git add x && git commit -qm init
+sdd init >/dev/null 2>&1 || fail "init failed"
+assert_no_file .sdd/core/agents/narrowbot.sh
+assert_no_file .sdd/local
+assert_contains "$(sdd help)" 'hooks for your agent (claude codex)'
+assert_not_contains "$(sdd help)" narrowbot
+assert_file "$SRC/.sdd/local/agents/narrowbot.sh"
+assert_no_file "$SRC/.sdd/core/agents/narrowbot.sh"
+out=$(sdd run builder 1 2>&1)
+assert_not_contains "$out" narrowbot
 exit 0

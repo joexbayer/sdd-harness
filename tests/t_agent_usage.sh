@@ -3,7 +3,7 @@
 . "$SRC/tests/lib.sh"
 # use <agent> <function> <args>: call an adapter function, as sdd itself loads it.
 # shellcheck disable=SC1090,SC2034 # the adapter is chosen per call; SDD_HOME is read by common.sh
-use() { (SDD_HOME="$SRC/.sdd" && . "$SRC/.sdd/core/lib/common.sh" && . "$SRC/.sdd/core/agents/$1.sh" && shift && "$@"); }
+use() { (SDD_HOME="$SRC/.sdd" && . "$SRC/.sdd/core/lib/common.sh" && . "$SRC/.sdd/$(ls "$SRC/.sdd/core/agents/$1.sh" "$SRC/.sdd/local/agents/$1.sh" 2>/dev/null | head -n 1 | sed "s|^$SRC/.sdd/||")" && shift && "$@"); }
 tab=$(printf '\t')
 
 # claude -p --output-format json: input counts cached input too; cost and verdict as reported.

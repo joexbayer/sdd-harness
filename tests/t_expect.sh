@@ -111,8 +111,8 @@ f=specs/changes/3-red-without-code/item.md
 fill "$f" plan
 awk '/^## What changes$/ { print; print "FR-3.1 WHEN x THE SYSTEM SHALL y."; print "  e.g. x → y"; print ""; next }
 /^## Tasks \(optional\)$/ { print
-	print "- [ ] T-3.1 Api test, FR-3.1 (files: tests3/t31.sh; test: sh tests3/t31.sh; expect: fail \"api: missing\")"
 	print "- [ ] T-3.2 Vacuous test (files: t32.sh; test: sh t32.sh; expect: fail)"
+	print "- [ ] T-3.1 Api test, FR-3.1 (files: tests3/t31.sh; test: sh tests3/t31.sh; expect: fail \"api: missing\")"
 	print "- [ ] T-3.3 Late test (files: t33.sh; test: sh t33.sh; expect: fail)"
 	print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs(3): plan" && sdd approve >/dev/null 2>&1 || fail "approve 3 failed"
@@ -132,6 +132,7 @@ assert_contains "$out" '✗ T-3.2 expected its test to fail, but it passes even 
 grep -q '^- \[ \] T-3.2 ' "$f" || fail "T-3.2 ticked"
 clean_after "(refused)"
 rm -f other.txt t32.sh
+sed 's/^- \[ \] T-3.2 /- [x] T-3.2 /' "$f" >"$T/f" && cp "$T/f" "$f" # by hand: T-3.2 goes first (FR-73.7)
 
 # FR-31.2: failing without the code, but not for the plan's reason, is not red.
 printf 'sh api.sh 2>/dev/null && exit 0\necho boom\nexit 1\n' >tests3/t31.sh

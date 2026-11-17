@@ -49,6 +49,11 @@ run the real `curl … | sh` in a throwaway HOME.
   Use `$CMD`, `$DIRNAME` and `$SPECS` instead of literal `sdd` or `.sdd` in output.
 - **A new agent:** `.sdd/core/agents/<agent>.sh` defining `agent_sync` and `agent_hook_reply`.
   Claude and Codex share `_hooks.sh` because their hook JSON is identical.
+  Narrowbot's adapter (a private agent) is not core: it lives in this repo's `.sdd/local/agents/`, which
+  `init` does not copy (item 73). A test that runs it calls `use_narrowbot` (tests/lib.sh) after `new_repo`.
+- `init` writes `profile = standard` (item 73); `new_repo` pins `lite` so tests keep their meaning, and
+  adds `.gitattributes` eol=lf lines to every test repo (a test that needs a CR in a file sets `-text` in
+  `.git/info/attributes`, t_query.sh).
 - **Agent skills:** step texts in `.sdd/core/agents/skills/<step>.md` (agent-neutral, thin:
   "run sdd next and follow it"), plus `<step>.<agent>.md` for one agent's tool hints;
   `install_skills` writes them on `sync`. Behaviour agents must follow goes in

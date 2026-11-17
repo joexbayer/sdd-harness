@@ -32,13 +32,13 @@ esac
 there=$(worktree_of "$branch")
 if [ -n "$there" ]; then
 	echo "$branch is checked out in $there"
-	echo "next    cd $there && $CMD next"
+	echo "next    cd $(shq "$there") && $CMD next"
 	exit 0
 fi
 
 if [ -n "$wt" ]; then
 	where=$(worktree_path "$id")
-	[ ! -e "$where" ] || die "$where already exists (remove it, or: cd $where)"
+	[ ! -e "$where" ] || die "$where already exists (remove it, or: cd $(shq "$where"))"
 	if [ -n "$track" ]; then
 		git worktree add -q --track -b "$branch" "$where" "$track" || die "could not create worktree $where"
 	else
@@ -47,7 +47,7 @@ if [ -n "$wt" ]; then
 	cd "$where" || exit 1
 	sync_here
 	echo "worktree $where   (branch $branch${track:+, tracking $track})"
-	echo "next    cd $where && $CMD next"
+	echo "next    cd $(shq "$where") && $CMD next"
 	exit 0
 fi
 

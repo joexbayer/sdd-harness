@@ -14,6 +14,7 @@ assert_contains "$(cat "$f")" 'title: Pagination drops last item'
 assert_contains "$(cat "$f")" 'FR-1.1'
 assert_eq "$(git log -1 --format=%s)" 'docs(1): open fix "Pagination drops last item"'
 assert_eq "$(git show --name-only --format= HEAD)" "$f"
+assert_contains "$out" 'warning: uncommitted changes come along to the new branch: wip.txt' # FR-73.5
 assert_file wip.txt # unrelated work is carried along, not committed
 git status --porcelain | grep -q 'wip.txt' || fail "wip.txt should still be untracked"
 rm wip.txt
@@ -160,4 +161,24 @@ assert_not_contains "$out" 'not reserved'
 mkdir -p "$HOME/bin"
 ln -s "$SRC/.sdd/bin/sdd" "$HOME/bin/sdd"
 "$SH" "$HOME/bin/sdd" help | grep -q 'Humans plan and review' || fail "symlinked sdd failed"
-exit 0
+
+# FR-73.5: refuses while the install is not committed on the base; no commits at all; no warning
+# for a clean tree or --worktree.
+mkdir -p "$T/adopt" && cd "$T/adopt" || exit 1
+git init -q && echo x >x && git add x && git commit -qm init
+sdd init >/dev/null 2>&1
+out=$(sdd new fix "Early" 2>&1) && fail "new should refuse before the adoption commit"
+assert_contains "$out" 'sdd is not committed on main yet: git add .sdd AGENTS.md && git commit -m "chore: adopt sdd"'
+assert_eq "$(git symbolic-ref --short HEAD)" main
+git add -A && git commit -qm adopt
+out=$(sdd new fix "Clean" 2>&1) || fail "$out"
+assert_not_contains "$out" 'uncommitted'
+git switch -q main
+echo more >extra.txt
+out=$(sdd new fix "Wt" --worktree 2>&1) || fail "$out"
+assert_not_contains "$out" 'uncommitted'
+mkdir -p "$T/empty" && cd "$T/empty" || exit 1
+git init -q
+out=$(sdd new fix "Nothing" 2>&1) && fail "new should refuse without commits"
+assert_contains "$out" 'no commits yet'
+assert_not_contains "$out" 'set base'

@@ -17,7 +17,7 @@ open_items() {
 
 if current_item; then
 	item_phase
-	echo "$ID $ITYPE · $IR_TITLE · $BRANCH"
+	echo "$ID $ITYPE · $IR_TITLE · $BRANCH · $(cfg sdd.profile standard)"
 	echo "phase   $PHASE   ($WHY)"
 	waits_for "$IR_DEPENDS"
 	[ -z "$WAITS" ] || echo "waits   for $WAITS (ship waits until they have shipped)"

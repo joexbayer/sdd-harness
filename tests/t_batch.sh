@@ -2,6 +2,7 @@
 # sdd run builder show the batch, FR-17.5 unknown task attributes make the task unreadable.
 . "$SRC/tests/lib.sh"
 new_repo
+use_narrowbot
 
 sdd new feature "Orders paging" >/dev/null 2>&1
 f=specs/changes/1-orders-paging/item.md
@@ -96,9 +97,9 @@ f=specs/changes/3-colours/item.md
 fill "$f" plan
 awk '/^## What changes$/ { print; print "FR-3.1 WHEN x THE SYSTEM SHALL y."; next }
 /^## Tasks \(optional\)$/ { print
+	print "- [ ] T-3.3 Semicolons stay in tests (test: true; echo ok; size: S)"
 	print "- [ ] T-3.1 Paint, FR-3.1 (test: echo ran >ran.txt; colour: red)"
 	print "- [ ] T-3.2 Huge (test: true; size: XL)"
-	print "- [ ] T-3.3 Semicolons stay in tests (test: true; echo ok; size: S)"
 	print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs(3): plan" && sdd approve >/dev/null 2>&1 || fail "approve 3 failed"
 out=$(sdd task 'done' T-3.1 2>&1)

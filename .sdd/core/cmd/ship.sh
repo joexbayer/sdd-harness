@@ -13,9 +13,12 @@ fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
 [ -z "$(git status --porcelain)" ] || die "commit, stash or ignore your changes first (ship checks exactly what it lands)"
 
 base=$(cfg sdd.base main)
+# FR-73.9: no push hint without a remote.
+remote=$(cfg sdd.remote origin)
+push_hint=
+git remote get-url "$remote" >/dev/null 2>&1 && push_hint="git push $remote $base   ·   "
 title=$(fm_get title "$IFILE")
 pre=
-remote=$(cfg sdd.remote origin)
 forge=
 if forge_load; then
 	why=$(forge_ready) || die "ship goes through $FORGE_NAME (forge = $(cfg sdd.forge)): $why"
@@ -59,7 +62,8 @@ check_gate() {
 		case $? in
 		0) echo "✓ check passed" ;;
 		3) gate check "check ran zero tests: that proves nothing (log: $CHECK_LOG)" ;;
-		*) gate check "check failed (log: $CHECK_LOG)" ;;
+		*) gate check "check failed (log: $CHECK_LOG)
+$(LC_ALL=C tr -d '\000' <"$CHECK_LOG" | LC_ALL=C grep -v '^[[:space:]]*$' | tail -n 5)" ;;
 		esac
 	fi
 }
@@ -73,7 +77,7 @@ cleanup() {
 	_wt=$(worktree_of "$base")
 	if [ "$ROOT" != "$_main" ]; then
 		echo "✓ $1; this worktree and branch $BRANCH stay until tidy"
-		echo "cleanup cd $_main && $CMD tidy"
+		echo "cleanup cd $(shq "$_main") && $CMD tidy"
 	elif [ -n "$_wt" ]; then
 		echo "✓ $1; branch $BRANCH kept ($base is checked out in $_wt)"
 		echo "cleanup git switch --detach && $CMD tidy"
@@ -151,19 +155,21 @@ item_gates() {
 	# naming it, in every profile, and, when that commit is yours, the note task done left in this
 	# clone (a teammate's tick was proven on their machine). Features also need tasks, all ticked.
 	trows=$(task_rows)
+	# FR-73.8: a tick with no task done note says that first: a commit subject is no use to it.
+	me=$(git config user.name)
+	byhand=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r t; do
+		grep -qx "$t" "$ST/checks/$ID.tasks" 2>/dev/null && continue
+		! waived "$t" || continue
+		c=$(task_commit "$t")
+		[ -z "$c" ] || [ "$(git log -1 --format=%an "$c")" = "$me" ] && echo "$t"
+	done)
+	[ -z "$byhand" ] || fail "item $ID: ticked without $CMD task done: $(joinlist "$byhand") (untick them and run task done)"
 	unproven=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' |
 		while IFS= read -r t; do waived "$t" || [ -n "$(task_commit "$t")" ] || echo "$t"; done)
 	[ -z "$unproven" ] || fail "item $ID: ticked, but no commit names them: $(joinlist "$unproven") (put the task ID in the commit subject)"
 	# FR-58.1: a test the planner wrote is the contract; the builder may not quietly change it.
 	bent=$(bent_tests)
 	[ -z "$bent" ] || fail "$bent"
-	me=$(git config user.name)
-	byhand=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "done" { print $1 }' | while IFS= read -r t; do
-		grep -qx "$t" "$ST/checks/$ID.tasks" 2>/dev/null && continue
-		! waived "$t" || continue
-		[ "$(git log -1 --format=%an "$(task_commit "$t")")" != "$me" ] || echo "$t"
-	done)
-	[ -z "$byhand" ] || fail "item $ID: ticked without $CMD task done: $(joinlist "$byhand") (untick them and run task done)"
 	if [ "$(gate_level tasks "$ITYPE")" != off ]; then
 		[ -n "$trows" ] || gate tasks "item $ID: the plan has no tasks (- [ ] T-$ID.1 …)"
 		open=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "open" { print $1 }')
@@ -218,7 +224,7 @@ pr_ship() {
 	pr_here=$(git rev-parse HEAD)
 	case $pr_state in
 	'') pr_ready && pr_gates && pr_push "pushed item $ID to" && return ;;
-	CLOSED) die "PR #$pr_num is closed: reopen it (gh pr reopen $pr_num) to ship it, or drop the item" ;;
+	CLOSED) die "PR #$pr_num is closed: reopen it (gh pr reopen $pr_num) to ship it, or abandon the item: git branch -D $BRANCH" ;;
 	MERGED)
 		# Merged on GitHub (the button): fine, unless it left out newer commits from here.
 		git merge-base --is-ancestor HEAD "$pr_head" 2>/dev/null ||
@@ -295,10 +301,10 @@ if [ "$lands" = item ]; then
 	ff_base "$commit"
 	if [ "$ITYPE" = roadmap ]; then
 		echo "✓ roadmap $ID: plan archived on $base (local); its ready entries: $CMD next (on $base)"
-		echo "next    git push origin $base   ·   then open an entry: $CMD new --from R-$ID.<n>"
+		echo "next    ${push_hint}then open an entry: $CMD new --from R-$ID.<n>"
 	else
 		echo "✓ $ITYPE $ID: $what archived on $base (local); the code stays on $BRANCH"
-		echo "next    git push origin $base   ·   delete the code when done: git branch -D $BRANCH"
+		echo "next    ${push_hint}delete the code when done: git branch -D $BRANCH"
 	fi
 	exit 0
 fi
@@ -332,4 +338,4 @@ if [ -n "$forge" ]; then
 fi
 ff_base "$(git rev-parse HEAD)"
 cleanup "shipped $ID into $base (local)"
-echo "next    git push origin $base"
+[ -z "$push_hint" ] || echo "next    git push $remote $base"

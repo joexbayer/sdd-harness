@@ -3,6 +3,7 @@
 # SubagentStart/Stop hooks with tokens from the transcript.
 . "$SRC/tests/lib.sh"
 new_repo
+use_narrowbot
 setcfg usage.track true   # off by default (FR-16.5); t_usage_off.sh covers that
 sdd new feature "Roles" >/dev/null 2>&1
 

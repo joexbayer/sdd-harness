@@ -122,6 +122,12 @@ red_without_code() {
 		BEGIN { n = split(ENVIRON["F"], f, "\n") }
 		$0 == ENVIRON["I"] { next }
 		{ for (i = 1; i <= n; i++) if ($0 == f[i] || index($0, f[i] "/") == 1) next; print }')
+	# FR-73.8: with no code committed on this branch either, the test passes for want of a test.
+	if [ -z "$red_other" ] && [ -z "$(git diff --name-only "$(cfg sdd.base main)...HEAD" -- . ":(exclude)$SPECS" 2>/dev/null)" ]; then
+		tail -n 20 "$log"
+		echo "✗ $tid: the test passes: write the failing test in $(tsv 4 "$row") first (log: $log)"
+		exit 1
+	fi
 	if [ -z "$red_other" ]; then
 		tail -n 20 "$log"
 		echo "✗ $tid expected its test to fail, but it passed: the code is already committed (or there is none), so $NAME cannot see the test fail; write the test before its code. Already committed? git revert the code commit, run task done while the test fails, commit, then revert the revert (log: $log)"
@@ -165,6 +171,13 @@ bad=$(tsv 8 "$row")
 [ "$(gate_level approved "$ITYPE")" != block ] || approval_ok ||
 	die "the plan is not approved, or changed since: the human runs $CMD approve first (a task's test runs only for the approved plan)"
 
+# FR-73.7: in order: the first open task goes first. Asked after the task's own checks, before its
+# test runs.
+in_order() {
+	first=$(task_rows | awk -F '\t' '$2 == "open" { print $1; exit }')
+	[ "$first" = "$tid" ] || die "$first comes first ($CMD task next)"
+}
+
 # FR-65.1, FR-65.2: the last non-blank line of a log.
 last_line() { LC_ALL=C tr -d '\000' <"$1" | LC_ALL=C grep -v '^[[:space:]]*$' | tail -n 1; }
 shown=
@@ -173,6 +186,7 @@ expect=$(tsv 6 "$row")
 reason=$(tsv 10 "$row")
 if [ -z "$test" ]; then
 	[ "$expect" != fail ] || die "$tid says expect: fail but names no test"
+	in_order
 	run_check "$ID"
 	rc=$?
 	how="the check passed"
@@ -186,6 +200,7 @@ else
 			[ -e "$p" ] || die "$tid: $p (in files:) does not exist yet: write the test first"
 		done
 	fi
+	in_order
 	log="$ST/checks/$ID.$tid.log"
 	sh -c "$test" </dev/null >"$log" 2>&1
 	rc=$?

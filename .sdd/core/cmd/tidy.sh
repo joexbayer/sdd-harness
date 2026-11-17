@@ -38,11 +38,11 @@ done_item() {
 # keep_reason <branch> <type> <worktree>: why a done item's branch (and its worktree) must stay,
 # with the command that removes it anyway; nothing when removing it loses nothing.
 keep_reason() {
-	_rm="${3:+git worktree remove --force $3 && }git branch -D $1"
+	_rm="${3:+git worktree remove --force $(shq "$3") && }git branch -D $1"
 	if [ "$3" = "$main" ]; then
 		echo "checked out in the main checkout · git switch $base && $CMD tidy"
 	elif [ -n "$3" ] && [ "$3" = "$ROOT" ]; then
-		echo "you are in it · cd $main && $CMD tidy"
+		echo "you are in it · cd $(shq "$main") && $CMD tidy"
 	elif ! git merge-base --is-ancestor "$1" "$base"; then
 		if [ "$2" = spike ]; then echo "a spike's code never lands on $base · $_rm"; else echo "has commits not on $base · $_rm"; fi
 	elif [ -d "$3" ] && [ -n "$(git -C "$3" status --porcelain)" ]; then

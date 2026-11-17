@@ -49,7 +49,7 @@ assert_contains "$out" '.sdd/bin/sdd task 'done' T-1.1'
 echo 'exit 0' >t1.sh
 out=$(sdd task 'done' T-1.1 2>&1)
 assert_eq $? 1 "(a red task whose test passes)"
-assert_contains "$out" 'expected its test to fail'
+assert_contains "$out" 'T-1.1: the test passes: write the failing test in t1.sh first' # FR-73.8
 echo 'grep -q page q.sh 2>/dev/null; r=$?; echo goldens 0; exit $r' >t1.sh
 out=$(sdd task 'done' T-1.1 2>&1) || fail "red task failed: $out"
 # FR-65.2: no expected text: the red run's last line is shown, with a note.
@@ -114,9 +114,9 @@ fill "$f" plan
 awk '/^## Tasks \(optional\)$/ { print
 	print "```"; print "- [ ] T-2.1 an example in a fence"; print "```"
 	print "- [ ] T-2.1 Red first (files: t2.sh; test: sh other.sh; expect: fail)"
+	print "- [ ] T-2.4 Plain (test: true)"
 	print "- [ ] T-2.2 Hides failures (test: false || true)"
-	print "- [ ] T-2.3 Wrapped (test: true)"; print "  and more words"
-	print "- [ ] T-2.4 Plain (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+	print "- [ ] T-2.3 Wrapped (test: true)"; print "  and more words"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs(2): plan" && sdd approve >/dev/null 2>&1 || fail "approve 2 failed"
 # FR-15.2: a red task's files must exist, and a red test that ran no tests is not red.
 assert_contains "$(sdd task 'done' T-2.1 2>&1)" 't2.sh (in files:) does not exist yet'
@@ -126,12 +126,13 @@ assert_contains "$(sdd task 'done' T-2.1 2>&1)" 'its test ran no tests'
 # FR-15.2: a test that hides failures, and attributes that do not end the line, are refused.
 assert_contains "$(sdd task 'done' T-2.2 2>&1)" 'its test hides failures'
 assert_contains "$(sdd task 'done' T-2.3 2>&1)" 'its attributes must end its line'
-# The fenced example is never ticked; the real line is.
+# The fenced example is never ticked; the real line is. Tasks go in order (FR-73.7): the first,
+# done by hand here, no longer holds T-2.4 back.
+sed 's/^- \[ \] T-2.1 Red/- [x] T-2.1 Red/' "$f" >"$T/f" && cp "$T/f" "$f"
 sdd task 'done' T-2.4 >/dev/null 2>&1 || fail "T-2.4 failed"
 grep -q '^- \[x\] T-2.4 ' "$f" || fail "T-2.4 not ticked"
 git add -A && git commit -qm "feat(2): T-2.4 plain"
 # FR-15.7: a tick by hand is refused at ship, even with a commit naming it.
-sed 's/^- \[ \] T-2.1 Red/- [x] T-2.1 Red/' "$f" >"$T/f" && cp "$T/f" "$f"
 grep -c '^- \[ \] T-2.1 an example' "$f" >/dev/null || fail "the fenced example changed"
 fill "$f" built && git commit -qam "feat(2): T-2.1 red first, by hand"
 assert_contains "$(sdd ship 2>&1)" 'ticked without .sdd/bin/sdd task done: T-2.1'
@@ -325,7 +326,7 @@ new_repo ten
 sdd new feature "Ten" >/dev/null 2>&1
 f=specs/changes/1-ten/item.md
 fill "$f" plan
-awk '/^## Tasks \(optional\)$/ { print; print "- [ ] T-1.10 Tenth (test: true)"; print "- [ ] T-1.1 First (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+awk '/^## Tasks \(optional\)$/ { print; print "- [ ] T-1.1 First (test: true)"; print "- [ ] T-1.10 Tenth (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
 sdd task 'done' T-1.1 >/dev/null 2>&1 || fail "T-1.1 failed"
 grep -q '^- \[ \] T-1.10 ' "$f" || fail "ticking T-1.1 ticked T-1.10"
@@ -353,4 +354,18 @@ for c in 'task next' 'task' 'next'; do
 	out=$(sdd $c 2>&1)
 	assert_contains "$out" 'needs tasks: add the test-first pair to the plan (the human approves it again)'
 done
+
+# FR-73.7: tasks go in order: a later one waits for the earlier open one.
+new_repo order
+sdd new feature "Order" >/dev/null 2>&1
+f=specs/changes/1-order/item.md
+fill "$f" plan
+awk '/^## Tasks \(optional\)$/ { print; print "- [ ] T-1.1 First (test: true)"; print "- [ ] T-1.2 Second (test: true)"; print ""; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve failed"
+out=$(sdd task 'done' T-1.2 2>&1)
+assert_eq $? 1 "(T-1.2 before T-1.1)"
+assert_contains "$out" 'T-1.1 comes first (.sdd/bin/sdd task next)'
+grep -q '^- \[ \] T-1.2 ' "$f" || fail "T-1.2 ticked"
+sdd task 'done' T-1.1 >/dev/null 2>&1 || fail "T-1.1 failed"
+sdd task 'done' T-1.2 >/dev/null 2>&1 || fail "T-1.2 failed after T-1.1"
 exit 0
