@@ -8,13 +8,11 @@ created: 2026-11-17
 # 74 Docs match the code; CI on three systems
 
 ## What and why
-<!-- 1-3 lines: what changes (dependencies, config, CI, ...) and why now. No behaviour change. -->
+Items 68-73 changed behaviour the docs still describe the old way (README, `specs/design.md`, SECURITY.md, the sdd-dev skill, AGENTS.md block), and nothing runs the suite but one Mac. Make the docs true; add CI on Ubuntu, macOS and Alpine (BusyBox) running `sdd check`; name jq as a prerequisite for agent hooks; drop this repo's ignored `mode = solo`. No behaviour change.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-74.4 rejects non-images and files over 5 MB -->
+- CI config runs code from pull requests → trigger `push` and `pull_request` only (never `pull_request_target`), `permissions: contents: read`, no secrets, third-party actions pinned by commit SHA.
+- New CI dependencies (actions/checkout, actions/setup-node, OS packages shellcheck, dash, jq, git) → official names only; accept: CI-only, not shipped to users.
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
