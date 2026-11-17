@@ -2,9 +2,10 @@
 id: 73
 type: fix
 title: First-run rough edges
-status: open
+status: shipped
 created: 2026-11-11
 approved: bbf3517af136a3bb914d650663921fee74c9e4c8 2026-11-11 joexbayer
+shipped: 2026-11-17
 ---
 # 73 First-run rough edges
 
