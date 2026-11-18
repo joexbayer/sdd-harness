@@ -81,7 +81,15 @@ assert_eq "$(wc -l <"$T/gh/log")" "$n" "(ls and review before a PR called gh)"
 assert_not_contains "$(sdd review)" 'pr      '
 echo 0 >"$T/gh/auth"
 # FR-10.6: gh not installed at all.
-nogh=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gh" ] || printf '%s:' "$d"; done)
+# A folder holding gh (on Linux often /usr/bin, next to git and dash) is replaced by links to all but gh.
+nogh=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do
+	if [ -x "$d/gh" ]; then
+		s=$(mktemp -d "$T/nogh.XXXXXX")
+		for f in "$d"/*; do [ "${f##*/}" = gh ] || ln -s "$f" "$s/"; done
+		d=$s
+	fi
+	printf '%s:' "$d"
+done)
 assert_contains "$(PATH=$nogh sdd ship 2>&1)" 'gh is not installed'
 
 # FR-10.1: gates, archive on the branch, push, PR; main is untouched. FR-54.1: the body points at
