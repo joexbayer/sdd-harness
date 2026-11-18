@@ -2,8 +2,9 @@
 id: 74
 type: chore
 title: Docs match the code; CI on three systems
-status: open
+status: shipped
 created: 2026-11-17
+shipped: 2026-11-18
 ---
 # 74 Docs match the code; CI on three systems
 
