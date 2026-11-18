@@ -22,6 +22,8 @@ jobs:
       - run: git config --global user.name ci && git config --global user.email ci@example.com
       - run: cd server && npm ci
       - run: .sdd/bin/sdd check
+      - if: failure()
+        run: cat .git/sdd/checks/*.log
 
   macos:
     runs-on: macos-latest
@@ -34,6 +36,8 @@ jobs:
       - run: git config --global user.name ci && git config --global user.email ci@example.com
       - run: cd server && npm ci
       - run: .sdd/bin/sdd check
+      - if: failure()
+        run: cat .git/sdd/checks/*.log
 
   # Alpine 3.20 ships Node 20, too old for the server's tests (Node 22.18+, run on the other two),
   # so this job runs every `[check] run` line from .sdd/config except the npm one.

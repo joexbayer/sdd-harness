@@ -121,6 +121,7 @@ cfg_load() {
 # cfg_fresh <cache>: the cache is newer than every config file that exists (_uc: cfg_load's).
 cfg_fresh() {
 	for _f in "$SDD_HOME/config" "$_uc" "$SDD_HOME/core/config"; do
+		# shellcheck disable=SC3013 # -nt: dash, bash and BusyBox sh all have it (CI runs all three)
 		[ ! -e "$_f" ] || [ "$1" -nt "$_f" ] || return 1
 	done
 }
@@ -388,6 +389,7 @@ plan_changes() {
 # in <git dir>/sdd-plan ("<file> <hash>"), used while strictly newer than the file.
 plan_hash() {
 	_pc=${GD:+$GD/$NAME-plan}
+	# shellcheck disable=SC3013 # -nt: dash, bash and BusyBox sh all have it (CI runs all three)
 	if [ -n "$_pc" ] && [ "$PWD" = "$ROOT" ] && [ "$_pc" -nt "$1" ] 2>/dev/null &&
 		{ IFS=' ' read -r _pf _ph <"$_pc"; } 2>/dev/null && [ "$_pf" = "$1" ] && [ -n "$_ph" ]; then
 		printf '%s\n' "$_ph"
@@ -1485,6 +1487,7 @@ item_row() {
 # file's hash, its origin and path; the rest (branch, opened_by, active) is read from git for
 # all rows at once. A row whose facts depend on more (a check result, the working tree) is
 # never cached. Deleting the cache changes nothing but speed (C-2).
+# shellcheck disable=SC2120 # status.sh passes the origin; older shellcheck misses callers in other files
 item_rows() {
 	_cf=$(cache_file) || _cf=/dev/null
 	_src=$(item_sources | O=${1:-} awk -F '\t' 'ENVIRON["O"] == "" || $1 == ENVIRON["O"]')
