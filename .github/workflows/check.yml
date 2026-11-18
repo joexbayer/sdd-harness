@@ -40,7 +40,8 @@ jobs:
         run: cat .git/sdd/checks/*.log
 
   # Alpine 3.20 ships Node 20, too old for the server's tests (Node 22.18+, run on the other two),
-  # so this job runs every `[check] run` line from .sdd/config except the npm one.
+  # so this job runs every `[check] run` line from .sdd/config except the npm one. The checkout is
+  # handed to the container's user: the tests keep git config out (GIT_CONFIG_NOSYSTEM, own HOME).
   alpine:
     runs-on: ubuntu-latest
     container: alpine:3.20
@@ -48,5 +49,5 @@ jobs:
       - run: apk add --no-cache git dash shellcheck jq curl
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { fetch-depth: 0 }
-      - run: git config --system --add safe.directory "$PWD" && git config --global user.name ci && git config --global user.email ci@example.com
+      - run: chown -R "$(id -u)" . && git config --global user.name ci && git config --global user.email ci@example.com
       - run: git config -f .sdd/config --get-all check.run | grep -v npm | while IFS= read -r c; do sh -c "$c" || exit 1; done
