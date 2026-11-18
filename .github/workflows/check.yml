@@ -48,5 +48,5 @@ jobs:
       - run: apk add --no-cache git dash shellcheck jq curl
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { fetch-depth: 0 }
-      - run: git config --global --add safe.directory "$PWD" && git config --global user.name ci && git config --global user.email ci@example.com
+      - run: git config --system --add safe.directory "$PWD" && git config --global user.name ci && git config --global user.email ci@example.com
       - run: git config -f .sdd/config --get-all check.run | grep -v npm | while IFS= read -r c; do sh -c "$c" || exit 1; done
