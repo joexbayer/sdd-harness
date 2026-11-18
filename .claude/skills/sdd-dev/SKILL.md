@@ -44,7 +44,8 @@ run the real `curl … | sh` in a throwaway HOME.
 
 ## Where things go
 - **A new verb:** `.sdd/core/cmd/<verb>.sh`. It is sourced by `bin/sdd`, and `"$@"` holds the
-  args. Add it to `cmd/help.sh`.
+  args. Add it to `cmd/help.sh` (`sdd help <verb>` prints its line; `sdd --version` and `sdd version`
+  print `.sdd/VERSION`, item 73).
 - **Shared logic:** `.sdd/core/lib/common.sh`. `NAME` (the tool name) is defined only there.
   Use `$CMD`, `$DIRNAME` and `$SPECS` instead of literal `sdd` or `.sdd` in output.
 - **A new agent:** `.sdd/core/agents/<agent>.sh` defining `agent_sync` and `agent_hook_reply`.
@@ -107,6 +108,7 @@ run the real `curl … | sh` in a throwaway HOME.
 - Forges: only `core/forges/<forge>.sh` calls `gh` (the C-4 check enforces it). Tests use a
   stub `gh` on PATH over a bare origin (tests/t_forge.sh); the PR jq lives in `FORGE_JQ` and
   can be tried offline with `jq -r ".[] | $FORGE_JQ" sample.json`.
+- `task done` refuses while an earlier task is open (item 73): fixtures tick in plan order.
 - Tasks: `task_rows` field 8 is why sdd cannot read the line (empty when fine), field 9 the size
   (S|M|L, M by default), field 10 the `expect: fail "<text>"` text (field 6 is then plain
   `fail`, so `!= fail` checks keep working), field 11 `by:` (item 36; empty = the builder). next.sh splits a row by prefix stripping, not
@@ -142,8 +144,8 @@ run the real `curl … | sh` in a throwaway HOME.
 - A new gate: add it to `sdd.gates` in core/config as well as to each profile, because
   `gate_level` says off for any gate the type's list lacks. Types with their own `gates =`
   (hotfix, chore, spike) do not get it unless you add it there; amendment pins every gate to block.
-- Ship gates from item 22: `verified` (a `Verified by:` line under Built, not `none`; off in
-  lite) and `reviewed` (`sdd review` wrote `.git/sdd/checks/<id>.reviewed` with the patch id of
+- Ship gates from item 22: `verified` (a `Verified by:` line under Built, not `none`; warn in
+  lite and standard) and `reviewed` (`sdd review` wrote `.git/sdd/checks/<id>.reviewed` with the patch id of
   the code diff, `review_print`; warn in lite). A test that ships in strict needs both: write
   the line into Built and run `sdd review` last. `setcfg` after the review is a code change
   (`.sdd/config` is outside specs/), so the gate then says the code changed since the review.
@@ -154,7 +156,10 @@ run the real `curl … | sh` in a throwaway HOME.
   check goes there, and its message in tests/t_analyze.sh's exact expected output. A check that
   needs config reads it in the shell before the awk and passes it via ENVIRON (item 39:
   `max_size` sets `MAX_SIZE` once per run, warning on a bad value; cfg reads the cache, no git).
-- Conditional prompt text: `render` replaces a line that is exactly `{{max-size}}` with
+- Conditional prompt text (item 69): `render` keeps a `{{if <fact>}}` … block only when the fact holds
+  (`type_facts`: frs tasks security approval code verify, from the type's template, its gates and
+  `code = no` in `[type "<t>"]`, set for contract and amendment). Item text is substituted after the
+  `{{if}}` lines are read, so it cannot open a block. Also `render` replaces a line that is exactly `{{max-size}}` with
   `RENDER_SIZE`, or drops it when that is empty (next.sh sets it in the plan phase). Reuse the
   pattern for other config-dependent rules rather than echoing text after the prompt, so the
   rule sits where it belongs and a local/ prompt override can place or omit it.
@@ -237,7 +242,7 @@ A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git c
 
 ## Evaluating sdd with a real agent (narrowbot + qwen)
 Unit tests don't show whether a mid-size model can follow sdd. To find out, run narrowbot headless:
-`~/narrowbot-bench/narrow-sdd.sh REPO OUT PROMPT_FILE`. It runs qwen3-coder-30b with
+a runner script kept outside this repo (`<runner> REPO OUT PROMPT_FILE`). It runs qwen3-coder-30b with
 `project-check-command = .sdd/bin/sdd check`, isolated config, and the key from env or
 `~/.config/narrowbot/api.key`. OUT gets `events.jsonl` (spec: narrowbot repo
 `docs/design/json-events.md`), `rc` and `diff.patch`. diff.patch leaves out untracked files,

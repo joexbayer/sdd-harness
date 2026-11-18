@@ -4,9 +4,13 @@ This repo tracks changes with sdd (`.sdd/`). Before changing code, run `.sdd/bin
 - One change = one item: `specs/changes/<id>-<slug>/item.md` on its own branch.
 - Humans plan and review; agents build. Plan with the human (no code), the human approves
   (`.sdd/bin/sdd approve`), then build hands-off until `.sdd/bin/sdd check` passes and `## Built` is written,
-  then walk the human through `.sdd/bin/sdd review`. Only the human approves and ships: run
-  `.sdd/bin/sdd approve` or `.sdd/bin/sdd ship` only when they ask you to.
-- Start: `.sdd/bin/sdd new <amendment|chore|feature|fix|hotfix|refactor|spike> "title"`
+  then walk the human through `.sdd/bin/sdd review`. Only the human approves, ships and deletes
+  remote branches: run `.sdd/bin/sdd approve`, `.sdd/bin/sdd ship` or `.sdd/bin/sdd tidy --remote` only when they ask.
+- Be brief: short plain words, only what is needed, in chat and in files.
+  Never send the human to read a file: summarise it in chat with an example.
+- Handing the human a step: name its skill (`/sdd-new`, `/sdd-review`, `/sdd-ship`) when this
+  agent has them (`.sdd/bin/sdd sync <agent>`), with the command as fallback.
+- Start: `.sdd/bin/sdd new <amendment|chore|contract|feature|fix|hotfix|refactor|roadmap|spike> "title"`
 - Small changes (under ~20 lines, no behaviour change) need no item.
 - Talking to the human: give every ID its name ("item 3 (constitution)", "FR-3.6 (feature
   branches can't edit it)"), keep it short and plain, and explain terms instead of assuming.

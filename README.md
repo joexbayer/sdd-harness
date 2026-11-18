@@ -14,19 +14,22 @@ for the exact code it ran on, and the agent can't stop with unfinished work.
 
 ## Quick start
 
+Needs `git`, a POSIX `sh` and `awk`. `jq` is needed only for agent hooks (`sdd sync claude|codex`
+writes and answers Claude Code / Codex hook JSON with it); the rest of sdd works without it.
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/joexbayer/sdd-harness/main/install.sh | sh   # once
 cd your-repo && git switch main
-sdd init                    # copies .sdd/ into the repo, writes .sdd/config, adds a block to AGENTS.md
+sdd init                    # copies .sdd/ into the repo, writes .sdd/config (profile standard), adds a block to AGENTS.md
 sdd sync claude             # skills and hooks for Claude Code (or: codex)
-git add .sdd AGENTS.md
+git add .sdd AGENTS.md .gitattributes
 [ -f .gitleaks.toml ] && git add .gitleaks.toml
 git commit -m "chore: adopt sdd"
 ```
 
 Then tell your agent what you want, or type `/sdd-new add CSV export`. Existing project or Spec
 Kit repo: see [MIGRATE.md](MIGRATE.md). Upgrade: rerun the installer (`… | sh -s -- v0.2.0` for a
-version), then `sdd init` in each repo. Uninstall: `rm -r ~/.local/bin/sdd ~/.local/share/sdd`.
+version; `sdd --version` shows what you have), then `sdd init` in each repo. `sdd help <verb>` explains one verb. Uninstall: `rm -r ~/.local/bin/sdd ~/.local/share/sdd`.
 
 ## How a change moves
 

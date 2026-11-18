@@ -16,7 +16,7 @@ each decision is in `specs/kb/`. Changes to this design arrive as items under
   never by prose.
 - **Solo first, team ready.** The team layer adds collision-free IDs, review, and a
   read-only MCP server that shows in-flight work across branches and repos.
-- **Keep humans learning.** Every rule explains itself (`sdd explain <topic>`), and the brief
+- **Keep humans learning.** Every refusal says why and what to run next, and the brief
   before code is written for people.
 
 Non-goals: our own agent runtime, a web UI, a database as the source of truth, and
@@ -39,11 +39,10 @@ replacing the team's git host.
 | Concept | Meaning |
 |---|---|
 | item | one change: `specs/changes/<id>-<slug>/item.md` on branch `<type>/<id>-<slug>` |
-| type | hotfix, fix, chore, refactor, spike, feature. Each has its own template and gates |
+| type | hotfix, fix, chore, refactor, spike, feature, amendment, contract, roadmap. Each has its own template and gates |
 | phase | derived: describe → (approve) → build → (review) → ship |
 | check | your test/lint commands. Passing them is the main gate |
-| profile | lite (default), standard, strict. Sets how hard each gate is |
-| mode | solo (default) or team. Decides where IDs come from and how approval works |
+| profile | standard (default), lite, strict. Sets how hard each gate is |
 | constitution | `specs/constitution.md`: a system's ground truths, each an article `C-n` with a reason and its enforcement (a check command or human review); changed only by an amendment |
 
 ## 4. Layout
@@ -80,15 +79,15 @@ state (ID counter, check results, synced agents) lives in `$(git rev-parse
 
 | type | use when | template sections | default gates |
 |---|---|---|---|
-| hotfix | prod is broken | What is broken · Fix · Follow-up | check (description may come after) |
-| fix | wrong behaviour | Current · Expected (FR) · Must not change · Test | described, check |
-| chore | deps, config, CI | What and why | described, check |
+| hotfix | prod is broken | What is broken · Fix · Follow-up | planned (warn), check, built |
+| fix | wrong behaviour | Current · Expected (FR) · Must not change · Test | all |
+| chore | deps, config, CI | What and why | planned, check, built, depends |
 | refactor | structure only | Goal · Invariants | described, check |
 | spike | learning | Question · Timebox · Findings · Decision | described; only the item merges, never the code |
 | amendment | a ground truth must change | Articles affected · Current text · Proposed text · Why now · Impact · Alternatives | every gate blocks in every profile; lands no code (Impact lists the items that follow) |
 | roadmap | a system in several items | Goal · Items (`R-` entries) · Done when | planned, analyzed, approved, built; only the item lands, like a spike |
 | contract | an interface items build against changes | Why · Contract · Users · Compatibility · Security · Done when | planned, analyzed, approved, check, built, reviewed; lands no code; review shows the contract diff in full |
-| feature | new behaviour | Why · What changes (US/FR + examples) · Not in scope · How · Questions · Done when | described, check (+ approve, tasks, trace in standard) |
+| feature | new behaviour | Why · What changes (US/FR + examples) · Not in scope · How · Questions · Done when | all |
 
 **Constitution.** Articles are one line, ID first (`grep '^C-' specs/constitution.md`), with
 indented `Why:` and `Enforced: review | check <command>` lines; at most 30 (`constitution.max-articles`).
@@ -130,16 +129,15 @@ built on git state instead of edit counters.
 
 | gate | lite | standard | strict |
 |---|---|---|---|
-| check passes before ship | block | block | block |
-| item described before ship | warn | block | block |
-| stop with unverified edits (agent hook) | warn | block once | block once |
-| plan approved before build (not chore, hotfix) | you, content-hash pinned | you, content-hash pinned | non-author |
-| failing test first (fix, feature tasks) | – | block | block |
-| trace: every FR has a test naming it | – | warn | block |
-| verifier ran: a `Verified by:` line under Built, not `none` (`verified`) | – | warn | block |
+| check passes before ship (`check`) | block | block | block |
+| plan sections filled (`planned`); `sdd analyze` clean at approve (`analyzed`) | warn | block | block |
+| plan approved, content-hash pinned, no code before it (`approved`; not chore, hotfix) | block | block | block |
+| every task ticked with `task done` (`tasks`) | warn | block | block |
+| "## Built" written (`built`) | warn | block | block |
+| stop with unplanned or unverified edits (`finish`, agent hook) | block once | block once | block once |
+| verifier ran: a `Verified by:` line under Built, not `none` (`verified`) | warn | warn | block |
 | code unchanged since the human's `sdd review` in this clone (`reviewed`) | warn | warn | block |
 | every `depends:` ref has shipped (`depends`; not hotfix) | warn | block | block |
-| trust gate, env allowlist, role profiles | – | – | on |
 
 "Block once" follows narrowbot: the first stop is refused with the reason. The second is allowed,
 and the report carries `unverified:`. Honest reporting, no deadlock.
@@ -212,13 +210,14 @@ readers ignore keys they do not know.
 
 ## 8. Commands
 
-| step | verbs |
+| | verbs |
 |---|---|
-| 1 lite | `init new status next check ship sync hook help`, `ls`, `show`, `summary`, `open`, `tidy`, `task`, `run`, `usage` |
-| 2 standard | `approve`, `trace`, `drop` |
-| 3 team | team IDs, `ship` via PR, `sdd-server` (MCP), CI job |
-| 4 knowledge | `kb search/links/add/accept/tidy`, `explain` |
-| 5 strict | `trust`, env allowlist, role profiles, `upgrade` with checksums |
+| flow | `init new status next analyze approve task check review ship` |
+| look | `ls show summary usage help version` |
+| move | `open tidy` |
+| agents | `sync hook run`, `extension` |
+| team | ids from the remote (`refs/sdd/next-id`), `ship` via PR (`forge = github`), `sdd-server` (MCP) |
+| not built | `kb`, `explain`, a trust gate, env allowlist, `upgrade` with checksums |
 
 Every verb prints a few lines and ends with the next command to run. Only `new`, `approve`
 and `ship` create commits (constitution C-4). No verb pushes, except `new` (records the id it takes
@@ -283,7 +282,7 @@ own agent and model:
 Roles run as subagents where the agent has them: `sync claude` writes
 `.claude/agents/sdd-<role>.md` (the tier's model; "run `sdd next` and do that step") for every
 role on a Claude tier, and the `sdd-run` skill hands a role to its subagent. Other roles (a
-coder model through narrowbot) run through `sdd run <role> <id>`: `agents/<agent>.sh` builds the
+coder model through narrowbot, whose adapter lives in this repo's `.sdd/local/agents/`, not in core, item 73) run through `sdd run <role> <id>`: `agents/<agent>.sh` builds the
 headless command (`claude -p`, `narrowbot --json` today; `codex exec`, `opencode run`, … later)
 with only the tier's `args`. With usage tracking on (`[usage] track = true`; off by default), every run, either way, is one line in this clone's
 `.git/sdd/runs.tsv` (tokens from the agent's final JSON, or summed from a subagent's transcript
@@ -342,8 +341,8 @@ the change keeps the id. The record is per clone: a teammate's review is the PR'
 
 Team mode adds:
 
-- remote-claimed IDs
-- `ship` opens a PR whose body points at the item file
+- IDs reserved in the remote ref `refs/sdd/next-id` (no config switch; item 72)
+- `ship` runs its gates, then opens a PR whose body points at the item file (new commits and the merge run them again)
 - approval is a review by someone other than the author
 - CI runs the gates, and nobody can skip them
 
@@ -464,7 +463,7 @@ supported and needs more of the human's review.
 | 16 | model roles + usage: `sdd run <role> <id> [task]` (planner on Opus via `claude -p`, builder on a coder model via narrowbot, reviewer fresh), each run logging tokens, cost, time and result; `sdd usage` reports per item, role and task | the experiment measures what each role costs and delivers |
 | 17 | task batches: `size: S\|M\|L` on tasks, `sdd task next` groups consecutive small ones (`[build] batch`), `next` and `sdd run builder` show the batch, the `sdd-build` skill loops one builder per batch until no task is open; unknown task attributes are refused | "now let's build" works the whole item without a subagent per tiny task |
 | 24 | multi-item plans: a `roadmap` type whose `R-` entries open items (`new --from`), `depends:` in an item's frontmatter, ready entries in `next`, entry states in `show`, what an item waits for in `next`/`status`/`ls`, and the `depends` ship gate | a complex system is many items in an order |
-| later | team mode: PR review as plan approval (Q-0.1), team IDs | approval by someone other than the author |
+| later | team mode: PR review as plan approval (Q-0.1) | approval by someone other than the author |
 | later | planning gates: clarify (an interactive discussion of the problem first, then questions one at a time with options grounded in the research and a recommendation; `Q-n.m … → decided:` written by the human; open questions block approve), research (decisions cite `kb/` notes), plan lint (FR examples, IDs, budget); levels per project in `[plan]` config | planning carries the weight, so the human's decisions and the evidence behind them are gates, not prose |
 | 26 | contracts: `specs/contracts/<name>` (OpenAPI, JSON Schema, data model, any format); a `contract` item lands only the contract; items name `contracts:` and approval pins their ids, so a contract change sends dependent open items back to planning | frontend and backend build in parallel against one agreed contract |
 | 30-40 | the experiment: a complex multi-phase app, Opus plans and a coder model builds tasks, a scripted human answers and approves, measured against an Opus-only baseline. Done 2026-10-30: Opus as builder shipped, qwen needs supervision (kb/experiment-results.md) | proves plan big, build small with numbers |

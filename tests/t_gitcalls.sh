@@ -27,6 +27,9 @@ calls() {
 }
 s="$SH .sdd/bin/sdd"
 hook_in=$(printf '{"cwd":"%s","stop_hook_active":false}' "$PWD")
+# Caches are used while strictly newer than their source; BusyBox sh compares whole seconds, so
+# sources written in the same second as the caches would read as changed. Age them first.
+touch -t 202001010000 "$f" .sdd/config .sdd/core/config
 calls "$s next" >/dev/null # the first run writes the caches
 # limit <max> <command>: the command runs at most <max> git processes (the log shows which).
 limit() {

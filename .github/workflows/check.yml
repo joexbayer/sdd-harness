@@ -1,0 +1,53 @@
+# sdd's own check on three systems: Ubuntu (dash is /bin/sh), macOS, Alpine (BusyBox is /bin/sh).
+# Runs pull-request code: no secrets, read-only token, actions pinned by commit SHA.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck dash jq
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: 22 }
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+      - run: cd server && npm ci
+      - run: .sdd/bin/sdd check
+      - if: failure()
+        run: cat .git/sdd/checks/*.log
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - run: brew install shellcheck dash jq
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: 22 }
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+      - run: cd server && npm ci
+      - run: .sdd/bin/sdd check
+      - if: failure()
+        run: cat .git/sdd/checks/*.log
+
+  # Alpine 3.20 ships Node 20, too old for the server's tests (Node 22.18+, run on the other two),
+  # so this job runs every `[check] run` line from .sdd/config except the npm one. The checkout is
+  # handed to the container's user: the tests keep git config out (GIT_CONFIG_NOSYSTEM, own HOME).
+  alpine:
+    runs-on: ubuntu-latest
+    container: alpine:3.20
+    steps:
+      - run: apk add --no-cache git dash shellcheck jq curl
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0 }
+      - run: chown -R "$(id -u)" . && git config --global user.name ci && git config --global user.email ci@example.com
+      - run: git config -f .sdd/config --get-all check.run | grep -v npm | while IFS= read -r c; do sh -c "$c" || exit 1; done
