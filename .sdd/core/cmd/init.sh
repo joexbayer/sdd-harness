@@ -87,6 +87,7 @@ config="$target/config"
 if [ ! -f "$config" ]; then
 	git config -f "$config" sdd.profile standard
 	git config -f "$config" sdd.base "$(detect_base)"
+	git config -f "$config" security.use asvs-l2
 	checks=$(detect_checks)
 	if [ -z "$checks" ] && [ -f Makefile ] && grep -q '^test:' Makefile; then checks='make test'; fi
 	if [ -n "$checks" ]; then
@@ -108,6 +109,7 @@ if [ ! -f "$config" ]; then
 	else
 		echo "tip     install gitleaks and add 'run = gitleaks dir . --no-banner' under [check] to catch committed secrets"
 	fi
+	echo "security asvs-l2 (OWASP ASVS level 2). Your laws and policies: specs/security/<name>.md, then add the name to [security] use"
 	echo "wrote $DIRNAME/config (profile standard: ship blocks on an incomplete plan, open tasks and a missing write-up; lite only warns, strict also wants a verifier and your review)"
 fi
 

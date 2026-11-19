@@ -56,8 +56,8 @@ DOD-77.1 A new repo from init plans a feature, `next` shows the ASVS L2 triggers
 
 ## Tasks
 - [x] T-77.1 Failing tests: baseline printed with a team file replacing a built-in, missing Standards line and unknown name reported, init writes asvs-l2, the five built-in files exist and are at most 15 lines, FR-77.1 FR-77.2 FR-77.3 FR-77.4 FR-77.5 (files: tests/t_security.sh; test: SRC=$PWD SH=dash dash tests/t_security.sh; expect: fail; size: S)
-- [ ] T-77.2 `security_files` in common.sh; next.sh prints the baseline at the plan phase; plan_extra reports the missing line and unknown names, FR-77.1 FR-77.2 FR-77.3 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh; test: for t in security analyze; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
-- [ ] T-77.3 The five built-in files; the Security comment in feature, fix, chore and contract templates asks for the Standards line; init writes `use = asvs-l2` and the hint; design.md §13 and README note it, FR-77.4 FR-77.5 (files: .sdd/core/security/, .sdd/core/templates/, .sdd/core/cmd/init.sh, specs/design.md, README.md; test: for t in security init; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
+- [x] T-77.2 `security_files` in common.sh; next.sh prints the baseline at the plan phase; plan_extra reports the missing line and unknown names, FR-77.1 FR-77.2 FR-77.3 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/next.sh; test: for t in security analyze; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
+- [x] T-77.3 The five built-in files; the Security comment in feature, fix, chore and contract templates asks for the Standards line; init writes `use = asvs-l2` and the hint; design.md §13 and README note it, FR-77.4 FR-77.5 (files: .sdd/core/security/, .sdd/core/templates/, .sdd/core/cmd/init.sh, specs/design.md, README.md; test: for t in security init; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

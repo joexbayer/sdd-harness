@@ -21,7 +21,8 @@ created: {{date}}
 <!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
 dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
 what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-{{id}}.4 rejects non-images and files over 5 MB -->
+    e.g. uploads are untrusted → FR-{{id}}.4 rejects non-images and files over 5 MB
+With a baseline in [security] use, start with "Standards: <which add work here, or none>". -->
 
 ## Test
 <!-- The regression test (name and file) that fails now and passes after the fix. -->

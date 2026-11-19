@@ -52,6 +52,7 @@ version; `sdd --version` shows what you have), then `sdd init` in each repo. `sd
 | `sdd next` | what to do now (agents call this) |
 | `sdd approve` · `sdd ship` | the human's two steps |
 | `sdd check` | your tests and linters, plus secret scanning with gitleaks |
+| `[security] use` in `.sdd/config` | security baselines every plan answers to: `asvs-l2` by default; add your laws as `specs/security/<name>.md` |
 | `sdd review` | what was built, requirement by requirement |
 | `sdd task [next \| done <T-id> \| waive <T-id> "why"]` | the tasks; `done` runs a task's test before ticking it; `waive` (the human's) ticks one that cannot be run and records why in the item |
 | `sdd ls` · `sdd show <id>` · `sdd status` | items across all branches (`--json` for tools) |
