@@ -4,6 +4,7 @@ type: feature
 title: Worktrees inside the repo, in .worktrees/
 status: open
 created: 2026-11-19
+approved: 490455bc4fac9ddd64de15f00203e8fa53bfe5f3 2026-11-19 joexbayer
 ---
 # 78 Worktrees inside the repo, in .worktrees/
 
