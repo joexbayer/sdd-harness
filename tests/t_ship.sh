@@ -241,4 +241,20 @@ setcfg sdd.remote origin
 echo o >o.txt && git add o.txt && git commit -qm "fix(1): code"
 fill "$ITEM" built && git commit -qam "docs(1): built"
 out=$(sdd ship 2>&1) || fail "a [sdd] edit should ship: $out"
+# FR-75.1: a duplicated run line, and a deleted config, still name the key, with no git noise.
+new_repo
+planned_item fix "Twice"
+setcfg --add check.run "$(git config -f .sdd/config --get-all check.run | head -n 1)"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(fix duplicates a run line)"
+assert_contains "$out" "(check.run): change [check] in a chore"
+new_repo
+planned_item fix "Gone"
+git rm -q .sdd/config && git commit -qm "fix(1): no config"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(fix deletes .sdd/config)"
+assert_contains "$out" "(check.run): change [check] in a chore"
+assert_not_contains "$out" "unable to resolve"
 exit 0
