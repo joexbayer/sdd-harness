@@ -170,6 +170,9 @@ item_gates() {
 	# FR-58.1: a test the planner wrote is the contract; the builder may not quietly change it.
 	bent=$(bent_tests)
 	[ -z "$bent" ] || fail "$bent"
+	# FR-75.1: a change cannot weaken the check that judges it, in any profile.
+	x=$(check_edited)
+	[ -z "$x" ] || fail "$x"
 	if [ "$(gate_level tasks "$ITYPE")" != off ]; then
 		[ -n "$trows" ] || gate tasks "item $ID: the plan has no tasks (- [ ] T-$ID.1 …)"
 		open=$(printf '%s\n' "$trows" | awk -F '\t' '$2 == "open" { print $1 }')

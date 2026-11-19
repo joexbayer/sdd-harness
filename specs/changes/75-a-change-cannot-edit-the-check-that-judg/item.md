@@ -33,7 +33,7 @@ FR-75.2 WHEN `review` shows such an item THE SYSTEM SHALL print the same line as
 
 ## Tasks
 - [x] T-75.1 Failing tests: a fix editing [check] is refused at ship and warned at review, a chore is not, FR-75.1 FR-75.2 (files: tests/t_ship.sh, tests/t_reviewed.sh; test: for t in ship reviewed; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
-- [ ] T-75.2 `check_edited` in common.sh (compares `git config --blob <base>:.sdd/config --get-regexp '^check\.'` with HEAD's), used by ship next to the planner-test guard and by review, FR-75.1 FR-75.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/ship.sh, .sdd/core/cmd/review.sh; test: for t in ship reviewed forge; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
+- [x] T-75.2 `check_edited` in common.sh (compares `git config --blob <base>:.sdd/config --get-regexp '^check\.'` with HEAD's), used by ship next to the planner-test guard and by review, FR-75.1 FR-75.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/ship.sh, .sdd/core/cmd/review.sh; test: for t in ship reviewed forge; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

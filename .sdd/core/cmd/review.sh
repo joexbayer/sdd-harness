@@ -43,6 +43,7 @@ fi
 awk '/^## / { on = ($0 == "## Waived"); next } on && /^- T-/ { sub(/^- /, "waived  "); print }' "$IFILE"
 unnamed_note
 bent_tests | sed 's/^/⚠ /' # FR-58.3
+check_edited | sed 's/^/⚠ /' # FR-75.2
 # Only in a PR (FR-27.2): before the first ship sdd has opened none, so no forge call.
 pr=
 [ "$PHASE" != pr ] || pr=$(pr_note "$BRANCH")
