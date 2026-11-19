@@ -2,9 +2,10 @@
 id: 75
 type: fix
 title: A change cannot edit the check that judges it
-status: open
+status: shipped
 created: 2026-11-18
 approved: 3d9384e04c953eec348f7be9b0f1b820b3dc1034 2026-11-19 joexbayer
+shipped: 2026-11-19
 ---
 # 75 A change cannot edit the check that judges it
 
