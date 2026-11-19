@@ -159,9 +159,9 @@ out=$(sdd analyze 2>&1)
 assert_contains "$out" '✗ Security: no "Standards:" line (baseline: asvs-l2 gdpr): say which add work here, or none'
 awk '/^## Security$/ { print; print "Standards: gdpr adds erasure here; asvs-l2 none"; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 assert_not_contains "$(sdd analyze 2>&1)" 'Standards:" line'
-git commit -qam "docs: standards" && git config -f .sdd/config security.use "asvs-l2 hipaa" && git commit -qam cfg -- .sdd/config
+git commit -qam "docs: standards" && git config -f .sdd/config security.use "asvs-l2 hipaa" && git commit -qm cfg -- .sdd/config
 assert_contains "$(sdd analyze 2>&1)" '✗ Security: unknown standard hipaa (add specs/security/hipaa.md)'
-git config -f .sdd/config --unset security.use && git commit -qam cfg -- .sdd/config
+git config -f .sdd/config --unset security.use && git commit -qm cfg -- .sdd/config
 assert_not_contains "$(sdd analyze 2>&1)" 'Security:'
 assert_not_contains "$(sdd next)" 'Security baseline'
 
