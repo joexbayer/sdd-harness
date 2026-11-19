@@ -4,6 +4,7 @@ type: feature
 title: Verification rules: stop after three rounds, no flaky workarounds, graded findings
 status: open
 created: 2026-11-18
+approved: 5c7568de78f1a5274b6d9e754daad180bd445522 2026-11-19 joexbayer
 ---
 # 76 Verification rules: stop after three rounds, no flaky workarounds, graded findings
 
