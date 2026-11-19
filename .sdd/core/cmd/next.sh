@@ -132,12 +132,14 @@ fi
 # FR-77.1: the security baseline the plan's Security section answers against.
 if [ "$PHASE" = plan ]; then
 	_use=$(cfg security.use "")
-	case " $(type_facts "$ITYPE")" in *" security"*) ;; *) _use= ;; esac
+	[ -z "$_use" ] || case " $(type_facts "$ITYPE")" in *" security"*) ;; *) _use= ;; esac
 	if [ -n "$_use" ]; then
 		echo "Security baseline ([security] use): $_use"
+		set -f
 		for _n in $_use; do
 			_f=$(security_file "$_n") && { echo; cat "$_f"; }
 		done
+		set +f
 		echo
 	fi
 fi

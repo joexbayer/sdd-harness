@@ -530,10 +530,12 @@ security_file() {
 # after "- ", "* " or "**" and not also defined at a line start: IDs are read only there (FR-69.11).
 plan_extra() {
 	_use=$(cfg security.use "")
-	case " $(type_facts "${ITYPE:-}")" in *" security"*) ;; *) _use= ;; esac
+	[ -z "$_use" ] || case " $(type_facts "${ITYPE:-}")" in *" security"*) ;; *) _use= ;; esac
+	set -f
 	for _n in $_use; do
 		security_file "$_n" >/dev/null || printf 'Security\t\tunknown standard %s (add %s/security/%s.md)\n' "$_n" "$SPECS" "$_n"
 	done
+	set +f
 	plan_part "$IFILE" | uncomment | TY=${ITYPE:-} I=${ID:-} USE=$_use awk '
 	/^```/ { fence = !fence; next }
 	fence { next }

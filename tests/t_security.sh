@@ -147,6 +147,12 @@ out=$(sdd next)
 assert_contains "$out" 'TEAM-L2-REPLACES the built-in'
 assert_not_contains "$out" 'V16 Security Logging and Error Handling'
 git add specs/security && git commit -qm "team l2"
+# FR-77.1, FR-77.2: a refactor has no Security section, so no baseline and no Standards check.
+sec_br=$(git branch --show-current)
+sdd new refactor "R" >/dev/null 2>&1 || fail "new refactor failed"
+assert_not_contains "$(sdd next)" 'Security baseline'
+assert_not_contains "$(sdd analyze 2>&1)" 'Standards:" line'
+git switch -q "$sec_br"
 f=$(ls specs/changes/*-sec-base/item.md)
 fill "$f" plan
 out=$(sdd analyze 2>&1)
@@ -163,6 +169,18 @@ mkdir "$T/ini" && cd "$T/ini" && git init -q && echo x >README.md && git add -A 
 out=$(sdd init 2>&1)
 assert_eq "$(git config -f .sdd/config security.use)" asvs-l2
 assert_contains "$out" 'security asvs-l2 (OWASP ASVS level 2). Your laws and policies: specs/security/<name>.md, then add the name to [security] use'
+# DOD-77.1: a fresh init'd repo's feature shows the baseline, and approve needs a Standards line.
+git add -A && git commit -qm adopt >/dev/null 2>&1
+sdd new feature "F" >/dev/null 2>&1 || fail "new feature failed"
+assert_contains "$(sdd next)" 'V16'
+f=$(ls specs/changes/*-f/item.md)
+fill "$f" plan
+git add -A && git commit -qm "docs: plan" >/dev/null 2>&1
+out=$(sdd approve 2>&1) && fail "approve without a Standards line passed: $out"
+assert_contains "$out" 'no "Standards:" line'
+awk '/^## Security$/ { print; print "Standards: asvs-l2 none"; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs: standards" >/dev/null 2>&1
+out=$(sdd approve 2>&1) || fail "approve with a Standards line failed: $out"
 
 for n in asvs-l1 asvs-l2 asvs-l3 masvs llm-top10; do
 	assert_file "$SRC/.sdd/core/security/$n.md"

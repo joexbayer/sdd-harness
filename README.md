@@ -52,7 +52,6 @@ version; `sdd --version` shows what you have), then `sdd init` in each repo. `sd
 | `sdd next` | what to do now (agents call this) |
 | `sdd approve` · `sdd ship` | the human's two steps |
 | `sdd check` | your tests and linters, plus secret scanning with gitleaks |
-| `[security] use` in `.sdd/config` | security baselines every plan answers to: `asvs-l2` by default; add your laws as `specs/security/<name>.md` |
 | `sdd review` | what was built, requirement by requirement |
 | `sdd task [next \| done <T-id> \| waive <T-id> "why"]` | the tasks; `done` runs a task's test before ticking it; `waive` (the human's) ticks one that cannot be run and records why in the item |
 | `sdd ls` · `sdd show <id>` · `sdd status` | items across all branches (`--json` for tools) |
@@ -71,6 +70,8 @@ A typical Spec Kit setup is ~13,000 words of instructions and ~19,000 words of s
 Everything is config (`.sdd/config`) or an override (`.sdd/local/<path>`, or
 `<prompt>.append.md` to extend a prompt). Rules your project must keep go in
 `specs/constitution.md`, each enforced by a check or by you at review. See [MIGRATE.md](MIGRATE.md).
+
+`[security] use` in `.sdd/config` names the security baselines every plan answers to: `asvs-l2` by default; add your laws as `specs/security/<name>.md`.
 
 ## Extensions
 
