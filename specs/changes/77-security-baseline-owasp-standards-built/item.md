@@ -4,6 +4,7 @@ type: feature
 title: Security baseline: OWASP standards built in, team regimes added
 status: open
 created: 2026-11-19
+approved: a32f1c25df981c9ab6574cf4d34a9053c9237b8a 2026-11-19 joexbayer
 ---
 # 77 Security baseline: OWASP standards built in, team regimes added
 
