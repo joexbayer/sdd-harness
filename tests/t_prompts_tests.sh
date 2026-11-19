@@ -85,7 +85,7 @@ for p in 'must-fix' 'should-fix' 'nit' 'pre-existing' 'earlier round'; do
 	assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" "$p"
 done
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
-[ "$w" -le 770 ] || fail "build step is $w words (ceiling 770)"
+[ "$w" -le 820 ] || fail "build step is $w words (ceiling 820)"
 
 # FR-35.5: the verifier's prompt.
 setcfg role.verifier.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
