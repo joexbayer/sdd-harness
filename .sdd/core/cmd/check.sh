@@ -11,6 +11,16 @@ if [ -n "$id" ] && ! guard=$(constitution_guard); then
 fi
 run_check "$id"
 rc=$?
+# FR-76.1: a count of failures in a row, reset by a pass; the third says to stop.
+if [ -n "$id" ]; then
+	fails="$ST/checks/$id.fails"
+	if [ $rc -eq 0 ]; then
+		rm -f "$fails"
+	else
+		n=$(($(cat "$fails" 2>/dev/null || echo 0) + 1))
+		echo "$n" >"$fails"
+	fi
+fi
 case $rc in
 0)
 	echo "✓ check passed$([ -n "$id" ] && echo " for item $id") ($CHECK_SECS s${CHECK_SKIPPED:+; docs-only change: skipped $CHECK_SKIPPED})"
@@ -44,5 +54,6 @@ case $budget in '' | *[!0-9]*) warn "[check] budget is not a number of seconds: 
 if [ "$budget" -gt 0 ] && [ "$CHECK_SECS" -gt "$budget" ]; then
 	echo "⚠ the check took $CHECK_SECS s (budget $budget s): keep the check fast: it runs at a task with no test of its own, at finish and at ship. Slow tests (end-to-end, real hash cost, sleeps, network) belong to their task's test: mark them and leave them out of check.run; make cost settings (hash rounds, timeouts) configurable and minimal in tests, with one test on the real values"
 fi
+[ "${n:-0}" -lt 3 ] || echo "✗ check failed $n times in a row: stop and tell the human what fails and what you tried"
 no_articles
 exit $rc
