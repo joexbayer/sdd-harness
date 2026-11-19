@@ -46,7 +46,7 @@ none: prompt text and a per-clone counter file under `.git/sdd/`; no input cross
 DOD-76.1 Three failed checks in a row print the stop line; the prompts carry the rules (tests show both).
 
 ## Tasks (optional)
-- [ ] T-76.1 Failing tests: the stop line on the third failure and its reset, the prompt rules, FR-76.1 FR-76.2 FR-76.3 FR-76.4 (files: tests/t_check.sh, tests/t_prompts_tests.sh; test: for t in check prompts_tests; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
+- [x] T-76.1 Failing tests: the stop line on the third failure and its reset, the prompt rules, FR-76.1 FR-76.2 FR-76.3 FR-76.4 (files: tests/t_check.sh, tests/t_prompts_tests.sh; test: for t in check prompts_tests; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
 - [ ] T-76.2 Count failures in check, FR-76.1 (files: .sdd/core/cmd/check.sh; test: SRC=$PWD SH=dash dash tests/t_check.sh; size: S)
 - [ ] T-76.3 Prompt rules, FR-76.2 FR-76.3 FR-76.4 (files: .sdd/core/prompts/build.md, .sdd/core/prompts/role-verifier.md; test: for t in prompts_tests verified security; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 

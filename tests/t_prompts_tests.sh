@@ -76,6 +76,14 @@ assert_contains "$out" 'ship refuses it where the `verified` gate blocks'
 assert_not_contains "$out" 'approved the plan'
 assert_contains "$out" "A test that only repeats another's case may be deleted"
 assert_not_contains "$out" 'so keep it fast'
+# FR-76.2 no flaky workarounds; FR-76.3 act on the tags.
+for p in 'rerun' 'sleep' 'delete the test' 'must-fix' 'should-fix' 'pre-existing'; do
+	assert_contains "$out" "$p"
+done
+# FR-76.3 the verifier tags findings; FR-76.4 a later round checks the earlier fixes first.
+for p in 'must-fix' 'should-fix' 'nit' 'pre-existing' 'earlier round'; do
+	assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" "$p"
+done
 w=$(printf '%s\n' "$out" | wc -w | tr -d ' ')
 [ "$w" -le 770 ] || fail "build step is $w words (ceiling 770)"
 
