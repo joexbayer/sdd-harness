@@ -51,8 +51,15 @@ DOD-76.1 Three failed checks in a row print the stop line; the prompts carry the
 - [x] T-76.3 Prompt rules, FR-76.2 FR-76.3 FR-76.4 (files: .sdd/core/prompts/build.md, .sdd/core/prompts/role-verifier.md; test: for t in prompts_tests verified security; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-76.1: `check.sh:14-24` counts failures in `$ST/checks/<id>.fails` (exit 1, exit 3, could not run all count; a pass removes it; `n=0` first so the environment cannot leak in); `check.sh:58` prints the stop line at 3 or more. Only the `check` verb counts: ship and task done call `run_check` directly. Test: `t_check.sh` (new: no line at 1 and 2, the line at 3, reset by a pass).
+- FR-76.2, FR-76.3 (build side): `prompts/build.md:35-36`, the flaky rule and how to act on tagged findings. Test: `t_prompts_tests.sh`.
+- FR-76.3, FR-76.4 (verifier side): `prompts/role-verifier.md` step 3 asks for must-fix / should-fix / nit / pre-existing and, on a later round, the earlier findings and their fixes first. Test: `t_prompts_tests.sh`.
+- Deviation: the build-prompt word ceiling in `t_prompts_tests.sh:88` went 770 → 820 (prompt now 812 words); the repo has raised it this way before. Next prompt addition will need a trim.
+- Not tested: exit 3 counting (same branch as any failure).
+- Known: two full checks failed on unrelated tests under load (`t_verified`, then `t_gitcalls`, load ~16); both pass alone; the third run passed (342 s, budget 150 s).
+- Security pass (the verifier, on the diff): nothing exploitable; the counter path uses sdd's own item id under `.git/sdd`.
+
+Verified by: claude-opus-5-5: PASS; FR-76.1 proven by three check.sh mutants (no line, no reset, no write), prompts by removing the lines; the two load failures traced to run_check, not the counter; uninitialised n fixed
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
