@@ -1119,6 +1119,22 @@ bent_tests() {
 		done
 }
 
+# check_edited: FR-75.1's line when an item that is not a chore changes any check.* value in
+# .sdd/config from where it branched off the base, or nothing.
+check_edited() {
+	[ "$ITYPE" != chore ] || return 0
+	_mb=$(git merge-base "$(cfg sdd.base main)" HEAD) || return 0
+	git cat-file -e "$_mb:.sdd/config" 2>/dev/null || return 0
+	_old=$(git config --blob "$_mb:.sdd/config" --get-regexp '^check\.' | sort)
+	_new=$(git config --blob "HEAD:.sdd/config" --get-regexp '^check\.' 2>/dev/null | sort)
+	[ "$_old" != "$_new" ] || return 0
+	# A key whose lines differ in count between the two sides, so a duplicated line counts too.
+	_keys=$({ printf '%s\n' "$_old" | sed 's/^/o /'; printf '%s\n' "$_new" | sed 's/^/n /'; } |
+		awk 'NF > 1 { k = substr($0, 3); c[k] += ($1 == "o") ? 1 : -1 }
+			END { for (k in c) if (c[k]) { split(k, f, " "); print f[1] } }' | sort -u | paste -sd, - | sed 's/,/, /g')
+	echo "item $ID: changes the check that judges it ($_keys): change [check] in a chore"
+}
+
 # usage_on: usage tracking is switched on ([usage] track = true, yours or the project's); off by
 # default, so nothing about runs is kept unless someone asks for it.
 usage_on() { [ "$(cfg_mine usage.track false)" = true ]; }

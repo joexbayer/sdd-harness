@@ -177,17 +177,17 @@ assert_file specs/archive/1-ident-b/item.md
 # --- FR-73.9: a failing check shows the last 5 lines of its log; a local ship with no remote
 # suggests no push; a linked worktree's cleanup hint quotes a path with a space.
 new_repo "my app"
+setcfg --replace-all check.run 'test -f ok.txt || { for i in 1 2 3 4 5 6 7; do echo "line $i"; echo; done; exit 1; }'
 planned_item fix "Loud"
 echo fixed >fix.txt && git add fix.txt && git commit -qm "fix(1): code"
 fill "$ITEM" built && git commit -qam "docs(1): built"
-setcfg --replace-all check.run 'for i in 1 2 3 4 5 6 7; do echo "line $i"; echo; done; exit 1'
 out=$(sdd ship 2>&1)
 assert_eq $? 1 "(failing check)"
 assert_contains "$out" 'check failed (log: '
 assert_contains "$out" 'line 7'
 assert_contains "$out" 'line 4'
 assert_not_contains "$out" 'line 3'
-setcfg --replace-all check.run 'echo ok'
+echo ok >ok.txt && git add ok.txt && git commit -qm 'fix(1): ok'
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_not_contains "$out" 'git push'
 new_repo "my app2"
@@ -221,4 +221,40 @@ echo up >up.txt && git add up.txt && git commit -qm "fix(1): code"
 fill "$ITEM" built && git commit -qam "docs(1): built"
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'next    git push upstream main'
+# FR-75.1: a fix that changes [check] is refused naming the keys; a chore may; [sdd] edits may.
+new_repo
+planned_item fix "Weak check"
+setcfg --replace-all check.run true
+echo w >w.txt && git add w.txt && git commit -qm "fix(1): code"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(fix edits check.run)"
+assert_contains "$out" "item $(sed -n 's/^id: //p' "$ITEM"): changes the check that judges it (check.run): change [check] in a chore"
+new_repo
+planned_item chore "Strong check"
+setcfg --replace-all check.run true
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1) || fail "chore changing [check] should ship: $out"
+new_repo
+planned_item fix "Other section"
+setcfg sdd.remote origin
+echo o >o.txt && git add o.txt && git commit -qm "fix(1): code"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1) || fail "a [sdd] edit should ship: $out"
+# FR-75.1: a duplicated run line, and a deleted config, still name the key, with no git noise.
+new_repo
+planned_item fix "Twice"
+setcfg --add check.run "$(git config -f .sdd/config --get-all check.run | head -n 1)"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(fix duplicates a run line)"
+assert_contains "$out" "(check.run): change [check] in a chore"
+new_repo
+planned_item fix "Gone"
+git rm -q .sdd/config && git commit -qm "fix(1): no config"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(fix deletes .sdd/config)"
+assert_contains "$out" "(check.run): change [check] in a chore"
+assert_not_contains "$out" "unable to resolve"
 exit 0
