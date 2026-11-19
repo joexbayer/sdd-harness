@@ -32,6 +32,8 @@ done; stop only where a rule says so. Be brief.
 {{if code}}
 - Never weaken or skip a test to pass; if one is wrong, say so under "## Built".
   A test that only repeats another's case may be deleted, listed under "## Built".
+- Never make a flaky test pass by rerun, sleep, retry or skip; cause unknown: delete the test, say why under "## Built".
+- Verifier tags: fix must-fix, decide should-fix, list the rest under "## Built"; pre-existing never counts against the item.
 {{end}}
 {{if frs}}
 - A test calls the code the way its user does. If it would

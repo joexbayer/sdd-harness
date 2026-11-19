@@ -12,7 +12,10 @@ and do not hand the item to another verifier. Instead:
    value that nothing calls or reads is a finding, and so is a test that only repeats another
    test's case, a list with no limit, a query inside a loop, or a new flag or status whose bad
    combinations nothing prevents.
-3. Report only findings: an FR that does not do what it says, that you could not prove, or that
+3. Tag each finding must-fix, should-fix, nit or pre-existing (a bug the item did not cause).
+   On a later round, check the earlier round's findings and their fixes first and look near
+   them; do not re-check everything from scratch.
+   Report only findings: an FR that does not do what it says, that you could not prove, or that
    no test would fail if it were dropped, each
    with the command you ran and its output (trimmed to what shows the problem). No praise, no
    style notes, no summary of what works.
