@@ -131,4 +131,41 @@ if command -v gitleaks >/dev/null 2>&1; then
 	sdd init >/dev/null 2>&1
 	assert_eq "$(cat .gitleaks.toml)" "$(printf '[extend]\nuseDefault = true')"
 fi
+# FR-77.1 the baseline is printed at the plan phase (a team file replaces a built-in); FR-77.2 a missing
+# Standards line and FR-77.3 an unknown name are plan problems; FR-77.4 init writes asvs-l2; FR-77.5 the built-ins.
+new_repo base
+setcfg security.use "asvs-l2 gdpr"
+mkdir -p specs/security && echo "GDPR-TEAM-TRIGGER erase on request" >specs/security/gdpr.md
+git add specs/security && git commit -qm "team regime"
+sdd new feature "Sec base" >/dev/null 2>&1 || fail "new failed"
+out=$(sdd next)
+assert_contains "$out" 'Security baseline ([security] use): asvs-l2 gdpr'
+assert_contains "$out" 'GDPR-TEAM-TRIGGER erase on request'
+assert_contains "$out" 'V16 Security Logging and Error Handling'
+echo "TEAM-L2-REPLACES the built-in" >specs/security/asvs-l2.md
+out=$(sdd next)
+assert_contains "$out" 'TEAM-L2-REPLACES the built-in'
+assert_not_contains "$out" 'V16 Security Logging and Error Handling'
+git add specs/security && git commit -qm "team l2"
+f=$(ls specs/changes/*-sec-base/item.md)
+fill "$f" plan
+out=$(sdd analyze 2>&1)
+assert_contains "$out" '✗ Security: no "Standards:" line (baseline: asvs-l2 gdpr): say which add work here, or none'
+awk '/^## Security$/ { print; print "Standards: gdpr adds erasure here; asvs-l2 none"; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+assert_not_contains "$(sdd analyze 2>&1)" 'Standards:" line'
+git commit -qam "docs: standards" && git config -f .sdd/config security.use "asvs-l2 hipaa" && git commit -qam cfg -- .sdd/config
+assert_contains "$(sdd analyze 2>&1)" '✗ Security: unknown standard hipaa (add specs/security/hipaa.md)'
+git config -f .sdd/config --unset security.use && git commit -qam cfg -- .sdd/config
+assert_not_contains "$(sdd analyze 2>&1)" 'Security:'
+assert_not_contains "$(sdd next)" 'Security baseline'
+
+mkdir "$T/ini" && cd "$T/ini" && git init -q && echo x >README.md && git add -A && git commit -qm init
+out=$(sdd init 2>&1)
+assert_eq "$(git config -f .sdd/config security.use)" asvs-l2
+assert_contains "$out" 'security asvs-l2 (OWASP ASVS level 2). Your laws and policies: specs/security/<name>.md, then add the name to [security] use'
+
+for n in asvs-l1 asvs-l2 asvs-l3 masvs llm-top10; do
+	assert_file "$SRC/.sdd/core/security/$n.md"
+	[ "$(wc -l <"$SRC/.sdd/core/security/$n.md")" -le 15 ] || fail "$n.md has more than 15 lines"
+done
 exit 0
