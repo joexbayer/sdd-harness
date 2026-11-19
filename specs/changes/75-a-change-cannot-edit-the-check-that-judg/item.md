@@ -36,8 +36,15 @@ FR-75.2 WHEN `review` shows such an item THE SYSTEM SHALL print the same line as
 - [x] T-75.2 `check_edited` in common.sh (compares `git config --blob <base>:.sdd/config --get-regexp '^check\.'` with HEAD's), used by ship next to the planner-test guard and by review, FR-75.1 FR-75.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/ship.sh, .sdd/core/cmd/review.sh; test: for t in ship reviewed forge; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-75.1: `check_edited` (`.sdd/core/lib/common.sh:1124`) compares `check.*` in `.sdd/config` at the merge-base with HEAD's, counting each line, so changed, added, removed and duplicated lines all count; a chore, or a base with no `.sdd/config`, gives nothing. `ship.sh:173` refuses with `fail` (every profile), in `item_gates`, so forge PR pushes and merges are guarded too. Test: `t_ship.sh` (fix refused naming check.run; chore ships; `[sdd]`-only ships; duplicate line; deleted config).
+- FR-75.2: `review.sh:47` prints the line with `⚠ `. Test: `t_reviewed.sh`.
+- Deviation: compares against the merge-base, not the base tip, so a branch behind a chore that changed `[check]` is not refused (it runs the new check after rebase).
+- Deviation: `t_ship.sh` "Loud" test (~line 180) changed `check.run` in a fix, now refused; its failing check moved into the base config and it commits `ok.txt` instead. Same behaviour tested.
+- Known limit, accept (already in Security): a branch can edit `.sdd/core` itself, as with every guard; review lists `.sdd/*` as sensitive. A spike changing `[check]` is refused too (FR-75.1 says "not a chore").
+- Known: `t_perf` over budget under load, as on main. Check 428 s (budget 150 s), machine loaded.
+- Security pass (the verifier, on the diff): no exploitable finding; `--blob` reads ignore `include.path`; ship needs a clean tree, so HEAD's config is the one the check runs.
+
+Verified by: claude-opus-5-5: PASS; both FRs proven by a mutant (check_edited returning nothing fails t_ship and t_reviewed); a duplicated run line and a deleted config gave an empty key list: fixed with tests
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
