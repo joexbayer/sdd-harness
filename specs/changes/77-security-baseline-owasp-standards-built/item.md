@@ -60,8 +60,18 @@ DOD-77.1 A new repo from init plans a feature, `next` shows the ASVS L2 triggers
 - [x] T-77.3 The five built-in files; the Security comment in feature, fix, chore and contract templates asks for the Standards line; init writes `use = asvs-l2` and the hint; design.md §13 and README note it, FR-77.4 FR-77.5 (files: .sdd/core/security/, .sdd/core/templates/, .sdd/core/cmd/init.sh, specs/design.md, README.md; test: for t in security init; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-77.1: `security_file` (`.sdd/core/lib/common.sh`, above `plan_extra`) picks `specs/security/<n>.md`, else the built-in (through `sdd_path`, so `.sdd/local/security/` also works); `next.sh` prints `Security baseline ([security] use): …` and each file at the plan phase, only for types with a Security section. Test: `t_security.sh` (team gdpr file replaces a built-in; nothing when unset; a refactor shows none).
+- FR-77.2, FR-77.3: `plan_extra` reports a Security section without a `Standards:` line and an unknown name, so analyze, next and approve show them at the analyzed gate (standard blocks, lite warns). Test: `t_security.sh`.
+- FR-77.4: `init` writes `security.use asvs-l2` and the hint. Test: `t_security.sh`, incl. DOD-77.1 end to end (init repo: next shows V16, approve refuses until the Standards line exists).
+- FR-77.5: `.sdd/core/security/` asvs-l1/l2/l3, masvs, llm-top10 (9–11 lines, source and version named; l1–l3 share triggers, D-77.4). Templates (feature, fix, chore, contract) ask for the Standards line. README and design.md §13 note it.
+- Deviation: T-77.2 and T-77.3 in one commit: T-77.2's test file also asserts T-77.3 work (the plan's split was wrong).
+- Deviation: `tests/lib.sh` `new_repo` unsets `security.use` next to the lite pin, so existing tests keep their meaning; t_security sets it.
+- Deviation: the baseline prints before the plan prompt (next to Contracts), not after the rules; no prompt word ceiling moved.
+- `use` loops run under `set -f` (no globbing); `type_facts` runs only when `use` is set.
+- Known: `t_perf` over budget under load, on main too. Check 308 s (budget 150 s).
+- Security pass (the verifier, on the diff): nothing exploitable; names read only `.md` files from config the repo commits.
+
+Verified by: claude-opus-5-5: PASS; OWASP ASVS 5.0 / MASVS v2 / LLM Top 10 2025 names correct; mutants on team lookup and the Standards check caught; refactor exemption and init end to end were untested: added; glob and README nits fixed
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
