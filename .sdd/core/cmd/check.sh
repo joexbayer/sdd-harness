@@ -12,6 +12,7 @@ fi
 run_check "$id"
 rc=$?
 # FR-76.1: a count of failures in a row, reset by a pass; the third says to stop.
+n=0
 if [ -n "$id" ]; then
 	fails="$ST/checks/$id.fails"
 	if [ $rc -eq 0 ]; then
