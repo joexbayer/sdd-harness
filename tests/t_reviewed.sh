@@ -57,4 +57,12 @@ done_tasks
 built
 out=$(sdd ship 2>&1) || fail "docs-only ship failed: $out"
 assert_not_contains "$out" 'review'
+
+# FR-75.2: review warns when the item changed [check].
+new_repo
+planned_item fix "Weak check"
+setcfg --replace-all check.run true
+out=$(sdd review 2>&1)
+id=$(sed -n 's/^id: //p' "$ITEM")
+assert_contains "$out" "⚠ item $id: changes the check that judges it (check.run): change [check] in a chore"
 echo ok

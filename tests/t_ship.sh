@@ -221,4 +221,24 @@ echo up >up.txt && git add up.txt && git commit -qm "fix(1): code"
 fill "$ITEM" built && git commit -qam "docs(1): built"
 out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_contains "$out" 'next    git push upstream main'
+# FR-75.1: a fix that changes [check] is refused naming the keys; a chore may; [sdd] edits may.
+new_repo
+planned_item fix "Weak check"
+setcfg --replace-all check.run true
+echo w >w.txt && git add w.txt && git commit -qm "fix(1): code"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(fix edits check.run)"
+assert_contains "$out" 'item 1: changes the check that judges it (check.run): change [check] in a chore'
+new_repo
+planned_item chore "Strong check"
+setcfg --replace-all check.run true
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1) || fail "chore changing [check] should ship: $out"
+new_repo
+planned_item fix "Other section"
+setcfg sdd.profile standard
+echo o >o.txt && git add o.txt && git commit -qm "fix(1): code"
+fill "$ITEM" built && git commit -qam "docs(1): built"
+out=$(sdd ship 2>&1) || fail "a [sdd] edit should ship: $out"
 exit 0
