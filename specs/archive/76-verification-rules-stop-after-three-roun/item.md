@@ -2,9 +2,10 @@
 id: 76
 type: feature
 title: Verification rules: stop after three rounds, no flaky workarounds, graded findings
-status: open
+status: shipped
 created: 2026-11-18
 approved: 5c7568de78f1a5274b6d9e754daad180bd445522 2026-11-19 joexbayer
+shipped: 2026-11-19
 ---
 # 76 Verification rules: stop after three rounds, no flaky workarounds, graded findings
 
