@@ -57,6 +57,7 @@ assert_contains "$out" 'item 9 is dropped'
 # FR-7.2, FR-78.1: a worktree in the main checkout's .worktrees, with the agents synced here (its absolute-path
 # ask rules name the new folder); asked again, it says where the branch is.
 sdd sync claude >/dev/null 2>&1 || fail "sync claude failed"
+printf '*.log' >"$(git rev-parse --git-common-dir)/info/exclude" # no last newline
 out=$(sdd open 1 --worktree) || fail "open --worktree failed: $out"
 assert_contains "$out" '/.worktrees/1'
 assert_file "$T/app/.worktrees/1/specs/changes/1-local-thing/item.md"
@@ -71,4 +72,5 @@ assert_file "$T/app/.worktrees/2/specs/changes/2-karis-thing/item.md"
 # FR-78.2: the main checkout stays clean, and /.worktrees/ is in its exclude once.
 assert_eq "$(git status --porcelain)" ""
 assert_eq "$(grep -cx '/.worktrees/' "$(git rev-parse --git-common-dir)/info/exclude")" 1
+assert_eq "$(grep -cx '\*\.log' "$(git rev-parse --git-common-dir)/info/exclude")" 1
 exit 0

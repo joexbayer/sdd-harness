@@ -705,6 +705,8 @@ worktree_path() { _m=$(main_root) && printf '%s/.worktrees/%s\n' "$_m" "$1"; }
 exclude_worktrees() {
 	_x=$(git rev-parse --git-common-dir)/info/exclude
 	mkdir -p "$(dirname "$_x")"
+	# A hand-edited file may lack its last newline: don't glue our line onto its last pattern.
+	[ ! -s "$_x" ] || [ -z "$(tail -c 1 "$_x")" ] || echo >>"$_x"
 	grep -qx '/.worktrees/' "$_x" 2>/dev/null || echo '/.worktrees/' >>"$_x"
 }
 

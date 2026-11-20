@@ -93,6 +93,9 @@ rm -rf .sdd && printf '[extend]\nuseDefault = true\n' >.gitleaks.toml && git add
 out=$(PATH="$T/withgl:$PATH" sdd init 2>&1)
 assert_eq "$(cat .gitleaks.toml)" "$(printf '[extend]\nuseDefault = true')"
 assert_contains "$out" "tip     .gitleaks.toml: add '^\\.claude/worktrees/' and '^\\.worktrees/' to its allowlist paths, or gitleaks also scans worktree copies of the repo"
+# FR-78.3: a file that skips only .claude/worktrees/ still gets the tip.
+printf "[allowlist]\npaths = ['''^\\\\.claude/worktrees/''']\n" >.gitleaks.toml
+assert_contains "$(PATH="$T/withgl:$PATH" sdd init 2>&1)" 'tip     .gitleaks.toml'
 new_repo gl2
 rm -rf .sdd .gitleaks.toml && git commit -qam "remove sdd" >/dev/null 2>&1
 out=$(PATH=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gitleaks" ] || printf '%s:' "$d"; done) sdd init 2>&1)
