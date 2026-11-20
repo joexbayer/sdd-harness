@@ -131,7 +131,7 @@ cd "$R" || exit 1
 out=$(sdd new --from R-1.1 --worktree 2>&1) || fail "new --from R-1.1 --worktree failed: $out"
 assert_contains "$out" '5 feature · Auth API'
 assert_not_contains "$out" 'depends'
-wt=$(cd "$T/app.5" && pwd -P) || fail "no worktree app.5"
+wt=$(cd "$T/app/.worktrees/5" && pwd -P) || fail "no worktree .worktrees/5"
 assert_eq "$(sed -n 's/^roadmap: //p' "$wt/specs/changes/5-auth-api/item.md")" R-1.1
 assert_eq "$(grep -c '^depends:' "$wt/specs/changes/5-auth-api/item.md")" 0
 assert_eq "$(git rev-parse --abbrev-ref HEAD)" main

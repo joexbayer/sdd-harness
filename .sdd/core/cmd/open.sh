@@ -44,6 +44,7 @@ if [ -n "$wt" ]; then
 	else
 		git worktree add -q "$where" "$branch" || die "could not create worktree $where"
 	fi
+	exclude_worktrees
 	cd "$where" || exit 1
 	sync_here
 	echo "worktree $where   (branch $branch${track:+, tracking $track})"

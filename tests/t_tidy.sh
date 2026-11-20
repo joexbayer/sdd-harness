@@ -12,7 +12,7 @@ assert_contains "$(sdd tidy)" 'nothing to tidy'
 shipped_from_worktree() {
 	sdd new feature "$2" --worktree >/dev/null 2>&1 || fail "new $2 failed"
 	(
-		cd "$T/app.$1" || exit 1
+		cd "$T/app/.worktrees/$1" || exit 1
 		f=$(ls specs/changes/"$1"-*/item.md)
 		fill "$f" plan && git commit -qam "docs($1): plan" && sdd approve >/dev/null 2>&1 &&
 			echo "$1" >"code$1.txt" && git add "code$1.txt" && git commit -qm "feat($1): code" &&
@@ -25,9 +25,9 @@ shipped_from_worktree() {
 shipped_from_worktree 1 "First"
 assert_contains "$(cat "$T/ship.out")" 'this worktree and branch feature/1-first stay until tidy'
 assert_contains "$(cat "$T/ship.out")" '&& .sdd/bin/sdd tidy'
-assert_file "$T/app.1"
+assert_file "$T/app/.worktrees/1"
 shipped_from_worktree 2 "Second"
-echo wip >"$T/app.2/wip.txt"
+echo wip >"$T/app/.worktrees/2/wip.txt"
 
 # 3: a spike: its code never lands, so its branch is never safe to delete.
 planned_item spike "Learn"
@@ -39,8 +39,8 @@ git switch -q main
 sdd new feature "Open work" >/dev/null 2>&1 && git push -q origin HEAD && git switch -q main
 
 # FR-7.7: inside a shipped item's worktree, tidy keeps that worktree.
-out=$(cd "$T/app.1" && sdd tidy --dry-run)
-assert_contains "$out" "worktree $(cd "$T/app.1" && pwd -P)"
+out=$(cd "$T/app/.worktrees/1" && sdd tidy --dry-run)
+assert_contains "$out" "worktree $(cd "$T/app/.worktrees/1" && pwd -P)"
 assert_contains "$out" 'you are in it'
 
 # FR-7.7: a shipped branch checked out in the main checkout is kept; a branch that only shares
@@ -56,16 +56,16 @@ assert_contains "$out" 'would remove worktree'
 assert_contains "$out" 'and branch feature/1-first (item 1, shipped)'
 assert_not_contains "$out" fix/1-typo
 git rev-parse -q --verify refs/heads/feature/1-first >/dev/null || fail "dry run deleted a branch"
-assert_file "$T/app.1"
+assert_file "$T/app/.worktrees/1"
 
 # FR-7.6, FR-7.7, FR-7.8: the real run. main is not pushed yet, so no remote branch counts as done.
 out=$(sdd tidy) || fail "tidy failed: $out"
 assert_contains "$out" 'removed  worktree'
 assert_contains "$out" 'and branch feature/1-first (item 1, shipped)'
-assert_no_file "$T/app.1"
+assert_no_file "$T/app/.worktrees/1"
 git rev-parse -q --verify refs/heads/feature/1-first >/dev/null && fail "branch 1 should be gone"
 assert_contains "$out" 'uncommitted changes · git worktree remove --force'
-assert_file "$T/app.2/wip.txt"
+assert_file "$T/app/.worktrees/2/wip.txt"
 assert_contains "$out" "kept     branch spike/3-learn (item 3, shipped): a spike's code never lands on main · git branch -D spike/3-learn"
 assert_not_contains "$out" 'feature/4-open-work'
 assert_not_contains "$out" 'remote   '

@@ -72,6 +72,7 @@ dir="$SPECS/changes/$id-$slug"
 if [ $wt -eq 1 ]; then
 	where=$(worktree_path "$id")
 	git worktree add -q -b "$branch" "$where" "$base" || die "could not create worktree $where"
+	exclude_worktrees
 	cd "$where" || exit 1
 else
 	git switch -q -c "$branch" "$base" || die "could not create branch $branch from $base"

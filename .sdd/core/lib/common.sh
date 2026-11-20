@@ -698,8 +698,15 @@ worktree_of() {
 		/^worktree / { w = substr($0, 10) } $0 == "branch " b { print w; exit }'
 }
 
-# worktree_path <id>: where an item's worktree goes: ../<repo>.<id>, next to the main checkout.
-worktree_path() { _m=$(main_root) && printf '%s/%s.%s\n' "$(dirname "$_m")" "$(basename "$_m")" "$1"; }
+# worktree_path <id>: where an item's worktree goes: <main checkout>/.worktrees/<id>, from any worktree.
+worktree_path() { _m=$(main_root) && printf '%s/.worktrees/%s\n' "$_m" "$1"; }
+
+# exclude_worktrees: keep .worktrees/ out of the main checkout's git status, once. FR-78.2
+exclude_worktrees() {
+	_x=$(git rev-parse --git-common-dir)/info/exclude
+	mkdir -p "$(dirname "$_x")"
+	grep -qx '/.worktrees/' "$_x" 2>/dev/null || echo '/.worktrees/' >>"$_x"
+}
 
 # sync_here: give this (new) worktree the agents synced in the clone, as `sync` would. ROOT
 # is this worktree for the sync, so its absolute-path ask rules name this folder.
