@@ -45,7 +45,7 @@ DOD-78.1 In this repo, `sdd new … --worktree` makes `.worktrees/<id>`, an agen
 ## Tasks
 - [x] T-78.1 Failing tests: the new path from main and from a worktree, the exclude line once and a clean status, FR-78.1 FR-78.2 (files: tests/t_new.sh, tests/t_open.sh; test: for t in new open; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
 - [x] T-78.2 `worktree_path` and the exclude line; update tests that name `app.<id>` (t_new, t_open, t_roadmap, t_tidy and any other), FR-78.1 FR-78.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/new.sh, .sdd/core/cmd/open.sh, tests/; test: for t in new open roadmap tidy ship agents expect; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
-- [ ] T-78.3 init: gitleaks skip, tip and Python search; README, design.md and the sdd-dev skill name the new path, FR-78.3 FR-78.4 (files: .sdd/core/cmd/init.sh, tests/t_security.sh, tests/t_init.sh, README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; test: for t in security init; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
+- [x] T-78.3 init: gitleaks skip, tip and Python search; README, design.md and the sdd-dev skill name the new path, FR-78.3 FR-78.4 (files: .sdd/core/cmd/init.sh, tests/t_security.sh, tests/t_init.sh, README.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; test: for t in security init; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

@@ -71,8 +71,8 @@ rm -rf .sdd .gitleaks.toml && git commit -qam "remove sdd" >/dev/null 2>&1
 out=$(PATH="$T/withgl:$PATH" sdd init 2>&1)
 assert_contains "$out" 'checks: + gitleaks dir . (secret scanning)'
 assert_contains "$(git config -f .sdd/config --get-all check.run)" 'gitleaks dir . --no-banner'
-# FR-46.1: gitleaks' defaults, minus Claude Code's worktree copies of the repo.
-assert_contains "$out" "wrote .gitleaks.toml (gitleaks' default rules; skips .claude/worktrees/, agents' copies of the repo)"
+# FR-46.1, FR-78.3: gitleaks' defaults, minus worktree copies of the repo.
+assert_contains "$out" "wrote .gitleaks.toml (gitleaks' default rules; skips .claude/worktrees/ and .worktrees/, copies of the repo)"
 cat >"$T/gl.toml" <<'EOF'
 # Written by sdd init. gitleaks' default rules, minus copies of the repo that git never commits.
 [extend]
@@ -80,7 +80,7 @@ useDefault = true
 
 [allowlist]
 description = "agent worktrees (Claude Code isolation: worktree): copies git does not commit"
-paths = ['''^\.claude/worktrees/''']
+paths = ['''^\.claude/worktrees/''', '''^\.worktrees/''']
 EOF
 assert_eq "$(cat .gitleaks.toml)" "$(cat "$T/gl.toml")"
 # FR-46.3: a second run leaves it alone and says nothing about it.
@@ -92,7 +92,7 @@ new_repo gl3
 rm -rf .sdd && printf '[extend]\nuseDefault = true\n' >.gitleaks.toml && git add -A && git commit -qm "own gitleaks config" >/dev/null 2>&1
 out=$(PATH="$T/withgl:$PATH" sdd init 2>&1)
 assert_eq "$(cat .gitleaks.toml)" "$(printf '[extend]\nuseDefault = true')"
-assert_contains "$out" "tip     .gitleaks.toml: add '^\\.claude/worktrees/' to its allowlist paths, or gitleaks also scans agents' worktree copies of the repo"
+assert_contains "$out" "tip     .gitleaks.toml: add '^\\.claude/worktrees/' and '^\\.worktrees/' to its allowlist paths, or gitleaks also scans worktree copies of the repo"
 new_repo gl2
 rm -rf .sdd .gitleaks.toml && git commit -qam "remove sdd" >/dev/null 2>&1
 out=$(PATH=$(printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r d; do [ -x "$d/gitleaks" ] || printf '%s:' "$d"; done) sdd init 2>&1)
@@ -118,6 +118,7 @@ if command -v gitleaks >/dev/null 2>&1; then
 	assert_contains "$(cat .gitleaks.toml)" "'''^build/'''"
 	assert_contains "$(cat .gitleaks.toml)" "'''^out\\.dir/'''"
 	assert_contains "$(cat .gitleaks.toml)" "'''^\\.claude/worktrees/'''"
+	assert_contains "$(cat .gitleaks.toml)" "'''^\\.worktrees/'''" # FR-78.3
 	out=$(gitleaks dir . --no-banner -v -c .gitleaks.toml 2>&1)
 	assert_not_contains "$out" 'build/a.txt'
 	assert_not_contains "$out" 'out.dir/a.txt'

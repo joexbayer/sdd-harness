@@ -1,6 +1,6 @@
 # shellcheck shell=sh
 # open <id> [--worktree]: switch to an item's branch, tracking a teammate's remote branch when
-# that is the only copy, or open it in its own worktree at ../<repo>.<id>.
+# that is the only copy, or open it in its own worktree at .worktrees/<id>.
 id=
 wt=
 for a in "$@"; do
