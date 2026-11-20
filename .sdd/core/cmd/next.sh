@@ -129,6 +129,20 @@ if [ "$PHASE" = build ] && [ -n "$IR_CONTRACTS" ]; then
 	echo "Contracts (read them; they change only through a contract item): $(joinlist "$(printf '%s\n' "$CROWS" | cut -f3)")"
 	echo
 fi
+# FR-77.1: the security baseline the plan's Security section answers against.
+if [ "$PHASE" = plan ]; then
+	_use=$(cfg security.use "")
+	[ -z "$_use" ] || case " $(type_facts "$ITYPE")" in *" security"*) ;; *) _use= ;; esac
+	if [ -n "$_use" ]; then
+		echo "Security baseline ([security] use): $_use"
+		set -f
+		for _n in $_use; do
+			_f=$(security_file "$_n") && { echo; cat "$_f"; }
+		done
+		set +f
+		echo
+	fi
+fi
 # FR-39.1, FR-39.2: a builder that takes less than L gets plans sized for it.
 if [ "$PHASE" = plan ]; then
 	max_size

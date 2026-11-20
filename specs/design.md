@@ -420,6 +420,9 @@ Proportionate controls, ranked by likelihood × impact. Detail is in kb/security
 | supply chain | pinned version + checksums; upgrade only through a reviewed commit | step 5 |
 | MCP abuse | server is read-only, bearer tokens, fixed-schema tools, no shell tool | always |
 
+Per item: `[security] use` names baselines (built-in `asvs-l1/l2/l3`, `masvs`, `llm-top10`, or the team's
+`specs/security/<name>.md`, which wins); `next` prints them at plan and the Security section needs a `Standards:` line.
+
 Not doing: injection classifiers, signing/SLSA, a VM per run, per-call approvals, MCP OAuth.
 Prompt injection is unsolved. These controls limit the blast radius; they do not prevent a
 hijack.

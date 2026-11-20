@@ -1,0 +1,11 @@
+OWASP ASVS 5.0.0, level 2: most apps (level 1 plus defence in depth for sensitive data). Say which add work here:
+- V1 Encoding and Sanitization, V2 Validation and Business Logic: new input, query, template or output sink.
+- V3 Web Frontend Security, V4 API and Web Service: new page, cookie, header, endpoint or CORS rule.
+- V5 File Handling: uploads, downloads, archives, paths built from input.
+- V6 Authentication, V7 Session Management, V8 Authorization: login, password, session, role or ownership check.
+- V9 Self-contained Tokens, V10 OAuth and OIDC: JWTs, third-party login, token scopes.
+- V11 Cryptography, V12 Secure Communication: hashing, encryption, keys, TLS.
+- V13 Configuration, V14 Data Protection: secrets, defaults, personal or sensitive data.
+- V15 Secure Coding and Architecture: a new dependency, a trust boundary, a risky component.
+- V16 Security Logging and Error Handling: errors that leak detail, events that need a log line.
+- V17 WebRTC: peer-to-peer media or signalling.

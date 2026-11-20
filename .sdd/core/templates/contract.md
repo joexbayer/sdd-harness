@@ -27,7 +27,8 @@ planning when this ships: name them and what each must change. -->
 ## Security
 <!-- Does the contract carry untrusted input, login or permissions, secrets or personal data?
 If not: "none: <why>". Otherwise, per risk: what can go wrong → what the contract requires
-(auth on an endpoint, a field's limits, what is never returned). -->
+(auth on an endpoint, a field's limits, what is never returned).
+With a baseline in [security] use, start with "Standards: <which add work here, or none>". -->
 
 ## Done when
 <!-- DOD-{{id}}.1 <observable outcome>, e.g. "the project's check validates

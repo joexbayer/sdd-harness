@@ -519,11 +519,24 @@ plan_frs() {
 	plan_part "$IFILE" | uncomment | grep -oE "FR-$ID\.[0-9]+" | sort -u -t . -k 2,2n
 }
 
+# security_file <name>: the file of a [security] use name: the team's specs/security/<name>.md, else the
+# built-in core/security/<name>.md; fails when neither exists (FR-77.1).
+security_file() {
+	if [ -f "$SPECS/security/$1.md" ]; then printf '%s\n' "$SPECS/security/$1.md"; else sdd_path "security/$1.md"; fi
+}
+
 # plan_extra: plan_findings' lines that need the plan text, not its facts: a fix with no `expect: fail`
 # task, unless its Test starts with "none:" (FR-69.10); an FR, US, D or Q ID of this item written
 # after "- ", "* " or "**" and not also defined at a line start: IDs are read only there (FR-69.11).
 plan_extra() {
-	plan_part "$IFILE" | uncomment | TY=${ITYPE:-} I=${ID:-} awk '
+	_use=$(cfg security.use "")
+	[ -z "$_use" ] || case " $(type_facts "${ITYPE:-}")" in *" security"*) ;; *) _use= ;; esac
+	set -f
+	for _n in $_use; do
+		security_file "$_n" >/dev/null || printf 'Security\t\tunknown standard %s (add %s/security/%s.md)\n' "$_n" "$SPECS" "$_n"
+	done
+	set +f
+	plan_part "$IFILE" | uncomment | TY=${ITYPE:-} I=${ID:-} USE=$_use awk '
 	/^```/ { fence = !fence; next }
 	fence { next }
 	/^## / { sec = substr($0, 4); next }
@@ -541,9 +554,12 @@ plan_extra() {
 			}
 		}
 	}
+	sec == "Security" && /^Standards:/ { std = 1 }
 	sec == "Test" && NF && !seen { seen = 1; none = ($0 ~ /^none:/) }
 	index(sec, "Tasks") == 1 && /expect: fail/ { red = 1 }
 	END { for (i = 1; i <= nb; i++) if (!(bid[i] in defd)) print bmsg[i]
+		if (ENVIRON["USE"] != "" && !std)
+			print "Security\t\tno \"Standards:\" line (baseline: " ENVIRON["USE"] "): say which add work here, or none"
 		if (ENVIRON["TY"] == "fix" && !red && !none)
 		print "Tasks\t\tno expect: fail task: a fix proves the bug with a test that fails first (or start Test with \"none: <why>\")" }'
 }
