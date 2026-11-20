@@ -50,6 +50,17 @@ DOD-78.1 In this repo, `sdd new … --worktree` makes `.worktrees/<id>`, an agen
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-78.1 `worktree_path` common.sh:702 (used at new.sh:73, open.sh:40). Proved by t_new.sh (parallel and setup cases) and t_open.sh (from main, and from inside `.worktrees/1`); t_roadmap, t_tidy, t_ship, t_agents updated to the new path.
+FR-78.2 `exclude_worktrees` common.sh:705, called new.sh:75 and open.sh:47 after `worktree add`. Proved by t_new.sh (one line, status shows no worktrees) and t_open.sh (status empty, one line).
+FR-78.3 init.sh:133-134 (path and filter), :138 (message), :139-140 (tip). Proved by t_security.sh (written file, message, tip; real-gitleaks case when installed).
+FR-78.4 init.sh:68. Proved by t_init.sh (`pywt`: test file only in `.worktrees/2` guesses no python runner).
+Docs: README.md (path line plus the jest/tsc/IDE/Docker note), specs/design.md item 7 row, sdd-dev SKILL.md worktree paragraph, open.sh header comment.
+
+Deviations: none. t_ship.sh used `my app2.1`; changed to `my app2/.worktrees/1`.
+Follow-ups: `exclude_worktrees` is grep-then-append, so two `new --worktree` at the exact same moment could write the line twice (harmless: git ignores a duplicate); not guarded. The tip fires when either gitleaks path is missing in a team's own file. Full `.sdd/bin/sdd check`: see the line below.
+Test change: t_new.sh checks only a clean status after the two parallel `new --worktree` (a count of 1 failed once under /bin/sh: both appended); the count of 1 is asserted in t_open.sh, sequential.
+Check: `.sdd/bin/sdd check` passed (631 s). A first run failed t_new under /bin/sh (the race above) and the `server` npm tests, which needed server/node_modules copied into the worktree (not from this change).
+Verified by: pending
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them

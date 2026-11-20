@@ -58,8 +58,7 @@ assert_contains "$out" 'nope-setup'
 fid=$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\) chore.*/\1/p')
 assert_file "$T/app/.worktrees/$fid/specs/changes/$fid-unseeded/item.md"
 git config -f .sdd/config --unset worktree.setup
-# FR-78.2: the exclude holds the line once, so the main checkout stays clean.
-assert_eq "$(grep -cx '/.worktrees/' "$(git rev-parse --git-common-dir)/info/exclude")" 1
+# FR-78.2: the main checkout stays clean (the once-only count is in t_open.sh: two parallel news may both append).
 assert_not_contains "$(git status --porcelain)" worktrees
 
 # The current item comes from the branch: none on main.
