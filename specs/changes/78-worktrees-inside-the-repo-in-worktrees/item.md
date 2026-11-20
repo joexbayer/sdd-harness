@@ -60,7 +60,7 @@ Deviations: none. t_ship.sh used `my app2.1`; changed to `my app2/.worktrees/1`.
 Follow-ups: `exclude_worktrees` is grep-then-append, so two `new --worktree` at the exact same moment could write the line twice (harmless: git ignores a duplicate); not guarded. The tip fires when either gitleaks path is missing in a team's own file. Full `.sdd/bin/sdd check`: see the line below.
 Test change: t_new.sh checks only a clean status after the two parallel `new --worktree` (a count of 1 failed once under /bin/sh: both appended); the count of 1 is asserted in t_open.sh, sequential.
 Check: `.sdd/bin/sdd check` passed (631 s). A first run failed t_new under /bin/sh (the race above) and the `server` npm tests, which needed server/node_modules copied into the worktree (not from this change).
-Verified by: pending
+Verified by: Opus verifier, 2026-11-20, 4 of 4 FRs proven (mutations caught); should-fix: exclude append without trailing-newline guard, old .gitleaks.toml files get no .worktrees skip
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
