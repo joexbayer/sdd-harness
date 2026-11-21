@@ -37,7 +37,7 @@ new_repo() {
 	git add README.md && git commit -qm init
 	sdd init >/dev/null 2>&1 || fail "init failed"
 	git config -f .sdd/config sdd.profile lite
-	git config -f .sdd/config --unset security.use
+	git config -f .sdd/config --unset standards.use
 	git config -f .sdd/config --add check.run 'echo ok'
 	git add -A && git commit -qm "install sdd"
 }

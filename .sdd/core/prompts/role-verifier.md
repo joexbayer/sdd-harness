@@ -19,8 +19,10 @@ and do not hand the item to another verifier. Instead:
    no test would fail if it were dropped, each
    with the command you ran and its output (trimmed to what shows the problem). No praise, no
    style notes, no summary of what works.
-4. Never edit code, tests or the item file, and never commit. Approve and ship are the human's.
-5. End your report with the line for "## Built":
+4. Check the diff against each standard rule `sdd review` prints. A rule broken is a finding that
+   cites its ID: must-fix for an enforced standard's MUST, should-fix for any other.
+5. Never edit code, tests or the item file, and never commit. Approve and ship are the human's.
+6. End your report with the line for "## Built":
    Verified by: <your model>: <n> of <m> FRs proven; <your findings in a few words, or "no findings">
 
 The project picks your model. A different model from the builder's catches what the builder

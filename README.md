@@ -73,7 +73,7 @@ Everything is config (`.sdd/config`) or an override (`.sdd/local/<path>`, or
 `<prompt>.append.md` to extend a prompt). Rules your project must keep go in
 `specs/constitution.md`, each enforced by a check or by you at review. See [MIGRATE.md](MIGRATE.md).
 
-`[security] use` in `.sdd/config` names the security baselines every plan answers to: `asvs-l2` by default; add your laws as `specs/security/<name>.md`.
+`[standards] use` in `.sdd/config` names the standards every plan answers to and the verifier checks: `asvs-l2` by default; add your own as `specs/standards/<name>.md` (rules `<ID> MUST|SHOULD <text>`). CODEOWNERS on `specs/standards/` gives each standard an owner.
 
 ## Extensions
 
