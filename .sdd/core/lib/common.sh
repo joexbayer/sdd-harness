@@ -918,10 +918,11 @@ EOF
 
 # next_id: allocate an item id, unique across all worktrees of this clone and, when the remote
 # answers, across clones (FR-72.1): the counter ref there holds the last id taken.
+# FR-81.1 the lock is a noclobber file: the shell's O_EXCL, not mkdir (not atomic in uutils).
 next_id() {
 	_lock="$ST/lock"
 	_n=0
-	until mkdir "$_lock" 2>/dev/null; do
+	until (set -C; : >"$_lock") 2>/dev/null; do
 		_n=$((_n + 1))
 		[ $_n -gt 100 ] && die "id lock busy: $_lock (remove it if no $NAME is running)"
 		sleep 0.1
@@ -935,7 +936,7 @@ next_id() {
 		reserve_id "$_rem" "$_last"
 	fi
 	echo "$_id" >"$ST/next-id"
-	rmdir "$_lock"
+	rm -f "$_lock"
 	echo "$_id"
 }
 
@@ -1258,7 +1259,7 @@ check_edited() {
 # default, so nothing about runs is kept unless someone asks for it.
 usage_on() { [ "$(cfg_mine usage.track false)" = true ]; }
 
-# run_slot: a new run number and its folder .git/sdd/runs/<n>/ (mkdir is the lock); sets RUN, RUNDIR.
+# run_slot: a new run number and its folder .git/sdd/runs/<n>/ (a noclobber file in it is the lock); sets RUN, RUNDIR.
 # With tracking off, a temporary folder that the caller removes (RUN is "-").
 run_slot() {
 	if ! usage_on; then
@@ -1268,7 +1269,8 @@ run_slot() {
 	fi
 	mkdir -p "$ST/runs"
 	RUN=1
-	while ! mkdir "$ST/runs/$RUN" 2>/dev/null; do RUN=$((RUN + 1)); done
+	# FR-81.2 uutils mkdir succeeds on an existing dir: skip one, claim with an O_EXCL file
+	while ! { [ ! -e "$ST/runs/$RUN" ] && mkdir -p "$ST/runs/$RUN" && (set -C; : >"$ST/runs/$RUN/.claim") 2>/dev/null; }; do RUN=$((RUN + 1)); done
 	RUNDIR="$ST/runs/$RUN"
 }
 

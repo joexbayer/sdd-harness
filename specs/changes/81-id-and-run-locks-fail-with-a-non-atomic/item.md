@@ -38,7 +38,7 @@ t_new.sh and t_run.sh (or t_agent_usage.sh, wherever run folders are tested), wi
 
 ## Tasks
 - [x] T-81.1 Failing tests with the non-atomic mkdir shim, FR-81.1 FR-81.2 (files: tests/t_new.sh, tests/t_run.sh, tests/t_agent_usage.sh; test: for t in new run agent_usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
-- [ ] T-81.2 next_id and run_slot claim with noclobber, FR-81.1 FR-81.2 (files: .sdd/core/lib/common.sh; test: for t in new run agent_usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
+- [x] T-81.2 next_id and run_slot claim with noclobber, FR-81.1 FR-81.2 (files: .sdd/core/lib/common.sh; test: for t in new run agent_usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
