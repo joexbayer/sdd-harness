@@ -2,9 +2,10 @@
 id: 79
 type: feature
 title: Team standards: rules with IDs, checked by the verifier
-status: open
+status: shipped
 created: 2026-11-21
 approved: 1e2fdc33075f62668774378fcb32c9fc2d113dbd 2026-11-21 joexbayer
+shipped: 2026-11-21
 ---
 # 79 Team standards: rules with IDs, checked by the verifier
 
