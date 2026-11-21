@@ -1,9 +1,4 @@
-# FR-83.3: each early commit with its files, 5 files in all.
-			early=$([ -n "$first" ] && git log --format=#%h --name-only "$base..$first" -- . ":(exclude)$SPECS" | awk '
-				/^#/ { h = substr($0, 2); next }
-				NF { if (++n <= 5) { if (!(h in f)) o = o (o == "" ? "" : "; ") h; f[h] = f[h] (f[h] == "" ? ": " : ", ") $0 } }
-				END { split(o, hs, "; "); for (i = 1; i in hs; i++) r = r (i > 1 ? "; " : "") hs[i] f[hs[i]]; print r (n > 5 ? " …" : "") }')
-			[ -z "$early" ] || gate approved "item $ID: code was committed before the plan was approved ($early)"# shellcheck shell=sh
+# shellcheck shell=sh
 # ship: gates, archive the item, fast-forward the base branch locally. Never pushes, unless the
 # project sets a forge (forge = github): then ship pushes the item branch and opens a PR, and
 # shipping again merges it (see pr_ship below).
