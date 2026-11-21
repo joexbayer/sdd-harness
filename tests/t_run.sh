@@ -94,7 +94,7 @@ assert_contains "$out" 'the agent exited 3'
 assert_eq "$(tail -n 1 "$log" | cut -f1,13)" "$(printf '3\t3')"
 grep -q '^- \[ \] T-1.2 ' "$ITEM" || fail "a failed planner run ticked T-1.2"
 # FR-81.2: three runs started at once, mkdir as uutils: each gets its own folder (the .claim decides).
-for i in 1 2 3; do (PATH="$T/uutils:$PATH" CLAUDE_RC=3 sdd run planner 1 >/dev/null 2>&1) & done
+for _ in 1 2 3; do (PATH="$T/uutils:$PATH" CLAUDE_RC=3 sdd run planner 1 >/dev/null 2>&1) & done
 wait
 assert_eq "$(tail -n 3 "$log" | cut -f1 | sort -u | wc -l | tr -d ' ')" 3 "(parallel runs shared a folder)"
 # FR-36.4: the planner works its own batch: its edit of the item file is undone, its task ticked.
