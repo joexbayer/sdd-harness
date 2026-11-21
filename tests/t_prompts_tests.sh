@@ -47,7 +47,7 @@ for p in 'ready for review: `/sdd-review`' \
 	'still pass if every function returned nothing' 'never from the code under test' \
 	'After two fixes resting on the same assumption fail' \
 	'Write just enough code to pass the test' 'extend an existing test' \
-	'a bare ID marks where a requirement lives' 'never repeat one that passed for this code' \
+	'a bare ID marks where a requirement lives' 'Never re-run a passed check on unchanged code' \
 	'Report only commands you ran' 'the control crossed' 'No unbounded list or query'; do
 	assert_contains "$out" "$p"
 done
@@ -80,6 +80,9 @@ assert_not_contains "$out" 'so keep it fast'
 for p in 'rerun' 'sleep' 'delete the test' 'must-fix' 'should-fix' 'pre-existing'; do
 	assert_contains "$out" "$p"
 done
+# Chore 80: targeted tests while building, the full check once at finish.
+assert_contains "$out" "Run only the current task's test"
+assert_contains "$out" 'once at finish'
 # FR-76.3 the verifier tags findings; FR-76.4 a later round checks the earlier fixes first.
 for p in 'must-fix' 'should-fix' 'nit' 'pre-existing' 'earlier round'; do
 	assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" "$p"
