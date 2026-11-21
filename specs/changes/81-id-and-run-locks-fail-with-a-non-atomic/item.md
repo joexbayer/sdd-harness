@@ -4,6 +4,7 @@ type: fix
 title: ID and run locks fail with a non-atomic mkdir (uutils)
 status: open
 created: 2026-11-21
+approved: 69bdd42606966b7e04c8d995bbeaade3f7f24007 2026-11-21 joexbayer
 ---
 # 81 ID and run locks fail with a non-atomic mkdir (uutils)
 
