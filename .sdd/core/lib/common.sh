@@ -519,24 +519,118 @@ plan_frs() {
 	plan_part "$IFILE" | uncomment | grep -oE "FR-$ID\.[0-9]+" | sort -u -t . -k 2,2n
 }
 
-# security_file <name>: the file of a [security] use name: the team's specs/security/<name>.md, else the
-# built-in core/security/<name>.md; fails when neither exists (FR-77.1).
-security_file() {
-	if [ -f "$SPECS/security/$1.md" ]; then printf '%s\n' "$SPECS/security/$1.md"; else sdd_path "security/$1.md"; fi
+# standard_file <name>: the file of a [standards] use name: the team's specs/standards/<name>.md, else the
+# built-in core/standards/<name>.md; fails for a name that is not [A-Za-z0-9_-]+ or has neither (FR-79.1).
+standard_file() {
+	case $1 in '' | *[!A-Za-z0-9_-]*) return 1 ;; esac
+	if [ -f "$SPECS/standards/$1.md" ]; then printf '%s\n' "$SPECS/standards/$1.md"; else sdd_path "standards/$1.md"; fi
+}
+
+# standard_read <info|rules> <file>: a standard is front matter (status:), one summary line, then rule lines
+# "<ID> MUST|SHOULD <text>". info prints "<status>\t<rule count>\t<summary>", rules the rule lines (FR-79.2).
+standard_read() {
+	M=$1 awk '
+	NR == 1 && $0 == "---" { fm = 1; next }
+	fm && $0 == "---" { fm = 0; next }
+	fm { if ($0 ~ /^status:/) { s = $0; sub(/^status:[ \t]*/, "", s) } next }
+	!sum && NF { sum = $0; next }
+	/^[A-Za-z][A-Za-z0-9]*-[0-9]+ (MUST|SHOULD) [^ ]/ { n++; if (ENVIRON["M"] == "rules") print }
+	END { if (ENVIRON["M"] == "info") printf "%s\t%d\t%s\n", s, n, sum }' "$2"
+}
+
+# standard_lint: check's gate on the used standards. Fails, with CHECK_STANDARDS holding "<name>:<line>: <problem>"
+# per line, when one has no status front matter, a line after the summary that is not a rule, or an ID
+# another used standard (or the file itself) already has (FR-79.2).
+standard_lint() {
+	CHECK_STANDARDS=
+	set -f
+	set --
+	for _n in $(cfg standards.use ""); do
+		_f=$(standard_file "$_n") && set -- "$@" "$_f"
+	done
+	set +f
+	[ $# -gt 0 ] || return 0
+	CHECK_STANDARDS=$(awk '
+	function bad(l, p) { print n ":" l ": " p }
+	function finish() {
+		if (n == "" || skip) return
+		if (phase == 0) bad(last, "front matter is not closed with ---")
+		else if (phase == 1) bad(last, "no summary line")
+	}
+	FNR == 1 { finish(); n = FILENAME; sub(/.*\//, "", n); sub(/\.md$/, "", n); skip = 0; phase = 0; status = 0
+		if ($0 != "---") { bad(1, "front matter must give status: advisory or status: enforced"); skip = 1 }
+		last = 1; next }
+	{ last = FNR }
+	skip { next }
+	phase == 0 && $0 == "---" { if (!status) bad(FNR, "front matter must give status: advisory or status: enforced"); phase = 1; next }
+	phase == 0 { if ($0 ~ /^status:/) { status = 1; if ($0 !~ /^status:[ \t]*(advisory|enforced)[ \t]*$/) bad(FNR, "status must be advisory or enforced") } next }
+	phase == 1 && NF { phase = 2; next }
+	phase == 2 && NF {
+		if ($0 !~ /^[A-Za-z][A-Za-z0-9]*-[0-9]+ (MUST|SHOULD) [^ ]/) bad(FNR, "not a rule (<ID> MUST|SHOULD <text>)")
+		else if ($1 in seen) bad(FNR, "duplicate ID " $1 " (first at " seen[$1] ")")
+		else seen[$1] = n ":" FNR
+	}
+	END { finish() }' "$@")
+	[ -z "$CHECK_STANDARDS" ]
+}
+
+# standard_line <name>: the catalog line of a standard: name, status, rule count, summary, path (FR-79.3).
+standard_line() {
+	_f=$(standard_file "$1") || return 0
+	case $_f in "$SPECS"/*) _p=$_f ;; *) _p="built-in $DIRNAME/${_f#"$SDD_HOME"/}" ;; esac
+	standard_read info "$_f" | awk -F '\t' -v n="$1" -v p="$_p" '{ printf "%-9s  %-8s  %s rules  %s  (%s)\n", n, $1, $2, $3, p }'
+}
+
+# standard_block <heading> <names>: "<heading>: <name> <status>, …", then the rule lines of those standards (FR-79.5, FR-79.6).
+standard_block() {
+	_h=$1
+	_hs=; _rs=
+	set -f
+	for _n in $2; do
+		_f=$(standard_file "$_n") || continue
+		_hs="${_hs:+$_hs, }$_n $(standard_read info "$_f" | cut -f1)"
+		_rs="${_rs:+$_rs
+}$(standard_read rules "$_f")"
+	done
+	set +f
+	[ -z "$_hs" ] || printf '%s: %s\n%s\n\n' "$_h" "$_hs" "$_rs"
+}
+
+# plan_std_line: the plan's "Standards:" line (the first one outside a code fence), or nothing.
+plan_std_line() {
+	plan_part "$IFILE" | uncomment | awk '/^```/ { f = !f; next } !f && /^Standards:/ { print; exit }'
+}
+
+# std_names <Standards: line>: its names one per line, "(…)" notes dropped; "none" is no name (FR-79.4).
+std_names() {
+	printf '%s\n' "${1#Standards:}" | sed 's/([^)]*)//g' | tr ',' '\n' | sed 's/^[ 	]*//; s/[ 	]*$//' | grep -v '^$' | grep -vx none
 }
 
 # plan_extra: plan_findings' lines that need the plan text, not its facts: a fix with no `expect: fail`
 # task, unless its Test starts with "none:" (FR-69.10); an FR, US, D or Q ID of this item written
 # after "- ", "* " or "**" and not also defined at a line start: IDs are read only there (FR-69.11).
 plan_extra() {
-	_use=$(cfg security.use "")
+	_use=$(cfg standards.use "")
 	[ -z "$_use" ] || case " $(type_facts "${ITYPE:-}")" in *" security"*) ;; *) _use= ;; esac
-	set -f
-	for _n in $_use; do
-		security_file "$_n" >/dev/null || printf 'Security\t\tunknown standard %s (add %s/security/%s.md)\n' "$_n" "$SPECS" "$_n"
-	done
-	set +f
-	plan_part "$IFILE" | uncomment | TY=${ITYPE:-} I=${ID:-} USE=$_use awk '
+	if [ -n "$_use" ]; then
+		set -f
+		for _n in $_use; do
+			case $_n in
+			*[!A-Za-z0-9_-]*) printf 'Standards\t\t%s is not a standard name (letters, digits, - and _)\n' "$_n" ;;
+			*) standard_file "$_n" >/dev/null || printf 'Standards\t\tunknown standard %s (add %s/standards/%s.md)\n' "$_n" "$SPECS" "$_n" ;;
+			esac
+		done
+		_line=$(plan_std_line)
+		if [ -z "$_line" ]; then
+			printf 'Standards\t\tno "Standards:" line (in use: %s): name which add work here, or none\n' "$_use"
+		else
+			for _n in $(std_names "$_line"); do
+				case " $_use " in *" $_n "*) ;; *) printf 'Standards\t\t%s is not in [standards] use (%s)\n' "$_n" "$_use" ;; esac
+			done
+		fi
+		set +f
+	fi
+	plan_part "$IFILE" | uncomment | TY=${ITYPE:-} I=${ID:-} awk '
 	/^```/ { fence = !fence; next }
 	fence { next }
 	/^## / { sec = substr($0, 4); next }
@@ -554,12 +648,9 @@ plan_extra() {
 			}
 		}
 	}
-	sec == "Security" && /^Standards:/ { std = 1 }
 	sec == "Test" && NF && !seen { seen = 1; none = ($0 ~ /^none:/) }
 	index(sec, "Tasks") == 1 && /expect: fail/ { red = 1 }
 	END { for (i = 1; i <= nb; i++) if (!(bid[i] in defd)) print bmsg[i]
-		if (ENVIRON["USE"] != "" && !std)
-			print "Security\t\tno \"Standards:\" line (baseline: " ENVIRON["USE"] "): say which add work here, or none"
 		if (ENVIRON["TY"] == "fix" && !red && !none)
 		print "Tasks\t\tno expect: fail task: a fix proves the bug with a test that fails first (or start Test with \"none: <why>\")" }'
 }
@@ -1201,7 +1292,8 @@ masked() { grep -E '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];]|$)';
 # pass, 1 fail, 3 when the output shows zero tests ran. Records the result for <id> (if
 # given) and sets CHECK_LOG, CHECK_NOTRUN to the first command the shell could not run, and
 # CHECK_DIRTIED to the files the run itself created or changed (the pass is for the code before),
-# CHECK_ARTICLES to the constitution's problems (see check_articles), and CHECK_SECS to how long
+# CHECK_ARTICLES to the constitution's problems (see check_articles), CHECK_STANDARDS to the standards'
+# (standard_lint), and CHECK_SECS to how long
 # the commands took (FR-35.1).
 run_check() {
 	# [check] run always runs; [check] code is skipped when only docs changed (FR-48.1).
@@ -1235,6 +1327,7 @@ $_cmds
 EOF
 	CHECK_SECS=$(($(date +%s) - _t0))
 	check_articles "$CHECK_LOG" || _rc=1
+	standard_lint || _rc=1
 	CHECK_DIRTIED=
 	_fp2=$(fingerprint)
 	[ "$_fp2" = "$_fp" ] || CHECK_DIRTIED=$(git diff-tree -r --name-only "$_fp" "$_fp2" 2>/dev/null)

@@ -69,7 +69,7 @@ DOD-79.1 In a scratch repo, `use = asvs-l2 api-errors` with an enforced api-erro
 
 ## Tasks
 - [x] T-79.1 Failing tests for FR-79.1–79.6: rename tests/t_security.sh to tests/t_standards.sh and rewrite it (files: tests/t_standards.sh, tests/t_security.sh, tests/lib.sh; test: SRC=$PWD SH=dash dash tests/t_standards.sh; expect: fail; size: M)
-- [ ] T-79.2 Lib and check: standard_file, standard_lint, plan_extra's Standards line, `[standards] use`; move and rewrite the built-ins as rules, FR-79.1 FR-79.2 FR-79.4 FR-79.7 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/check.sh, .sdd/core/standards/, .sdd/core/security/; test: SRC=$PWD SH=dash dash tests/t_standards.sh; size: M)
+- [x] T-79.2 Lib and check: standard_file, standard_lint, plan_extra's Standards line, `[standards] use`; move and rewrite the built-ins as rules, FR-79.1 FR-79.2 FR-79.4 FR-79.7 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/check.sh, .sdd/core/standards/, .sdd/core/security/; test: SRC=$PWD SH=dash dash tests/t_standards.sh; size: M)
 - [ ] T-79.3 next, review and the verifier prompt, FR-79.3 FR-79.5 FR-79.6 (files: .sdd/core/cmd/next.sh, .sdd/core/cmd/review.sh, .sdd/core/prompts/role-verifier.md; test: for t in standards reviewed verified prompts_tests; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: M)
 - [ ] T-79.4 init, templates, README, MIGRATE, design.md (D-79.3 line, §13), sdd-dev skill, FR-79.7 (files: .sdd/core/cmd/init.sh, .sdd/core/templates/, README.md, MIGRATE.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; test: for t in standards init; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 

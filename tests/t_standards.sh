@@ -68,7 +68,7 @@ assert_contains "$(sdd check 2>&1)" '✗ standard api-errors:1: front matter mus
 git checkout -q HEAD -- specs/standards
 
 # FR-79.5: the build prompt shows the rules of the named standards, with status, and no others.
-git commit -qam "docs: plan" 2>/dev/null
+git commit -qam "docs: plan" >/dev/null 2>&1
 sdd approve >/dev/null 2>&1 || fail "approve failed"
 out=$(sdd next)
 assert_contains "$out" 'Standards (follow these rules): asvs-l2 advisory, api-errors enforced'
@@ -103,9 +103,9 @@ fill "$f" plan
 git add -A && git commit -qm "docs: plan" >/dev/null 2>&1
 out=$(sdd approve 2>&1) && fail "approve without a Standards line passed: $out"
 assert_contains "$out" 'no "Standards:" line'
-awk '/^## Security$/ { print; print "Standards: asvs-l2 none"; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+awk '/^## Security$/ { print; print "Standards: none"; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
 git commit -qam "docs: standards" >/dev/null 2>&1
-sdd approve >/dev/null 2>&1 || fail "approve with a Standards line failed"
+out=$(sdd approve 2>&1) || fail "approve with a Standards line failed: $out"
 git config -f .sdd/config standards.use "asvs-l1 asvs-l2 asvs-l3 masvs llm-top10"
 git config -f .sdd/config --add check.run 'echo ok'
 for n in asvs-l1 asvs-l2 asvs-l3 masvs llm-top10; do

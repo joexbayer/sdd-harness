@@ -40,6 +40,7 @@ case $rc in
 *)
 	tail -n 40 "$CHECK_LOG"
 	[ -z "$CHECK_ARTICLES" ] || printf '%s\n' "$CHECK_ARTICLES" | sed 's/^/✗ constitution: /'
+	[ -z "$CHECK_STANDARDS" ] || printf '%s\n' "$CHECK_STANDARDS" | sed 's/^/✗ standard /'
 	if [ -n "$CHECK_NOTRUN" ]; then
 		echo "✗ check could not run \`$CHECK_NOTRUN\` (command not found or not executable)"
 		echo "next    this is the check config, not your code: fix 'run' under [check] in $DIRNAME/config"
