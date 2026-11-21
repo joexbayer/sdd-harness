@@ -2,8 +2,9 @@
 id: 82
 type: chore
 title: Verifier names what the change could break elsewhere
-status: open
+status: shipped
 created: 2026-11-21
+shipped: 2026-11-21
 ---
 # 82 Verifier names what the change could break elsewhere
 
