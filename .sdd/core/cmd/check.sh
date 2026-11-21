@@ -36,6 +36,7 @@ case $rc in
 	;;
 3)
 	echo "✗ check proves nothing: the output shows zero tests ran ($CHECK_SECS s; log: $CHECK_LOG)"
+	[ -z "$CHECK_STANDARDS" ] || printf '%s\n' "$CHECK_STANDARDS" | sed 's/^/✗ standard /'
 	;;
 *)
 	tail -n 40 "$CHECK_LOG"

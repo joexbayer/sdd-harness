@@ -88,6 +88,18 @@ verifier=$(cat "$SRC/.sdd/core/prompts/role-verifier.md")
 assert_contains "$verifier" 'must-fix'
 assert_contains "$verifier" 'rule'
 git switch -q main
+# FR-79.1: a plan naming ../x reads no file outside specs/standards/ (standard_file's own name check).
+sdd new feature "Std path" >/dev/null 2>&1 || fail "new failed"
+g=$(ls specs/changes/*-std-path/item.md)
+printf -- '---\nstatus: enforced\n---\nS.\nX-1 MUST leak.\n' >specs/x.md
+awk '/^## Security$/ { print; print "Standards: ../x"; next } { print }' "$g" >"$T/g" && cp "$T/g" "$g"
+git add -A && git commit -qm "docs: plan"
+assert_not_contains "$(sdd review 2>&1)" 'X-1 MUST leak'
+git switch -q main
+# A name written twice in use is linted and listed once.
+setcfg standards.use "asvs-l2 asvs-l2"
+assert_not_contains "$(sdd check 2>&1)" 'duplicate ID'
+setcfg standards.use "asvs-l2 api-errors"
 
 # FR-79.7: init writes [standards] use; the five built-ins are advisory standards that pass the lint.
 mkdir "$T/ini" && cd "$T/ini" && git init -q && echo x >README.md && git add -A && git commit -qm init

@@ -135,7 +135,7 @@ if [ "$PHASE" = build ] && [ -n "$IR_CONTRACTS" ]; then
 fi
 # FR-79.3: the standards the plan's Security section answers to, one line each.
 if [ "$PHASE" = plan ]; then
-	_use=$(cfg standards.use "")
+	_use=$(std_use)
 	[ -z "$_use" ] || case " $(type_facts "$ITYPE")" in *" security"*) ;; *) _use= ;; esac
 	if [ -n "$_use" ]; then
 		echo "Standards ([standards] use; the plan's \"Standards:\" line names which add work here, or none):"

@@ -93,7 +93,8 @@ Follow-ups (not built):
 - Notes with nested parentheses in a `Standards:` line (`(V1 (a))`) split wrongly. Failure: a false "not in use" finding; likelihood low; cost: a small parser.
 - A "none" among other names is dropped silently. Failure: none visible; likelihood low.
 
-Verified by: pending
+Verified by: claude-opus-5-5: 7 of 7 FRs proven; should-fix: standard_file's name check untested (fixed); 4 nits
+Verifier fixes: t_standards.sh tests a plan naming `../x` reads nothing outside specs/standards/ (breaking standard_file's check now fails it). `std_use` (common.sh:530) reads each use name once, so a repeated name is not its own duplicate; tested. check prints malformed standards also when it exits 3 (check.sh). The catalog says "1 rule". Left: a Standards: line outside Security still counts (it is pinned with the plan either way); the plan-step word ceiling is measured with standards unset (the default is now shorter than before).
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 

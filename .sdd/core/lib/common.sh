@@ -526,6 +526,9 @@ standard_file() {
 	if [ -f "$SPECS/standards/$1.md" ]; then printf '%s\n' "$SPECS/standards/$1.md"; else sdd_path "standards/$1.md"; fi
 }
 
+# std_use: the [standards] use names, each once.
+std_use() { cfg standards.use "" | awk '{ for (i = 1; i <= NF; i++) if (!seen[$i]++) o = o (o == "" ? "" : " ") $i } END { print o }'; }
+
 # standard_read <info|rules> <file>: a standard is front matter (status:), one summary line, then rule lines
 # "<ID> MUST|SHOULD <text>". info prints "<status>\t<rule count>\t<summary>", rules the rule lines (FR-79.2).
 standard_read() {
@@ -545,7 +548,7 @@ standard_lint() {
 	CHECK_STANDARDS=
 	set -f
 	set --
-	for _n in $(cfg standards.use ""); do
+	for _n in $(std_use); do
 		_f=$(standard_file "$_n") && set -- "$@" "$_f"
 	done
 	set +f
@@ -578,7 +581,7 @@ standard_lint() {
 standard_line() {
 	_f=$(standard_file "$1") || return 0
 	case $_f in "$SPECS"/*) _p=$_f ;; *) _p="built-in $DIRNAME/${_f#"$SDD_HOME"/}" ;; esac
-	standard_read info "$_f" | awk -F '\t' -v n="$1" -v p="$_p" '{ printf "%-9s  %-8s  %s rules  %s  (%s)\n", n, $1, $2, $3, p }'
+	standard_read info "$_f" | awk -F '\t' -v n="$1" -v p="$_p" '{ printf "%-9s  %-8s  %s rule%s  %s  (%s)\n", n, $1, $2, ($2 == 1 ? "" : "s"), $3, p }'
 }
 
 # standard_block <heading> <names>: "<heading>: <name> <status>, …", then the rule lines of those standards (FR-79.5, FR-79.6).
@@ -610,7 +613,7 @@ std_names() {
 # task, unless its Test starts with "none:" (FR-69.10); an FR, US, D or Q ID of this item written
 # after "- ", "* " or "**" and not also defined at a line start: IDs are read only there (FR-69.11).
 plan_extra() {
-	_use=$(cfg standards.use "")
+	_use=$(std_use)
 	[ -z "$_use" ] || case " $(type_facts "${ITYPE:-}")" in *" security"*) ;; *) _use= ;; esac
 	if [ -n "$_use" ]; then
 		set -f
