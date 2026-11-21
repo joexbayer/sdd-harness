@@ -8,14 +8,10 @@ created: 2026-11-21
 # 80 Targeted tests while building, full check once at finish
 
 ## What and why
-<!-- 1-3 lines: what changes (dependencies, config, CI, ...) and why now. No behaviour change. -->
+Builders re-run the full check (5-10 min here) after small steps. The build prompt says: while building, run only the current task's test; the full check runs once at finish and for a task with no test of its own. Saves time and tokens; the gate is unchanged.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-80.4 rejects non-images and files over 5 MB
-With a baseline in [security] use, start with "Standards: <which add work here, or none>". -->
+none: prompt wording only; `check` still gates finish and ship.
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

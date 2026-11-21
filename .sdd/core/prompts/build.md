@@ -56,6 +56,7 @@ done; stop only where a rule says so. Be brief.
 {{if code}}
 - Comments: prose only for why the code can't say itself (a
   constraint, a quirk), one line; never restate the code or its history.
-- Verify with `{{cmd}} check` (0 passed, 1 failed, 3 no tests ran). Run the checks this change needs;
-  never repeat one that passed for this code. Report only commands you ran. Commit as you go.
+- Run only the current task's test; run `{{cmd}} check` (0 passed, 1 failed, 3 no tests ran)
+  once at finish and for a task without one. Never re-run a passed check on unchanged code.
+  Report only commands you ran. Commit as you go.
 {{end}}
