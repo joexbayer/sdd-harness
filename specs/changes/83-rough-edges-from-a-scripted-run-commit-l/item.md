@@ -44,7 +44,7 @@ none: output text, one kept folder under .git/sdd; no input crosses a trust boun
 - t_check.sh: a failing first command's output shown when later commands pass (FR-83.5).
 
 ## Tasks
-- [ ] T-83.1 Failing tests for FR-83.1 to FR-83.5 (files: tests/t_run.sh, tests/t_usage_off.sh, tests/t_ship.sh, tests/t_check.sh; test: for t in run usage_off ship check; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
+- [x] T-83.1 Failing tests for FR-83.1 to FR-83.5 (files: tests/t_run.sh, tests/t_usage_off.sh, tests/t_ship.sh, tests/t_check.sh; test: for t in run usage_off ship check; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
 - [ ] T-83.2 run: commit as the next line, keep runs/last, FR-83.1 FR-83.2 (files: .sdd/core/cmd/run.sh, .sdd/core/lib/common.sh; test: for t in run usage_off; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 - [ ] T-83.3 ship names the files; approve warns on [check], FR-83.3 FR-83.4 (files: .sdd/core/cmd/ship.sh, .sdd/core/cmd/approve.sh; test: SRC=$PWD SH=dash dash tests/t_ship.sh; size: S)
 - [ ] T-83.4 check prints each failed command's output, FR-83.5 (files: .sdd/core/cmd/check.sh, .sdd/core/lib/common.sh; test: SRC=$PWD SH=dash dash tests/t_check.sh; size: S)
