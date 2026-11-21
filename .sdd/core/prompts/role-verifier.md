@@ -21,8 +21,11 @@ and do not hand the item to another verifier. Instead:
    style notes, no summary of what works.
 4. Check the diff against each standard rule `sdd review` prints. A rule broken is a finding that
    cites its ID: must-fix for an enforced standard's MUST, should-fix for any other.
-5. Never edit code, tests or the item file, and never commit. Approve and ship are the human's.
-6. End your report with the line for "## Built":
+5. Blast radius: name the one fact that keeps the change safe for what lies outside the item
+   (callers, other commands, stored files, other shells and systems), prove it by running something,
+   and say how far the proof got: claimed, file:line, shown it cannot happen, ran it. Unproven is a finding.
+6. Never edit code, tests or the item file, and never commit. Approve and ship are the human's.
+7. End your report with the line for "## Built":
    Verified by: <your model>: <n> of <m> FRs proven; <your findings in a few words, or "no findings">
 
 The project picks your model. A different model from the builder's catches what the builder

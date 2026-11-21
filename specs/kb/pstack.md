@@ -28,5 +28,13 @@ Later: rules naming their enforcer (`skills/correct`, `principle-encode-lessons-
 → an amendment; "Depends on" must name something (`check-plan.mjs`) → multi-item plans;
 `principle-explain-the-number` → the experiment's method.
 
+Second pass (2026-11-21, pstack 0.15.43): taken `skills/blast-radius` (name the one fact a change is
+safe because of, prove it by running, say how far the proof got) → chore 82, verifier step 5.
+Already in sdd: `worker.md` (one rules file for started agents: `sdd next`), "the kickoff's bar is the
+whole bar" (build exactly the plan), pre-existing problems in one line (item 76 tags), `sharpen`'s
+prototype-before-asking (FR-20.5). Later, not now: Opus-first routing with escalation after two failed
+runs (a tier `effort` plus one tier up after two failed checks). Their plan linter is gone (nothing ran
+it); sdd's plan checks run inside approve.
+
 Skipped: arena and swarm (N-way model fan-out, cost), the router (`sdd next` does it), the work
 log (overlaps Built and runs.tsv), style skills, formal verification, Cursor- and TS-only tools.
