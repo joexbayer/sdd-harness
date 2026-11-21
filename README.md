@@ -58,6 +58,8 @@ version; `sdd --version` shows what you have), then `sdd init` in each repo. `sd
 | `sdd run <role> <id>` · `sdd usage` | run a role on its own model; tokens, cost, time |
 | `sdd sync <agent>` · `sdd tidy` | per-developer glue; clean up shipped branches |
 
+`sdd new … --worktree` and `sdd open <id> --worktree` put the item in `.worktrees/<id>`, inside the repo, and add `/.worktrees/` to `.git/info/exclude`. Other tools that walk the tree (jest, tsc, IDEs, Docker) need their own exclude for `.worktrees/`.
+
 Hidden state bugs: `/sdd-audit-states <area>` hunts one area for them, reproduces each, and shows a ranked list; each group you pick becomes a fix item.
 
 ## Why it's small

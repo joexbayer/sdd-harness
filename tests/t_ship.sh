@@ -76,7 +76,7 @@ git switch -q main
 
 # --- worktree: base checked out in the main checkout, rebased because main moved
 sdd new feature "Wider" --worktree >/dev/null 2>&1 || fail "new --worktree failed"
-cd "$T/app.4" || exit 1
+cd "$T/app/.worktrees/4" || exit 1
 fill specs/changes/4-wider/item.md plan
 git commit -qam "docs(4): plan"
 sdd approve >/dev/null 2>&1 || fail "approve in worktree failed"
@@ -192,7 +192,7 @@ out=$(sdd ship 2>&1) || fail "ship failed: $out"
 assert_not_contains "$out" 'git push'
 new_repo "my app2"
 sdd new fix "Wt" --worktree >/dev/null 2>&1 || fail "new --worktree failed"
-cd "$T/my app2.1" || exit 1
+cd "$T/my app2/.worktrees/1" || exit 1
 f=$(echo specs/changes/1-*/item.md)
 fill "$f" plan && git add -A && git commit -qm "docs(1): plan"
 sdd approve >/dev/null 2>&1 || fail "approve failed"

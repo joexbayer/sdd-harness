@@ -181,6 +181,11 @@ assert_eq "$(git config -f .sdd/config --get-all check.run | grep -v '^gitleaks 
 assert_not_contains "$out" 'no test command detected'
 assert_contains "$out" 'sdd: warning: "python3 -m unittest" runs only unittest.TestCase classes'
 # a guessed command whose first word is not on PATH: the same warning
+# FR-78.4: a test file only inside .worktrees/ guesses no Python runner.
+fresh pywt
+mkdir -p .worktrees/2 && echo 'def test_a(): pass' >.worktrees/2/test_a.py
+sdd init >/dev/null 2>&1
+assert_not_contains "$(git config -f .sdd/config --get-all check.run)" python3
 fresh nocargo
 printf '[package]\n' >Cargo.toml
 mkdir -p "$T/lim"

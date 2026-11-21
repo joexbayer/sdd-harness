@@ -90,9 +90,10 @@ run the real `curl … | sh` in a throwaway HOME.
   `[check] budget = 150` (item 38). Tests on timing assert the recorded number, not a
   fixed one: a loaded machine can tick a second over.
 - Worktree paths: `git worktree list` prints real paths, so on macOS a test's `$T` (/var/…)
-  shows up as /private/var/…. Compare with `$(cd "$T/app.1" && pwd -P)` or assert on a
+  shows up as /private/var/…. Compare with `$(cd "$T/app/.worktrees/1" && pwd -P)` or assert on a
   suffix. Use `main_root`, `worktree_of` and `worktree_path` (lib/common.sh), not `$ROOT`,
-  which is the current worktree.
+  which is the current worktree. Worktrees live in `<main checkout>/.worktrees/<id>` (item 78);
+  `new`/`open` add `/.worktrees/` to the clone's `.git/info/exclude`.
 - Item files: the frontmatter must close with `---`. Without it `fm_set` adds nothing and
   `approve` fails with "could not commit". When rewriting an item with awk/head, keep line 7.
 - Item ids (item 72): `new` reserves its id in `refs/sdd/next-id` on `sdd.remote` (default origin) when that

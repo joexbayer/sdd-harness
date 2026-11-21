@@ -31,8 +31,9 @@ Then fix what `init` warned about:
 - **Budget.** Set `[check] budget` to the seconds your gate really takes (0 turns the warning off).
 - **Launcher ignored.** A `bin/` line in `.gitignore` also hides `.sdd/bin/`; make it `/bin/`.
 - **Secret scan.** With gitleaks installed, `init` adds it to the gate and writes a `.gitleaks.toml`
-  that skips agent worktrees (`.claude/worktrees/`). Fake keys in test fixtures: `gitleaks dir . -v`
-  prints their fingerprints; check each is fake, then list them in `.gitleaksignore`.
+  that skips agent worktrees (`.claude/worktrees/`, `.worktrees/`). A `.gitleaks.toml` written
+  before item worktrees moved into `.worktrees/` needs `'''^\.worktrees/'''` added under `paths`.
+  Fake keys in test fixtures: `gitleaks dir . -v` prints their fingerprints; check each is fake, then list them in `.gitleaksignore`.
   The allowlist lists the directories git ignored when `init` ran: one ignored later is scanned until
   you add it (`'''^dir/'''` under `paths`).
 

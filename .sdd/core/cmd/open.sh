@@ -1,6 +1,6 @@
 # shellcheck shell=sh
 # open <id> [--worktree]: switch to an item's branch, tracking a teammate's remote branch when
-# that is the only copy, or open it in its own worktree at ../<repo>.<id>.
+# that is the only copy, or open it in its own worktree at .worktrees/<id>.
 id=
 wt=
 for a in "$@"; do
@@ -44,6 +44,7 @@ if [ -n "$wt" ]; then
 	else
 		git worktree add -q "$where" "$branch" || die "could not create worktree $where"
 	fi
+	exclude_worktrees
 	cd "$where" || exit 1
 	sync_here
 	echo "worktree $where   (branch $branch${track:+, tracking $track})"

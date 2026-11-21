@@ -54,18 +54,23 @@ out=$(sdd open 9 2>&1)
 assert_eq $? 1 "(dropped)"
 assert_contains "$out" 'item 9 is dropped'
 
-# FR-7.2: a worktree next to the main checkout, with the agents synced here (its absolute-path
+# FR-7.2, FR-78.1: a worktree in the main checkout's .worktrees, with the agents synced here (its absolute-path
 # ask rules name the new folder); asked again, it says where the branch is.
 sdd sync claude >/dev/null 2>&1 || fail "sync claude failed"
+printf '*.log' >"$(git rev-parse --git-common-dir)/info/exclude" # no last newline
 out=$(sdd open 1 --worktree) || fail "open --worktree failed: $out"
-assert_contains "$out" 'app.1'
-assert_file "$T/app.1/specs/changes/1-local-thing/item.md"
-assert_eq "$(git -C "$T/app.1" branch --show-current)" feature/1-local-thing
-wt1=$(cd "$T/app.1" && pwd -P)
-assert_contains "$(jq -r '.permissions.ask | join(" ")' "$T/app.1/.claude/settings.local.json")" "Bash($wt1/.sdd/bin/sdd approve:*)"
+assert_contains "$out" '/.worktrees/1'
+assert_file "$T/app/.worktrees/1/specs/changes/1-local-thing/item.md"
+assert_eq "$(git -C "$T/app/.worktrees/1" branch --show-current)" feature/1-local-thing
+wt1=$(cd "$T/app/.worktrees/1" && pwd -P)
+assert_contains "$(jq -r '.permissions.ask | join(" ")' "$T/app/.worktrees/1/.claude/settings.local.json")" "Bash($wt1/.sdd/bin/sdd approve:*)"
 assert_contains "$(sdd open 1 --worktree)" 'feature/1-local-thing is checked out in'
 assert_contains "$(sdd open 1)" 'feature/1-local-thing is checked out in'
-# From inside a worktree, the next one still goes next to the main checkout (not app.1.2).
-out=$(cd "$T/app.1" && sdd open 2 --worktree) || fail "open 2 --worktree from a worktree failed: $out"
-assert_file "$T/app.2/specs/changes/2-karis-thing/item.md"
+# From inside a worktree, the next one still goes in the main checkout's .worktrees.
+out=$(cd "$T/app/.worktrees/1" && sdd open 2 --worktree) || fail "open 2 --worktree from a worktree failed: $out"
+assert_file "$T/app/.worktrees/2/specs/changes/2-karis-thing/item.md"
+# FR-78.2: the main checkout stays clean, and /.worktrees/ is in its exclude once.
+assert_eq "$(git status --porcelain)" ""
+assert_eq "$(grep -cx '/.worktrees/' "$(git rev-parse --git-common-dir)/info/exclude")" 1
+assert_eq "$(grep -cx '\*\.log' "$(git rev-parse --git-common-dir)/info/exclude")" 1
 exit 0

@@ -43,21 +43,23 @@ ids=$(cat "$T/a.out" "$T/b.out" | sed -n 's/^\([0-9][0-9]*\) feature.*/\1/p' | s
 assert_eq "$ids" "4 5"
 aid=$(sed -n "s/^\([0-9]*\) feature · Alpha$/\1/p" "$T/a.out")
 bid=$(sed -n "s/^\([0-9]*\) feature · Beta$/\1/p" "$T/b.out")
-assert_file "$T/app.$aid/specs/changes/$aid-alpha/item.md"
-assert_file "$T/app.$bid/specs/changes/$bid-beta/item.md"
+assert_file "$T/app/.worktrees/$aid/specs/changes/$aid-alpha/item.md"
+assert_file "$T/app/.worktrees/$bid/specs/changes/$bid-beta/item.md"
 
 # FR-66.1: [worktree] setup runs in the new worktree; a failing one warns and keeps the item.
 git config -f .sdd/config worktree.setup 'pwd > setup-ran'
 out=$(sdd new chore "Seeded" --worktree 2>&1) || fail "new with setup failed: $out"
 sid=$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\) chore.*/\1/p')
-assert_eq "$(cat "$T/app.$sid/setup-ran")" "$(cd "$T/app.$sid" && pwd -P)"
+assert_eq "$(cat "$T/app/.worktrees/$sid/setup-ran")" "$(cd "$T/app/.worktrees/$sid" && pwd -P)"
 git config -f .sdd/config worktree.setup 'echo nope-setup; exit 4'
 out=$(sdd new chore "Unseeded" --worktree 2>&1) || fail "a failing setup must not fail new: $out"
 assert_contains "$out" 'worktree setup failed'
 assert_contains "$out" 'nope-setup'
 fid=$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\) chore.*/\1/p')
-assert_file "$T/app.$fid/specs/changes/$fid-unseeded/item.md"
+assert_file "$T/app/.worktrees/$fid/specs/changes/$fid-unseeded/item.md"
 git config -f .sdd/config --unset worktree.setup
+# FR-78.2: the main checkout stays clean (the once-only count is in t_open.sh: two parallel news may both append).
+assert_not_contains "$(git status --porcelain)" worktrees
 
 # The current item comes from the branch: none on main.
 assert_eq "$(git symbolic-ref --short HEAD)" main
@@ -65,7 +67,7 @@ out=$(sdd status 2>&1)
 assert_contains "$out" 'open items:'
 assert_contains "$out" 'Pagination drops last item'
 assert_contains "$out" 'Alpha'
-(cd "$T/app.$bid" && sdd status) | grep -q "^$bid feature · Beta" || fail "status in worktree should show item $bid"
+(cd "$T/app/.worktrees/$bid" && sdd status) | grep -q "^$bid feature · Beta" || fail "status in worktree should show item $bid"
 
 # A fresh clone (no local counter) never reuses an id that a branch already carries, even
 # with a custom branch template; unrelated branches like release/2024-10 are ignored.

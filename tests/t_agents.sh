@@ -136,8 +136,8 @@ assert_eq "$(cat CLAUDE.md)" "$(printf '# Team notes\n\n@AGENTS.md')"
 # New worktrees get the glue of every synced agent.
 git switch -q main 2>/dev/null || { git stash -q -u && git switch -q main; }
 sdd new chore "Other" --worktree >/dev/null 2>&1 || fail "new --worktree failed"
-assert_file "$T/app.2/.claude/settings.local.json"
-assert_file "$T/app.2/.codex/hooks.json"
+assert_file "$T/app/.worktrees/2/.claude/settings.local.json"
+assert_file "$T/app/.worktrees/2/.codex/hooks.json"
 
 # A renamed install folder still works: paths derive from where it lives.
 mkdir -p "$T/renamed" && cd "$T/renamed" || exit 1

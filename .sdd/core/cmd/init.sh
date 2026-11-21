@@ -65,7 +65,7 @@ detect_checks() {
 	fi
 	# python3 -m: pip often installs pytest without putting its script on PATH. Without pytest the
 	# standard library's runner takes over when there are test_*.py files (FR-73.3).
-	_py=$(find . -name 'test_*.py' -not -path './.git/*' -not -path './node_modules/*' 2>/dev/null | head -n 1)
+	_py=$(find . -name 'test_*.py' -not -path './.git/*' -not -path './node_modules/*' -not -path './.worktrees/*' 2>/dev/null | head -n 1)
 	if [ -f pyproject.toml ] || [ -f pytest.ini ] || [ -f setup.py ]; then
 		if python3 -c 'import pytest' >/dev/null 2>&1; then
 			echo 'python3 -m pytest'
@@ -130,14 +130,14 @@ EOF
 		# FR-66.3: also skip the directories git ignores now (build/, node_modules/): gitleaks dir
 		# would read them all. Ignored files such as .env stay scanned.
 		{
-			printf "paths = ['''^\\\\.claude/worktrees/'''"
-			git ls-files --others --ignored --exclude-standard --directory | grep '/$' | git check-ignore --stdin | grep -vxF '.claude/worktrees/' |
+			printf "paths = ['''^\\\\.claude/worktrees/''', '''^\\\\.worktrees/'''"
+			git ls-files --others --ignored --exclude-standard --directory | grep '/$' | git check-ignore --stdin | grep -vxF -e '.claude/worktrees/' -e '.worktrees/' |
 				sed 's/[][\\.*^$+?(){}|]/\\&/g' | while IFS= read -r d; do printf ", '''^%s'''" "$d"; done
 			echo ']'
 		} >>.gitleaks.toml
-		echo "wrote .gitleaks.toml (gitleaks' default rules; skips .claude/worktrees/, agents' copies of the repo)"
-	elif ! grep -qF '.claude/worktrees' .gitleaks.toml; then
-		echo "tip     .gitleaks.toml: add '^\\.claude/worktrees/' to its allowlist paths, or gitleaks also scans agents' worktree copies of the repo"
+		echo "wrote .gitleaks.toml (gitleaks' default rules; skips .claude/worktrees/ and .worktrees/, copies of the repo)"
+	elif ! grep -qF '.claude/worktrees' .gitleaks.toml || ! grep -qF '.worktrees/' .gitleaks.toml; then
+		echo "tip     .gitleaks.toml: add '^\\.claude/worktrees/' and '^\\.worktrees/' to its allowlist paths, or gitleaks also scans worktree copies of the repo"
 	fi
 fi
 # FR-73.12: Git for Windows checks files out with CRLF (core.autocrlf), which breaks sh scripts and
