@@ -199,6 +199,11 @@ run the real `curl … | sh` in a throwaway HOME.
   contracts must stay at zero extra git calls (t_gitcalls). WHYCODE `contract` = a pinned contract
   changed (or cannot be pinned yet); run.sh treats it as the human's time. Tests: tests/t_contracts.sh
   (`uses` sets the frontmatter line, `ship_contract` ships a contract change from main).
+- Standards (item 79): `[standards] use` names rule files (`specs/standards/<n>.md` wins over built-in
+  `.sdd/core/standards/<n>.md`, `standard_file`). `standard_read info|rules` parses one, `standard_lint` is
+  check's gate (`CHECK_STANDARDS`, set in `run_check`), `plan_extra` checks the plan's `Standards:` line
+  (`plan_std_line`, `std_names`), `standard_block` prints rules for `next` (build) and `review`. A new
+  built-in needs IDs unique across all built-ins; t_standards lints all five together.
 
 ## Performance (item 18)
 A git process costs ~9 ms and an awk ~2 ms on macOS; a 0.2 s budget is ~20 git calls. So:

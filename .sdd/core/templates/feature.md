@@ -30,7 +30,7 @@ and the decisions they would question, each at the start of its line:
 dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
 what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
     e.g. uploads are untrusted → FR-{{id}}.4 rejects non-images and files over 5 MB
-With a baseline in [security] use, start with "Standards: <which add work here, or none>". -->
+With standards in [standards] use, add a line "Standards: <name> (<note>), …" or "Standards: none". -->
 
 ## Questions (optional)
 <!-- Q-{{id}}.1 <question> → recommend: <answer>. Resolve before building. -->

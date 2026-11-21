@@ -77,6 +77,14 @@ items, with a clean tree: `sdd init`. Uninstall the command: `rm -r ~/.local/bin
 commit. Review the diff, commit, then `sync` again. Never copy `.sdd/` by hand.
 An open fix now needs tasks (the first an `expect: fail` test) and, where the plan changes, approval again.
 
+## Standards (was security baselines)
+
+Item 79 renamed `[security] use` to `[standards] use` and `specs/security/` to `specs/standards/`; no
+shim. Rename both, then write each file as: front matter `status: advisory` (or `enforced`), one summary
+line, then rules `<ID> MUST|SHOULD <text>`, IDs unique across the standards you use. A plan's
+`Standards:` line names files: `Standards: asvs-l2 (V16 logging), api-errors` or `Standards: none`.
+`sdd check` reports a malformed file as `✗ standard <name>:<line>: …`.
+
 ## Make it yours
 
 Override any core file at the same path under `.sdd/local/`, or extend a prompt with

@@ -420,8 +420,13 @@ Proportionate controls, ranked by likelihood × impact. Detail is in kb/security
 | supply chain | pinned version + checksums; upgrade only through a reviewed commit | step 5 |
 | MCP abuse | server is read-only, bearer tokens, fixed-schema tools, no shell tool | always |
 
-Per item: `[security] use` names baselines (built-in `asvs-l1/l2/l3`, `masvs`, `llm-top10`, or the team's
-`specs/security/<name>.md`, which wins); `next` prints them at plan and the Security section needs a `Standards:` line.
+Standards (item 79): `[standards] use` names rule files, built-in (`asvs-l1/l2/l3`, `masvs`, `llm-top10`) or the team's
+`specs/standards/<name>.md` (wins). Each is front matter `status: advisory|enforced`, a summary line, then rules
+`<ID> MUST|SHOULD <text>`; `check` lints them. `next` lists them at plan; the plan's `Standards: <name> (<note>), …` line
+(or `none`) is checked and pinned by approval; at build `next` prints the named rules; `review` prints them and any
+change to `specs/standards/` for the verifier, who cites the rule ID (enforced MUST broken: must-fix).
+D-79.3 Decisions stay `D-n` lines in their item (history). A decision that binds later work becomes a standard rule,
+or a constitution article when it is a ground truth. This replaces ADRs.
 
 Not doing: injection classifiers, signing/SLSA, a VM per run, per-call approvals, MCP OAuth.
 Prompt injection is unsolved. These controls limit the blast radius; they do not prevent a
