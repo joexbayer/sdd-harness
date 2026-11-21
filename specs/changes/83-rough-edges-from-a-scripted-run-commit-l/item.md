@@ -60,7 +60,7 @@ FR-83.5 check.sh:42-48 awk prints each section ending in `[exit N]`: its `$ ` li
 
 Deviations:
 - Quoting: the commit subject is double-quoted as the FR example shows; `\ " $ \`` in task names are backslash-escaped.
-- FR-83.2: the output moves before ticking (so a failed tick keeps it too); with tracking off and an agent exit failure the folder is also under `runs/last` now, and the "its output: $dir" message shows that path.
+- FR-83.2: the output moves before ticking (so a failed tick keeps it too). A run whose agent exits non-zero stops before the move: its output stays in the TMPDIR folder that the "its output: <path>" message names.
 - FR-83.5: when only the constitution or a standard failed (no `[exit`), nothing extra is printed; their lines follow as before. The log path is still named in the last line.
 - Old "commit with:" text is gone from the count line; asserts updated in t_run.sh, t_batch.sh, t_role_guard.sh.
 - Build slip: a stray copy of the ship.sh snippet landed at the top of the file in the T-83.3 commit; removed in the next commit.
@@ -69,7 +69,8 @@ Follow-ups (not built):
 - Output text containing a line starting `$ ` would split a section in the check output: cosmetic, unlikely, would need a marker in the log.
 - Task names with newlines would break the commit line: tasks are one line, not possible.
 
-Verified by: pending
+Verified by: claude-opus-5-5: 5 of 5 FRs proven; must-fix: a failing constitution check's output hidden (fixed); should-fix: docs said "commit with:" (fixed); nits
+Verifier fixes: check_articles writes `[exit N]` for a failed article check (common.sh), so FR-83.5 shows its command and output; t_constitution.sh asserts it. design.md:302 and the sdd-dev skill name the new last line. The Built note on failed runs is corrected above. Left as nits: `!` in a task name breaks a hand paste into interactive bash (the FR's example uses double quotes; rare); `runs/last` is shared by all worktrees, so parallel runs with tracking off keep only the latest, and a millisecond race can nest one run's folder inside the other's (a per-item `runs/last-<id>` would change the FR's path: your call); the broken intermediate commit 473ce9b (fixed in 3c68dec). Pre-existing: failed runs' TMPDIR folders are never removed.
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
