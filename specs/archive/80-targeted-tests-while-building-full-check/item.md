@@ -2,8 +2,9 @@
 id: 80
 type: chore
 title: Targeted tests while building, full check once at finish
-status: open
+status: shipped
 created: 2026-11-21
+shipped: 2026-11-21
 ---
 # 80 Targeted tests while building, full check once at finish
 
