@@ -52,7 +52,8 @@ Deviations
 
 Follow-ups: none.
 
-Verified by: pending
+Verified by: claude-opus-5-5: 2 of 2 FRs proven; should-fix: no test of two parallel runs (fixed); nit on the FR-81.1 fixture (no change: the parallel test in t_new catches a missing set -C)
+Verifier fix: t_run.sh starts three runs at once with the uutils-like mkdir and expects three different run numbers; dropping the `.claim` fails it (3 of 3 tries). Also checked in an ubuntu:26.04 container (uutils mkdir 0.10.0): 15 pairs of parallel `new --worktree`, 0 duplicate ids. Pre-existing, not changed: run_slot loops without end if mkdir fails for another reason (no permission, disk full), as before.
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
