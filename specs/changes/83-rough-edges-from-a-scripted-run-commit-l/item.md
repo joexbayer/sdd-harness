@@ -52,6 +52,24 @@ none: output text, one kept folder under .git/sdd; no input crosses a trust boun
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-83.1 run.sh:110-114 `commit_next`, called at 133 (failure path) and 143 (last line). Proved by t_run.sh (last line after each tick, incl. partial batch).
+FR-83.2 run.sh:104-108 moves `$dir` to `runs/last` (old one removed), prints `output  <path>/` relative to the repo root when under it. Proved by t_usage_off.sh (`runs/1` still absent, `runs/last/out` present).
+FR-83.3 ship.sh:126-130, one `git log --name-only` plus awk, `<hash>: <files>` joined by `; `, 5 files in all then ` …`. Proved by t_ship.sh (`: early.txt)`).
+FR-83.4 approve.sh:58 `check_edited | sed 's/^/⚠ /'`, before the approved line; approve still approves. Proved by t_ship.sh (last block).
+FR-83.5 check.sh:42-48 awk prints each section ending in `[exit N]`: its `$ ` line and last 40 lines. Proved by t_check.sh.
+
+Deviations:
+- Quoting: the commit subject is double-quoted as the FR example shows; `\ " $ \`` in task names are backslash-escaped.
+- FR-83.2: the output moves before ticking (so a failed tick keeps it too); with tracking off and an agent exit failure the folder is also under `runs/last` now, and the "its output: $dir" message shows that path.
+- FR-83.5: when only the constitution or a standard failed (no `[exit`), nothing extra is printed; their lines follow as before. The log path is still named in the last line.
+- Old "commit with:" text is gone from the count line; t_run.sh asserts updated.
+- Build slip: a stray copy of the ship.sh snippet landed at the top of the file in the T-83.3 commit; removed in the next commit.
+
+Follow-ups (not built):
+- Output text containing a line starting `$ ` would split a section in the check output: cosmetic, unlikely, would need a marker in the log.
+- Task names with newlines would break the commit line: tasks are one line, not possible.
+
+Verified by: pending
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
