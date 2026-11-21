@@ -62,7 +62,7 @@ Deviations:
 - Quoting: the commit subject is double-quoted as the FR example shows; `\ " $ \`` in task names are backslash-escaped.
 - FR-83.2: the output moves before ticking (so a failed tick keeps it too); with tracking off and an agent exit failure the folder is also under `runs/last` now, and the "its output: $dir" message shows that path.
 - FR-83.5: when only the constitution or a standard failed (no `[exit`), nothing extra is printed; their lines follow as before. The log path is still named in the last line.
-- Old "commit with:" text is gone from the count line; t_run.sh asserts updated.
+- Old "commit with:" text is gone from the count line; asserts updated in t_run.sh, t_batch.sh, t_role_guard.sh.
 - Build slip: a stray copy of the ship.sh snippet landed at the top of the file in the T-83.3 commit; removed in the next commit.
 
 Follow-ups (not built):
