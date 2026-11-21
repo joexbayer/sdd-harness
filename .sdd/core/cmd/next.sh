@@ -123,22 +123,24 @@ BATCH
 	fi
 	echo
 fi
+# FR-79.5: the rules of the standards the plan names, for the builder to follow.
+if [ "$PHASE" = build ]; then
+	standard_block "Standards (follow these rules)" "$(std_names "$(plan_std_line)")"
+fi
 # FR-26.6: the contracts the item builds against are fixed input for the builder.
 if [ "$PHASE" = build ] && [ -n "$IR_CONTRACTS" ]; then
 	contract_ids "$IR_CONTRACTS"
 	echo "Contracts (read them; they change only through a contract item): $(joinlist "$(printf '%s\n' "$CROWS" | cut -f3)")"
 	echo
 fi
-# FR-77.1: the security baseline the plan's Security section answers against.
+# FR-79.3: the standards the plan's Security section answers to, one line each.
 if [ "$PHASE" = plan ]; then
-	_use=$(cfg security.use "")
+	_use=$(cfg standards.use "")
 	[ -z "$_use" ] || case " $(type_facts "$ITYPE")" in *" security"*) ;; *) _use= ;; esac
 	if [ -n "$_use" ]; then
-		echo "Security baseline ([security] use): $_use"
+		echo "Standards ([standards] use; the plan's \"Standards:\" line names which add work here, or none):"
 		set -f
-		for _n in $_use; do
-			_f=$(security_file "$_n") && { echo; cat "$_f"; }
-		done
+		for _n in $_use; do standard_line "$_n"; done
 		set +f
 		echo
 	fi

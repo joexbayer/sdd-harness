@@ -124,6 +124,15 @@ if [ "$ITYPE" = contract ]; then
 	git diff "$mb" -- "$CONTRACTS" | sed 's/^/  /'
 fi
 
+# FR-79.6: the standards the plan names, for the verifier and the human; a change to one in full.
+std=$(standard_block "Standards (the verifier checks the diff against each rule)" "$(std_names "$(plan_std_line)")")
+[ -z "$std" ] || printf '\n%s\n' "$std"
+if [ -n "$(git diff "$mb" -- "$SPECS/standards")" ]; then
+	echo
+	echo "Standards diff (against where this branch left $base; read it in full)"
+	git diff "$mb" -- "$SPECS/standards" | sed 's/^/  /'
+fi
+
 echo
 sec=$(section "Security" | sed '/^[[:space:]]*$/d; s/^/  /')
 if [ -n "$sec" ]; then
