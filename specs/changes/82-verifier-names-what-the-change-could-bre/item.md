@@ -8,14 +8,11 @@ created: 2026-11-21
 # 82 Verifier names what the change could break elsewhere
 
 ## What and why
-<!-- 1-3 lines: what changes (dependencies, config, CI, ...) and why now. No behaviour change. -->
+The verifier proves each FR but is not asked what the change breaks outside the item. pstack's `blast-radius` asks for the one fact a change is safe because of, proven by running something, with how far the proof got. One step in role-verifier.md, and specs/kb/pstack.md records this second look at pstack.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-82.4 rejects non-images and files over 5 MB
-With standards in [standards] use, add a line "Standards: <name> (<note>), …" or "Standards: none". -->
+Standards: none
+none: prompt and kb text only.
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what

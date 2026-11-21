@@ -68,6 +68,8 @@ assert_contains "$out" 'given the item id and the text of .sdd/core/prompts/role
 assert_not_contains "$out" 'reports parts nothing calls or reads'
 assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'in the plan part of the item file'
 assert_not_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'under "## What changes"'
+# Chore 82: the verifier proves the one fact that keeps the change safe elsewhere (blast radius).
+assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'Blast radius: name the one fact'
 # The brief is read raw by the subagent: no unrendered {{ }} in it.
 assert_not_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" '{{'
 assert_contains "$out" 'The plan is settled and the human is not watching.'
