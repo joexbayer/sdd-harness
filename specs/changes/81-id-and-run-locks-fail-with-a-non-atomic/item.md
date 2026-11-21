@@ -41,8 +41,18 @@ t_new.sh and t_run.sh (or t_agent_usage.sh, wherever run folders are tested), wi
 - [x] T-81.2 next_id and run_slot claim with noclobber, FR-81.1 FR-81.2 (files: .sdd/core/lib/common.sh; test: for t in new run agent_usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-81.1 `next_id` locks with a noclobber file: .sdd/core/lib/common.sh:926 (until), :939 (rm -f). Proved by tests/t_new.sh "FR-81.1" (fake uutils mkdir on PATH, lock held, next-id set to 70 after 2 s, `new` takes 71).
+FR-81.2 `run_slot` skips an existing run folder, then claims with `.claim`: .sdd/core/lib/common.sh:1272. Proved by tests/t_run.sh "FR-81.2" (runs/2 pre-created, fake mkdir; the next run is 3).
+
+Deviations
+- Test ids differ from the plan's example: 70 then 71 (not 7 then 8), as the repo is already at id 15 by then.
+- FR-81.2 extends the existing failed-planner run in t_run.sh (expects run 3 instead of 2); t_agent_usage.sh is unchanged.
+- The first full check failed only on server tests (no node_modules in the worktree); after `npm ci` in server/, all pass.
+- Nothing lists or cleans run folders, so `.claim` trips nothing (the usage-off folder is a temp dir without it).
+
+Follow-ups: none.
+
+Verified by: pending
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
