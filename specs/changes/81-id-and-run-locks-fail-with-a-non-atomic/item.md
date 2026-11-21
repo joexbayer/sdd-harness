@@ -37,7 +37,7 @@ none: local lock files under .git/sdd; no input crosses a trust boundary.
 t_new.sh and t_run.sh (or t_agent_usage.sh, wherever run folders are tested), with a `mkdir` on PATH that succeeds on an existing directory (`exec /bin/mkdir -p "$@"`, as uutils behaves): FR-81.1 holds the lock as a directory, starts `new`, writes next-id 7 after 2 s, releases, and expects id 8; FR-81.2 pre-creates `runs/1/` and expects `runs/2/`.
 
 ## Tasks
-- [ ] T-81.1 Failing tests with the non-atomic mkdir shim, FR-81.1 FR-81.2 (files: tests/t_new.sh, tests/t_run.sh, tests/t_agent_usage.sh; test: for t in new run agent_usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
+- [x] T-81.1 Failing tests with the non-atomic mkdir shim, FR-81.1 FR-81.2 (files: tests/t_new.sh, tests/t_run.sh, tests/t_agent_usage.sh; test: for t in new run agent_usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; expect: fail; size: S)
 - [ ] T-81.2 next_id and run_slot claim with noclobber, FR-81.1 FR-81.2 (files: .sdd/core/lib/common.sh; test: for t in new run agent_usage; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built

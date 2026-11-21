@@ -79,6 +79,19 @@ out=$(sdd new chore "After custom" 2>&1) || fail "$out"
 assert_contains "$out" '15 chore'
 assert_eq "$(git symbolic-ref --short HEAD)" 15-after-custom
 
+# FR-81.1: where mkdir succeeds on an existing directory (uutils), a held id lock still blocks:
+# new waits, then takes the id after the one another process took meanwhile.
+mkdir -p "$T/uutils" && printf '#!/bin/sh\nexec /bin/mkdir -p "$@"\n' >"$T/uutils/mkdir" && chmod +x "$T/uutils/mkdir"
+git switch -q main
+st=$(git rev-parse --git-common-dir)/sdd
+mkdir "$st/lock"
+PATH="$T/uutils:$PATH" sdd new chore "Locked" >"$T/l.out" 2>&1 &
+sleep 2
+echo 70 >"$st/next-id"
+rmdir "$st/lock" 2>/dev/null || rm -f "$st/lock"
+wait
+assert_contains "$(cat "$T/l.out")" '71 chore'
+
 # FR-72.1 two clones of one origin, no push between: ids 1 and 2; the origin counter holds the last.
 new_repo ids
 git init -q --bare "$T/o72.git" && git remote add origin "$T/o72.git" && git push -q origin main
