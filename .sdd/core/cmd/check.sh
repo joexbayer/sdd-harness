@@ -39,7 +39,13 @@ case $rc in
 	[ -z "$CHECK_STANDARDS" ] || printf '%s\n' "$CHECK_STANDARDS" | sed 's/^/✗ standard /'
 	;;
 *)
-	tail -n 40 "$CHECK_LOG"
+	# FR-83.5: each failed command with the last 40 lines of its own output; none when only the
+	# constitution or a standard failed (their lines follow).
+	awk '
+		function show(  i) { print cmd; for (i = (n > 40 ? n - 39 : 1); i <= n; i++) print b[i] }
+		/^\$ / { cmd = $0; n = 0; next }
+		{ b[++n] = $0 }
+		/^\[exit [0-9]+\]$/ { show() }' "$CHECK_LOG"
 	[ -z "$CHECK_ARTICLES" ] || printf '%s\n' "$CHECK_ARTICLES" | sed 's/^/✗ constitution: /'
 	[ -z "$CHECK_STANDARDS" ] || printf '%s\n' "$CHECK_STANDARDS" | sed 's/^/✗ standard /'
 	if [ -n "$CHECK_NOTRUN" ]; then
