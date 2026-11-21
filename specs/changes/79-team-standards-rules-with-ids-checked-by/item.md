@@ -74,6 +74,26 @@ DOD-79.1 In a scratch repo, `use = asvs-l2 api-errors` with an enforced api-erro
 - [x] T-79.4 init, templates, README, MIGRATE, design.md (D-79.3 line, §13), sdd-dev skill, FR-79.7 (files: .sdd/core/cmd/init.sh, .sdd/core/templates/, README.md, MIGRATE.md, specs/design.md, .claude/skills/sdd-dev/SKILL.md; test: for t in standards init; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
+- FR-79.1: `standard_file` (.sdd/core/lib/common.sh:524; team file, else built-in; refuses names outside `[A-Za-z0-9_-]+`); `plan_extra` (:612) reports unknown and bad names. Test: tests/t_standards.sh (hipaa, `../x`).
+- FR-79.2: `standard_lint` (common.sh:544), run by `run_check` (:1330), printed by check.sh:43 as `✗ standard <name>:<line>: …`. Test: t_standards.sh (not a rule, bad status, duplicate ID, no front matter; the five built-ins pass together).
+- FR-79.3: `standard_line` (common.sh:578), called in next.sh:136-146. Test: t_standards.sh (exact catalog line for api-errors, built-in path, no rules printed).
+- FR-79.4: `plan_std_line`, `std_names` (common.sh:600-607) and `plan_extra`. Test: t_standards.sh (no line, `gdpr` not in use, `none`, note with a colon, refactor not asked, and DOD-79.1 in a fresh init repo).
+- FR-79.5: `standard_block` (common.sh:585) from next.sh:126-129. Test: t_standards.sh (heading with statuses, API-1, API-2).
+- FR-79.6: review.sh:127-134 (rules block, `Standards diff` in full); role-verifier.md step 4. Test: t_standards.sh (`+API-3` in the diff, prompt keywords).
+- FR-79.7: init.sh:90 and :112; built-ins in .sdd/core/standards/ (git mv from core/security/, rewritten as rules, IDs ASVS1-/ASVS2-/ASVS3-, MASVS-, LLM-). Test: t_standards.sh (init config and message, status line of each built-in).
+- Also: tests/lib.sh unsets `standards.use`; templates, README, MIGRATE.md, design.md (§13, D-79.3) and the sdd-dev skill updated.
+
+Deviations:
+- T-79.1: tests/t_security.sh was not renamed. Its FR-12/46/66 tests (sensitive files, gitleaks) have nothing to do with standards, so only the FR-77 part moved into the new tests/t_standards.sh and t_security.sh keeps the rest.
+- T-79.2's test (the whole t_standards.sh) also covers next, review and init, so it could not pass before T-79.3 and T-79.4's code. I wrote all the code first, ticked each task in order, and committed each task's own files.
+- Catalog and rule text: rule counts print as "N rules" even for 1; the path of a built-in is `$DIRNAME/core/standards/<n>.md` even when a `.sdd/local/` copy overrides it.
+- Test example: the FR-79.2 example says line 4; the test's file has a 3-line front matter and a summary, so its bad line is 7 and the assertion says so.
+
+Follow-ups (not built):
+- Notes with nested parentheses in a `Standards:` line (`(V1 (a))`) split wrongly. Failure: a false "not in use" finding; likelihood low; cost: a small parser.
+- A "none" among other names is dropped silently. Failure: none visible; likelihood low.
+
+Verified by: pending
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
 
