@@ -2,9 +2,10 @@
 id: 83
 type: fix
 title: Rough edges from a scripted run: commit line, lost reports, vague gates, hidden check output
-status: open
+status: shipped
 created: 2026-11-21
 approved: 4a39cf121810a317a9486ef1a540c2008a030937 2026-11-21 joexbayer
+shipped: 2026-11-22
 ---
 # 83 Rough edges from a scripted run: commit line, lost reports, vague gates, hidden check output
 
