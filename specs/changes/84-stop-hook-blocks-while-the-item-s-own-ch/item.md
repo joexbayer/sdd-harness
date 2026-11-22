@@ -43,6 +43,11 @@ t_verified.sh (where the stop hook already blocks for a missing check): a live `
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
 changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+FR-84.1: .sdd/core/lib/common.sh:1320 writes `$$` to `checks/<id>.running`, :1337 removes it; .sdd/core/cmd/hook.sh:77-81 turns block into warn naming the pid. Proof: tests/t_verified.sh:107 (live pid warns, "still running").
+FR-84.2: same hook check uses `kill -0`; a dead pid is ignored. Proof: tests/t_verified.sh after the kill (hook exits 2 again).
+Deviations: t_verified.sh gets `unset SDD_ROLE` (under /bin/sh the `SDD_ROLE=verifier sdd ...` prefix on a function call persists, which made the new hook call a verifier run).
+Follow-ups: the mark is removed only when run_check ends normally; a killed check leaves a stale file, ignored by FR-84.2. A recycled pid could wrongly warn (very unlikely, cost: one skipped block); not handled.
+Verified by: pending
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
