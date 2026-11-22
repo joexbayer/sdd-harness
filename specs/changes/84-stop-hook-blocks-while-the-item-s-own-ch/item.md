@@ -47,7 +47,8 @@ FR-84.1: .sdd/core/lib/common.sh:1320 writes `$$` to `checks/<id>.running`, :133
 FR-84.2: same hook check uses `kill -0`; a dead pid is ignored. Proof: tests/t_verified.sh after the kill (hook exits 2 again).
 Deviations: t_verified.sh gets `unset SDD_ROLE` (under /bin/sh the `SDD_ROLE=verifier sdd ...` prefix on a function call persists, which made the new hook call a verifier run).
 Follow-ups: the mark is removed only when run_check ends normally; a killed check leaves a stale file, ignored by FR-84.2. A recycled pid could wrongly warn (very unlikely, cost: one skipped block); not handled.
-Verified by: pending
+Verified by: claude-opus-5-5: 2 of 2 FRs proven (hook side); should-fix: no test of run_check writing the mark (fixed); nit: read instead of $(cat) in the hook (fixed)
+Verifier fixes: t_verified.sh sets check.run to copy the mark while it runs and asserts the copy holds a pid and the mark is gone after; deleting the write at common.sh:1320 now fails it. hook.sh reads the pid with `read` (no fork on the blocking path). Left: a recycled pid after a killed check could turn one block into a warning (very unlikely; a fix needs a start time).
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
