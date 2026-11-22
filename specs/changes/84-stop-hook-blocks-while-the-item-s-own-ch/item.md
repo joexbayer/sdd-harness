@@ -33,11 +33,11 @@ Standards: none
 none: a pid file under .git/sdd; `kill -0` sends no signal.
 
 ## Test
-t_agents.sh (stop hook cases): a live `.running` pid (the test's own background `sleep`) turns the block into a warning; a dead pid blocks as before.
+t_verified.sh (where the stop hook already blocks for a missing check): a live `.running` pid (the test's own background `sleep`) turns the block into a warning; a dead pid blocks as before.
 
 ## Tasks
-- [ ] T-84.1 Failing test: live pid warns, dead pid blocks, FR-84.1 FR-84.2 (files: tests/t_agents.sh; test: SRC=$PWD SH=dash dash tests/t_agents.sh; expect: fail; size: S)
-- [ ] T-84.2 run_check writes and removes the mark; the stop hook reads it, FR-84.1 FR-84.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/hook.sh; test: for t in agents check verified; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
+- [ ] T-84.1 Failing test: live pid warns, dead pid blocks, FR-84.1 FR-84.2 (files: tests/t_verified.sh; test: SRC=$PWD SH=dash dash tests/t_verified.sh; expect: fail; size: S)
+- [ ] T-84.2 run_check writes and removes the mark; the stop hook reads it, FR-84.1 FR-84.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/hook.sh; test: for t in verified check agents; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
