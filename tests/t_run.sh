@@ -68,7 +68,8 @@ assert_eq "$(tail -n 1 "$log" | cut -f3-11,13,14)" "$(printf '1\tbuilder\tnarrow
 # FR-31.1: the stub never ticked; sdd ran task done for it, committed nothing (C-4) and says
 # what the orchestrator commits.
 assert_contains "$out" '✓ T-1.1 done (its test passed)'
-assert_contains "$out" 'ticked 1 of 1 · commit with: feat(1): T-1.1 Page the query'
+assert_contains "$out" 'ticked 1 of 1'
+assert_eq "$(printf '%s\n' "$out" | tail -n 1)" 'next    git add -A && git commit -m "feat(1): T-1.1 Page the query"' # FR-83.1
 assert_not_contains "$out" 'T-1.2 done'
 grep -q '^- \[x\] T-1.1 ' "$ITEM" || fail "T-1.1 not ticked by the run"
 assert_eq "$(git log -1 --format=%s)" "test: config" "(sdd run committed)"
@@ -106,7 +107,8 @@ assert_contains "$(cat "$T/stub/narrowbot.prompt")" 'You are the planner for ite
 assert_contains "$out" "⚠ the planner edited $ITEM: restored"
 assert_not_contains "$(cat "$ITEM")" 'scribble'
 assert_contains "$out" '✓ T-1.2 done (its test passed)'
-assert_contains "$out" 'ticked 1 of 1 · commit with: feat(1): T-1.2 Sort test'
+assert_contains "$out" 'ticked 1 of 1'
+assert_eq "$(printf '%s\n' "$out" | tail -n 1)" 'next    git add -A && git commit -m "feat(1): T-1.2 Sort test"' # FR-83.1
 git config -f "$XDG_CONFIG_HOME/sdd/config" --remove-section tier.big
 out=$(sdd run planner 1 2>&1)
 assert_eq $? 2 "(planner on the builder's batch)"
@@ -132,7 +134,8 @@ out=$( (export NARROWBOT_RC=3; sdd run builder 1) 2>&1) || fail "a narrowbot exi
 assert_contains "$out" "⚠ narrowbot could not verify its own work (exit 3); sdd's task tests and check decide"
 assert_not_contains "$out" 'the agent exited'
 assert_eq "$(tail -n 1 "$log" | cut -f4,13)" "$(printf 'builder\t3')"
-assert_contains "$out" 'ticked 1 of 1 · commit with: feat(1): T-1.3 Sort it'   # FR-31.1, after exit 3
+assert_contains "$out" 'ticked 1 of 1'
+assert_eq "$(printf '%s\n' "$out" | tail -n 1)" 'next    git add -A && git commit -m "feat(1): T-1.3 Sort it"' # FR-83.1
 git commit -qam "feat(1): T-1.3 Sort it"
 out=$( (export NARROWBOT_RC=4; sdd run builder 1) 2>&1)
 # Item 56: this once gave exit 2 under load (not reproduced in 40 runs); show what sdd said.
@@ -198,7 +201,8 @@ assert_not_contains "$(cat "$f")" 'Built by the builder'
 assert_not_contains "$(cat "$f")" 'trust me'
 assert_contains "$out" 'item 3 T-3.1 · started'
 assert_contains "$out" '✓ T-3.1 done (its test fails without the uncommitted code)'
-assert_contains "$out" 'ticked 1 of 1 · commit with: feat(3): T-3.1 Api test'
+assert_contains "$out" 'ticked 1 of 1'
+assert_eq "$(printf '%s\n' "$out" | tail -n 1)" 'next    git add -A && git commit -m "feat(3): T-3.1 Api test"' # FR-83.1
 assert_eq "$(git rev-parse HEAD)" "$head" "(the run committed)"
 assert_file api.sh
 git add -A && git commit -qm "test(3): T-3.1 api test"
@@ -207,7 +211,8 @@ assert_eq $? 1 "(a batch task's test fails)"
 assert_contains "$out" 'item 3 T-3.2 T-3.3 T-3.4 · started'
 assert_contains "$out" '✓ T-3.2 done (its test passed)'
 assert_contains "$out" '✗ T-3.3: its test failed'
-assert_contains "$out" 'ticked 1 of 3 · commit with: feat(3): T-3.2 Api'
+assert_contains "$out" 'ticked 1 of 3'
+assert_eq "$(printf '%s\n' "$out" | tail -n 1)" 'next    git add -A && git commit -m "feat(3): T-3.2 Api"' # FR-83.1
 assert_not_contains "$out" 'T-3.4 done'
 grep -q '^- \[ \] T-3.4 ' "$f" || fail "T-3.4 ticked after T-3.3 failed"
 

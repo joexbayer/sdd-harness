@@ -55,7 +55,8 @@ assert_contains "$(cat "$T/stub/tidy.out")" "sdd: tidy --remote is the human's: 
 assert_eq "$(git rev-parse HEAD)" "$head" "(no commit)"
 assert_eq "$(git symbolic-ref --short HEAD)" feature/1-guard "(still on the item branch)"
 # FR-31.1: sdd ticked the batch the careless builder left open; it commits nothing (C-4).
-assert_contains "$out" 'ticked 2 of 2 · commit with: feat(1): T-1.1 T-1.2'
+assert_contains "$out" 'ticked 2 of 2'
+assert_contains "$out" 'next    git add -A && git commit -m "feat(1): T-1.1 T-1.2 One, Two"'
 git commit -qam "feat(1): T-1.1 T-1.2"
 # With usage tracking off a run has no number ("-"); the refusal says just "a role run".
 out=$( (export SDD_RUN=-; sdd ship) 2>&1)

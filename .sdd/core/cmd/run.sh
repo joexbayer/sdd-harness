@@ -101,6 +101,17 @@ run_log "$n" "$started" "$ID" "$role" "$agent" "$model" "$phase" "$task" "$(tsv 
 # the log above keeps the real code.
 [ "$rc" -eq 0 ] || { command -v agent_exit_note >/dev/null 2>&1 && agent_exit_note "$rc"; } ||
 	{ echo "✗ the agent exited $rc (its output: $dir)"; exit 1; }
+# FR-83.2: tracking off keeps only the last run's output, under runs/last.
+if ! usage_on; then
+	mkdir -p "$ST/runs" && rm -rf "$ST/runs/last" && mv "$dir" "$ST/runs/last" && dir=$ST/runs/last
+	echo "output  ${dir#"$ROOT"/}/"
+fi
+ticked=
+# FR-83.1: the commit for what was ticked is the last line; sdd never makes it (C-4).
+commit_next() {
+	[ -n "$ticked" ] || return 1
+	echo "next    git add -A && git commit -m \"$(printf '%s' "$kind($ID):$ticked $what" | sed 's/[\\"$`]/\\&/g')\""
+}
 # FR-31.1, D-31.1, FR-36.4: in a batch run the batch's own tests decide, not the model: sdd ticks
 # each task the agent left open, in plan order, and stops at the first that fails. It commits
 # nothing (C-4): it prints the commit for the orchestrator to make.
@@ -112,7 +123,6 @@ if [ -n "$task" ]; then
 	done
 	case $ITYPE in feature) kind=feat ;; hotfix) kind=fix ;; *) kind=$ITYPE ;; esac
 	of=$(printf '%s\n' $left | grep -c .)
-	ticked=
 	what=
 	n_ok=0
 	for t in $left; do
@@ -123,12 +133,11 @@ if [ -n "$task" ]; then
 			what="${what:+$what, }$(printf '%s\n' "$rows" | T=$t awk -F '\t' '$1 == ENVIRON["T"] { print $3 }')"
 		else
 			printf '%s\n' "$tick"
-			echo "ticked $n_ok of $of${ticked:+ · commit with: $kind($ID):$ticked $what}"
+			echo "ticked $n_ok of $of"
+			commit_next
 			exit 1
 		fi
 	done
-	[ -z "$left" ] || echo "ticked $n_ok of $of · commit with: $kind($ID):$ticked $what"
+	[ -z "$left" ] || echo "ticked $n_ok of $of"
 fi
-# Tracking off: the agent's output was only needed for this summary (kept above when it failed).
-usage_on || rm -rf "$dir"
-echo "next    $CMD next   (or $CMD usage $ID)"
+commit_next || echo "next    $CMD next   (or $CMD usage $ID)"

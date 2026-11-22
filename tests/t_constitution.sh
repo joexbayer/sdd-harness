@@ -41,6 +41,7 @@ touch forbidden.txt
 out=$(sdd check 2>&1)
 assert_eq $? 1
 assert_contains "$out" '✗ constitution: C-1 Nothing named forbidden.txt. (its check failed)'
+assert_contains "$out" '$ test ! -f forbidden.txt   # C-1' # FR-83.5: the article's command is shown too
 rm forbidden.txt
 
 # FR-3.3: over budget.

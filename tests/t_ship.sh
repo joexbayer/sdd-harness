@@ -39,6 +39,8 @@ sdd approve >/dev/null 2>&1 || fail "approve failed"
 out=$(sdd ship 2>&1)
 assert_eq $? 1
 assert_contains "$out" 'code was committed before the plan was approved'
+assert_contains "$out" '(' # FR-83.3 names the files
+assert_contains "$out" ': early.txt)'
 git switch -q main
 
 planned_item chore "Bump"
@@ -257,4 +259,14 @@ out=$(sdd ship 2>&1)
 assert_eq $? 1 "(fix deletes .sdd/config)"
 assert_contains "$out" "(check.run): change [check] in a chore"
 assert_not_contains "$out" "unable to resolve"
+# FR-83.4: approve warns about a [check] change and still approves.
+new_repo
+sdd new fix "Weak approve" >/dev/null 2>&1
+ITEM=$(ls specs/changes/*/item.md)
+fill "$ITEM" plan
+setcfg --replace-all check.run true
+git add "$ITEM" && git commit -qm "docs: plan"
+out=$(sdd approve 2>&1) || fail "approve failed: $out"
+assert_contains "$out" "⚠ item $(sed -n 's/^id: //p' "$ITEM"): changes the check that judges it (check.run): change [check] in a chore"
+assert_contains "$out" 'approved by'
 exit 0

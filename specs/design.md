@@ -299,7 +299,7 @@ may say an exit code is no failure (`agent_exit_note`): narrowbot's exit 3, "cou
 own work", is logged as 3 and warned about, since sdd's task tests and check decide (D-28.2).
 After an accepted builder exit, `sdd run` runs `task done` for each batch task still open, in
 plan order, stopping at the first failure: the tool ticks, not the model (D-31.1). It commits
-nothing (C-4) and prints `ticked n of m · commit with: <kind>(<id>): <task ids> <what>` for the
+nothing (C-4) and prints `ticked n of m`, then `next    git add -A && git commit -m "<kind>(<id>): <task ids> <what>"` for the
 orchestrator. A batch is the first open task, joined by the open `size: S` tasks right after it while it
 is S too, up to `[build] batch` (3): the planner sizes tasks and the human approves them, sdd
 only groups, so a batch is the same every run (D-17.1). A batch ends after an `expect: fail`

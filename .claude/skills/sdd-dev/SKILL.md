@@ -128,7 +128,7 @@ run the real `curl … | sh` in a throwaway HOME.
   builder with `SDD_RUN` stop once no task is open (interactive builders are still held). An
   adapter's optional `agent_exit_note <rc>` turns an exit code into a warning (narrowbot: 3);
   run_log keeps the real rc. Item 31: after an accepted builder exit, run.sh runs `task done`
-  (as a subprocess) for each batch task still open and prints `ticked n of m · commit with: …`;
+  (as a subprocess) for each batch task still open and prints `ticked n of m` and the commit as its `next` line (FR-83.1);
   since item 36 that (and the item-file restore, item 34) is for whatever role owns the batch
   (`by:`), and run.sh refuses another role's run on it (usage_die, exit 2) before `run_slot`, so
   nothing is logged. A role run mid-build is therefore refused unless it owns the batch; a

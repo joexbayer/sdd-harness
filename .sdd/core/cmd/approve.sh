@@ -55,5 +55,6 @@ fm_set "$IFILE" approved "$APIN $(date +%F) $who"
 git add -- "$IFILE" || die "could not add $IFILE"
 git commit -q -m "docs($ID): approve plan" -- "$IFILE" || die "could not commit $IFILE"
 
+check_edited | sed 's/^/⚠ /' # FR-83.4
 echo "✓ plan for item $ID approved by $who"
 echo "next    tell the agent to build; it works hands-off from $CMD next. When it is done, you run: $CMD review"

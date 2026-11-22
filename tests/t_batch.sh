@@ -86,7 +86,8 @@ out=$(export PATH="$T/bin:$PATH" STUB="$T/stub"; sdd run builder 2 2>&1) || fail
 assert_contains "$out" 'item 2 T-2.1 T-2.2 T-2.3 · started'
 assert_contains "$(cat "$T/stub/narrowbot.prompt")" 'Current batch: T-2.1 T-2.2 T-2.3'
 # FR-31.1: the stub ticked nothing; the run ticked the batch and left the commit to us.
-assert_contains "$out" 'ticked 3 of 3 · commit with: feat(2): T-2.1 T-2.2 T-2.3'
+assert_contains "$out" 'ticked 3 of 3'
+assert_contains "$out" 'next    git add -A && git commit -m "feat(2): T-2.1 T-2.2 T-2.3 Small 1, Small 2, Small 3"'
 git commit -qam "feat(2): T-2.1 T-2.2 T-2.3"
 
 # FR-17.5: an attribute sdd does not know makes the task unreadable, instead of being read into

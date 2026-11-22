@@ -15,6 +15,10 @@ out=$(sdd run planner 1 2>&1) || fail "run failed: $out"
 assert_contains "$out" '5 in / 6 out'
 assert_no_file "$log"
 assert_no_file "$(git rev-parse --git-common-dir)/sdd/runs/1"
+# FR-83.2: the last run's output is kept in runs/last and printed.
+assert_contains "$out" 'output  '
+assert_contains "$out" 'runs/last'
+assert_file "$(git rev-parse --git-common-dir)/sdd/runs/last/out"
 # FR-16.7: usage says it is off and how to switch it on.
 out=$(sdd usage)
 assert_contains "$out" 'usage tracking is off'

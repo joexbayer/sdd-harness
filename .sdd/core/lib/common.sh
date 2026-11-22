@@ -1996,7 +1996,7 @@ check_articles() {
 				_p="$_id $_rule (its check hides failures: $_cmd)"
 			else
 				printf '$ %s   # %s\n' "$_cmd" "$_id" >>"$1"
-				sh -c "$_cmd" </dev/null >>"$1" 2>&1 || _p="$_id $_rule (its check failed)"
+				sh -c "$_cmd" </dev/null >>"$1" 2>&1 || { printf '[exit %s]\n' "$?" >>"$1"; _p="$_id $_rule (its check failed)"; }
 			fi
 		fi
 		[ -z "$_p" ] || CHECK_ARTICLES="${CHECK_ARTICLES:+$CHECK_ARTICLES
