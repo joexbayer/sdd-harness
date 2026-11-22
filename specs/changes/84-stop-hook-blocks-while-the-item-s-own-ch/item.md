@@ -8,29 +8,36 @@ created: 2026-11-22
 # 84 Stop hook blocks while the item's own check is still running
 
 ## Current behaviour
-<!-- What happens now, and how to reproduce it. -->
+An agent that starts `sdd check` in the background (it takes minutes) and ends its turn to wait is blocked by the stop hook: "has changes no check has passed. Run sdd check." It then spends a turn on a large context saying it is waiting, and is blocked again. In NarrowBot's sessions about 11 of 16 stop-hook refusals came while the agent waited on its own check or verifier (items 14, 16, 20, 21, 23, 30, 38).
 
 ## Expected behaviour
-<!-- FR-84.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-  e.g. <input> → <output> -->
+FR-84.1 WHEN the stop hook would block AND a `sdd check` for this item is still running in this clone THE SYSTEM SHALL warn instead, naming the running check.
+  e.g. check running with pid 4242 → stop allowed with `sdd: the check for item 3 is still running (pid 4242); run sdd next when it ends`
+FR-84.2 WHEN a check ended without cleaning up (killed, crashed) THE SYSTEM SHALL ignore its leftover mark.
+  e.g. mark names a pid that is gone → the hook blocks as before
 
 ## Must not change
-<!-- Behaviour that has to stay exactly as it is (so the fix breaks nothing else). -->
+- With no check running, the stop hook blocks exactly as today.
+- Planning and review phases, and role runs, are judged as today.
+
+## How
+```
+run_check   echo $$ >"$ST/checks/<id>.running"  …  rm -f it when the commands are done (pass or fail)
+hook stop   [ level = block ] && pid=$(cat <id>.running) && kill -0 "$pid"  →  level=warn, msg names it
+```
+D-84.1 A pid file per item, checked with `kill -0`, not a lock: the hook only needs "is it alive", and a stale file costs nothing.
+D-84.2 Only sdd's own check: subagents (verifier, security pass) are not tracked. Seeing them needs a hook on every subagent, and only Claude Code has one; the agent's background-task notice already wakes it when they end.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-84.4 rejects non-images and files over 5 MB
-With standards in [standards] use, add a line "Standards: <name> (<note>), …" or "Standards: none". -->
+Standards: none
+none: a pid file under .git/sdd; `kill -0` sends no signal.
 
 ## Test
-<!-- The regression test (name and file) that fails now and passes after the fix. -->
+t_agents.sh (stop hook cases): a live `.running` pid (the test's own background `sleep`) turns the block into a warning; a dead pid blocks as before.
 
 ## Tasks
-<!-- The failing test first, then the fix; each one task:
-- [ ] T-84.1 Failing test for <the bug>, FR-84.1 (files: <test file>; test: <command>; expect: fail; size: S)
-- [ ] T-84.2 Fix <the bug>, FR-84.1 (files: <code files>; test: <same command>; size: S) -->
+- [ ] T-84.1 Failing test: live pid warns, dead pid blocks, FR-84.1 FR-84.2 (files: tests/t_agents.sh; test: SRC=$PWD SH=dash dash tests/t_agents.sh; expect: fail; size: S)
+- [ ] T-84.2 run_check writes and removes the mark; the stop hook reads it, FR-84.1 FR-84.2 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/hook.sh; test: for t in agents check verified; do SRC=$PWD SH=dash dash tests/t_$t.sh || exit 1; done; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
