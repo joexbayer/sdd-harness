@@ -147,4 +147,23 @@ assert_not_contains "$out" 'check   '
 git switch -q fix/1-honest
 out=$(sdd ship 2>&1) || fail "lite must still ship: $out"
 assert_contains "$out" 'warning: item 1: not verified (gate verified)'
+
+# FR-85.2, FR-85.3: review says what changed since the verified commit; ship warns, never blocks.
+new_repo since
+planned_item fix "Since" tasks
+done_tasks
+echo code >code.txt && git add -A && git commit -qm "fix(1): code"
+sha=$(git rev-parse --short HEAD)
+built_with "Verified by: opus at $sha: 1 of 1 FRs proven; no findings"
+assert_contains "$(sdd review)" "verify  Verified by: opus at $sha: 1 of 1 FRs proven; no findings"
+assert_contains "$(sdd review)" 'since   no code changed since'
+echo more >more.txt && git add -A && git commit -qm "fix(1): more"
+assert_contains "$(sdd review)" 'since   more.txt changed after the verifier ran'
+built_with 'Verified by: opus: 1 of 1 FRs proven; no findings'
+assert_contains "$(sdd review)" 'since   the Verified by line names no commit'
+built_with 'Verified by: opus at deadbeef: 1 of 1 FRs proven; no findings'
+assert_contains "$(sdd review)" 'since   the verified commit is not in this branch'
+sdd check >/dev/null 2>&1 || fail "check failed"
+out=$(sdd ship 2>&1) || fail "stale verification must not block: $out"
+assert_contains "$out" 'warning: item 1: the verified commit is not in this branch'
 exit 0

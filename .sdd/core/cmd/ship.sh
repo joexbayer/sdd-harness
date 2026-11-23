@@ -135,6 +135,10 @@ item_gates() {
 	# FR-22.3: someone other than the builder proved the requirements (the verifier, see finish.md).
 	[ "$(gate_level verified "$ITYPE")" = off ] || verified ||
 		gate verified "item $ID: not verified (gate verified): \"## Built\" needs a \"Verified by: <model>: …\" line, not none (the verifier step in $CMD next)"
+	# FR-85.3: stale verification warns, never blocks.
+	if [ "$(gate_level verified "$ITYPE")" != off ] && verified && [ "$(verified_since | cut -c1-2)" != ok ]; then
+		warn "item $ID: $(since_text)"
+	fi
 	# FR-22.4: the code ships as the human last saw it in $CMD review here; a rebase keeps its patch
 	# id. An item that changes no code has nothing to see.
 	if [ "$(gate_level reviewed "$ITYPE")" != off ]; then

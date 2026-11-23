@@ -65,7 +65,7 @@ none: reads git history and item files; the sha is checked to be hex before reac
 DOD-85.1 `sdd review` and `sdd ship` on an item with fixes after verification name the changed files.
 
 ## Tasks (optional)
-- [ ] T-85.1 verified_since in common.sh; review prints it, ship warns, FR-85.2, FR-85.3 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/review.sh, .sdd/core/cmd/ship.sh, tests/t_verified.sh; test: SRC=$PWD SH=dash dash tests/t_verified.sh; size: M)
+- [x] T-85.1 verified_since in common.sh; review prints it, ship warns, FR-85.2, FR-85.3 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/review.sh, .sdd/core/cmd/ship.sh, tests/t_verified.sh; test: SRC=$PWD SH=dash dash tests/t_verified.sh; size: M)
 - [ ] T-85.2 ship's unverified warning counts shipped unverified items, FR-85.5 (files: .sdd/core/cmd/ship.sh, tests/t_verified.sh; test: SRC=$PWD SH=dash dash tests/t_verified.sh; size: S)
 - [ ] T-85.3 verifier line names its commit and inconclusive; finish's headless fallback, FR-85.1, FR-85.4, FR-85.6 (files: .sdd/core/prompts/role-verifier.md, .sdd/core/prompts/finish.md, tests/t_prompts_tests.sh; test: SRC=$PWD SH=dash dash tests/t_prompts_tests.sh; size: S)
 
