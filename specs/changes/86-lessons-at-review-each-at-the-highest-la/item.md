@@ -8,14 +8,16 @@ created: 2026-11-23
 # 86 Lessons at review, each at the highest layer that holds it
 
 ## What and why
-<!-- 1-3 lines: what changes (dependencies, config, CI, ...) and why now. No behaviour change. -->
+The review step (prompts/review.md and the sdd-review skill) ends with 0-3 lessons from the item:
+corrections the human gave, the verifier's must-fix findings, failed checks. Each goes to the highest
+layer that holds it: code that makes the mistake impossible, else a check or test, else prose (a skill,
+prompt, AGENTS.md). A mistake a prose rule already covered goes up a layer. The human picks; a code or
+check lesson becomes a new item on their word, a prose one the agent writes in this branch (the check
+runs again). Why: from pstack's correct/reflect and the "trust pyramid" talk; sdd has no retrospective.
+Test: tests/t_prompts_tests.sh asserts the new lines in review.md and the skill.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-86.4 rejects non-images and files over 5 MB
-With standards in [standards] use, add a line "Standards: <name> (<note>), …" or "Standards: none". -->
+none: prompt text only; lessons are applied only on the human's word.
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
