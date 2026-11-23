@@ -2,9 +2,10 @@
 id: 85
 type: feature
 title: Verified by is bound to the code it verified
-status: open
+status: shipped
 created: 2026-11-23
 approved: 43e37750e82454e3196938d72949b1063de167e2 2026-11-23 joexbayer
+shipped: 2026-11-23
 ---
 # 85 Verified by is bound to the code it verified
 
