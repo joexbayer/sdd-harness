@@ -74,6 +74,11 @@ stop)
 	;;
 *) exit 0 ;;
 esac
+# FR-84.1/84.2: the agent's own check is still running (a dead pid's leftover mark is ignored).
+if [ "$level" = block ] && { read -r _p <"$ST/checks/$ID.running"; } 2>/dev/null && kill -0 "$_p" 2>/dev/null; then
+	level=warn
+	msg="$NAME: the check for item $ID is still running (pid $_p); run $CMD next when it ends"
+fi
 [ "$level" = off ] && level=ok
 
 # shellcheck source=/dev/null

@@ -97,6 +97,25 @@ echo cap >cap.txt && git add cap.txt && git commit -qm "fix(4): cap"
 sdd hook stop </dev/null >/dev/null 2>&1
 assert_eq $? 2 "(an unfinished build blocks the builder)"
 SDD_ROLE=verifier sdd hook stop </dev/null >/dev/null 2>&1 || fail "the finish gate held a verifier run"
+unset SDD_ROLE # sh keeps a prefix assignment before a function call
+# FR-84.1, FR-84.2: a live check for this item turns the block into a warning; a dead pid blocks again.
+mark=$(git rev-parse --git-common-dir)/sdd/checks/4.running
+sleep 30 &
+spid=$!
+echo "$spid" >"$mark"
+out=$(sdd hook stop </dev/null 2>&1) || fail "stop blocked while the check runs: $out"
+assert_contains "$out" 'still running'
+kill "$spid"
+wait "$spid" 2>/dev/null
+sdd hook stop </dev/null >/dev/null 2>&1
+assert_eq $? 2 "(a dead check pid blocks as before)"
+rm -f "$mark"
+# FR-84.1: sdd check itself writes the mark while its commands run, and removes it after.
+git config -f .sdd/config --replace-all check.run "cp '$mark' '$T/seen'"
+sdd check >/dev/null 2>&1
+grep -qx '[0-9][0-9]*' "$T/seen" || fail "the check wrote no pid mark while running"
+assert_no_file "$mark"
+git config -f .sdd/config --replace-all check.run 'echo ok'
 echo ok
 
 # FR-62.1, FR-62.2: the phase line says verified only when it was; FR-62.3: lite warns at ship.

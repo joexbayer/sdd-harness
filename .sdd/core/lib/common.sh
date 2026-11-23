@@ -1317,6 +1317,7 @@ run_check() {
 	_fp=$(fingerprint)
 	CHECK_LOG="$ST/checks/${1:-none}.log"
 	: >"$CHECK_LOG"
+	echo $$ >"$ST/checks/${1:-none}.running" # FR-84.1: the stop hook reads it
 	_rc=0
 	CHECK_NOTRUN=
 	_t0=$(date +%s)
@@ -1333,6 +1334,7 @@ EOF
 	CHECK_SECS=$(($(date +%s) - _t0))
 	check_articles "$CHECK_LOG" || _rc=1
 	standard_lint || _rc=1
+	rm -f "$ST/checks/${1:-none}.running"
 	CHECK_DIRTIED=
 	_fp2=$(fingerprint)
 	[ "$_fp2" = "$_fp" ] || CHECK_DIRTIED=$(git diff-tree -r --name-only "$_fp" "$_fp2" 2>/dev/null)
