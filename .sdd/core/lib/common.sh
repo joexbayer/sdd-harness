@@ -509,7 +509,9 @@ verified_since() {
 	elif ! git merge-base --is-ancestor "$_s" HEAD 2>/dev/null; then
 		printf 'gone\t\n'
 	else
-		_f=$(git diff --name-only "$_s" HEAD -- . ":(exclude)$SPECS")
+		# Only the item's own files: a merge of the base brings in teammates' files too.
+		_o=$(git diff --name-only "$(git merge-base "$(cfg sdd.base main)" HEAD)" HEAD -- . ":(exclude)$SPECS")
+		_f=$([ -z "$_o" ] || git diff --name-only "$_s" HEAD -- . ":(exclude)$SPECS" | grep -Fx -e "$_o")
 		if [ -z "$_f" ]; then printf 'ok\t\n'; else printf 'changed\t%s\n' "$(joinlist "$_f")"; fi
 	fi
 }

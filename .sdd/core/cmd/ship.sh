@@ -55,11 +55,13 @@ gate() {
 # unverified_tally: " (<n> of <m> shipped items were not verified)", counted in the archive on
 # $base: no "Verified by:" line in "## Built", or none (FR-85.5).
 unverified_tally() {
-	git ls-tree -r --name-only "$base" -- "$SPECS/archive" | grep '/item\.md$' | while IFS= read -r _p; do
-		git show "$base:$_p" | awk '/^## / { on = ($0 == "## Built"); next }
-			on { s = $0; sub(/^[ \t]*([-*][ \t]+)?/, "", s); if (index(s, "Verified by:") == 1) v = tolower(s) }
-			END { sub(/^verified by:[ \t]*/, "", v); print (v == "" || v ~ /^none/) ? "u" : "v" }'
-	done | awk '{ m++ } /u/ { n++ } END { if (m) printf " (%d of %d shipped items were not verified)", n, m }'
+	git ls-tree -r --name-only "$base" -- "$SPECS/archive" | grep '/item\.md$' | sed "s|^|$base:|" |
+		git cat-file --batch | awk '
+		function end() { if (m) { t++; v = tolower(v); sub(/^verified by:[ \t]*/, "", v); if (v == "" || v ~ /^none/) n++ } }
+		/^[0-9a-f]+ blob [0-9]+$/ { end(); m = 1; on = 0; v = ""; next }
+		/^## / { on = ($0 == "## Built"); next }
+		on { s = $0; sub(/^[ \t]*([-*][ \t]+)?/, "", s); if (index(s, "Verified by:") == 1) v = s }
+		END { end(); if (t) printf " (%d of %d shipped items were not verified)", n, t }'
 }
 
 # check_gate: the configured checks must pass for exactly this code (cached when they did).

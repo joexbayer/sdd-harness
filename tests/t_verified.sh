@@ -163,7 +163,22 @@ built_with 'Verified by: opus: 1 of 1 FRs proven; no findings'
 assert_contains "$(sdd review)" 'since   the Verified by line names no commit'
 built_with 'Verified by: opus at deadbeef: 1 of 1 FRs proven; no findings'
 assert_contains "$(sdd review)" 'since   the verified commit is not in this branch'
+# A merge of the base lists only the item's own files, not a teammate's.
+built_with "Verified by: opus at $sha: 1 of 1 FRs proven; no findings"
+git switch -q main && echo t >teammate.txt && git add -A && git commit -qm "teammate" && git switch -q -
+git merge -q --no-edit main
+out=$(sdd review)
+assert_contains "$out" 'since   more.txt changed after the verifier ran'
+assert_not_contains "$out" 'teammate.txt'
 sdd check >/dev/null 2>&1 || fail "check failed"
 out=$(sdd ship 2>&1) || fail "stale verification must not block: $out"
-assert_contains "$out" 'warning: item 1: the verified commit is not in this branch'
+assert_contains "$out" 'warning: item 1: more.txt changed after the verifier ran'
+# FR-85.5: a later unverified item's warning counts the shipped ones (item 1 was verified).
+planned_item fix "Later" tasks
+done_tasks
+echo later >later.txt && git add -A && git commit -qm "fix(2): code"
+built_with 'Verified by: none: no subagent'
+sdd check >/dev/null 2>&1 || fail "check failed"
+out=$(sdd ship 2>&1) || fail "lite must still ship: $out"
+assert_contains "$out" '(0 of 1 shipped items were not verified)'
 exit 0
