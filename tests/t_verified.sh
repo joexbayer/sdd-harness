@@ -31,8 +31,8 @@ assert_contains "$out" 'hand item 1 to the `verifier` role: its `sdd-verifier` s
 assert_contains "$out" 'else `.sdd/bin/sdd run verifier 1` if the project sets the role, else a fresh subagent on a'
 assert_contains "$out" 'different model than yours'
 assert_contains "$out" 'reports only findings, each with the command and its output, and never edits code or the plan'
-assert_contains "$out" '  Verified by: <its model>: <n> of <m> FRs proven; <its findings in a few words, or "no findings">'
-assert_contains "$out" 'or, when no verifier could run, `Verified by: none` and why (ship refuses it where the `verified` gate blocks).'
+assert_contains "$out" '  Verified by: <its model> at <git rev-parse --short HEAD>: <n> of <m> FRs proven[, <k> inconclusive]; <findings or "no findings">'
+assert_contains "$out" 'or, only when none of these can run, `Verified by: none` and why (ship refuses it where the `verified` gate blocks).'
 
 # FR-22.2: a verifier role on a Claude model gets its subagent, with what a verifier does.
 setcfg role.verifier.tier big && setcfg tier.big.agent claude && setcfg tier.big.model opus
@@ -42,7 +42,7 @@ assert_file "$a"
 grep -qx 'model: opus' "$a" || fail "verifier subagent has no model: opus"
 assert_contains "$(cat "$a")" 'You are the verifier for this item: you check the build against its requirements'
 assert_contains "$(cat "$a")" 'Never edit code, tests or the item file, and never commit.'
-assert_contains "$(cat "$a")" 'Verified by: <your model>: <n> of <m> FRs proven;'
+assert_contains "$(cat "$a")" 'Verified by: <your model> at <git rev-parse --short HEAD>: <n> of <m> FRs proven'
 # FR-22.2: sdd run verifier gives the agent the same role prompt after the item's step.
 out=$(sdd run verifier 1 2>&1) || fail "run verifier failed: $out"
 p=$(cat "$STUB/claude.prompt")

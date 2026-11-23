@@ -68,6 +68,10 @@ assert_contains "$out" 'given the item id and the text of .sdd/core/prompts/role
 assert_not_contains "$out" 'reports parts nothing calls or reads'
 assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'in the plan part of the item file'
 assert_not_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'under "## What changes"'
+# FR-85.1, FR-85.4, FR-85.6: the line names the verified commit; headless fallback; inconclusive.
+assert_contains "$out" 'else a fresh headless session of your own CLI (e.g. `claude -p`,'
+assert_contains "$out" 'at <git rev-parse --short HEAD>: <n> of <m> FRs proven[, <k> inconclusive]'
+assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'neither prove nor disprove is inconclusive and counts as not proven'
 # Chore 82: the verifier proves the one fact that keeps the change safe elsewhere (blast radius).
 assert_contains "$(cat "$SRC/.sdd/core/prompts/role-verifier.md")" 'Blast radius: name the one fact'
 # The brief is read raw by the subagent: no unrendered {{ }} in it.

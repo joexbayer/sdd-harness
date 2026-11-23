@@ -52,6 +52,16 @@ gate() {
 	warn "$2"
 }
 
+# unverified_tally: " (<n> of <m> shipped items were not verified)", counted in the archive on
+# $base: no "Verified by:" line in "## Built", or none (FR-85.5).
+unverified_tally() {
+	git ls-tree -r --name-only "$base" -- "$SPECS/archive" | grep '/item\.md$' | while IFS= read -r _p; do
+		git show "$base:$_p" | awk '/^## / { on = ($0 == "## Built"); next }
+			on { s = $0; sub(/^[ \t]*([-*][ \t]+)?/, "", s); if (index(s, "Verified by:") == 1) v = tolower(s) }
+			END { sub(/^verified by:[ \t]*/, "", v); print (v == "" || v ~ /^none/) ? "u" : "v" }'
+	done | awk '{ m++ } /u/ { n++ } END { if (m) printf " (%d of %d shipped items were not verified)", n, m }'
+}
+
 # check_gate: the configured checks must pass for exactly this code (cached when they did).
 check_gate() {
 	[ "$(gate_level check "$ITYPE")" != off ] || return 0
@@ -134,7 +144,7 @@ item_gates() {
 	[ -z "$(missing_sections "$IFILE" built)" ] || gate built "item $ID: \"## Built\" is not written yet"
 	# FR-22.3: someone other than the builder proved the requirements (the verifier, see finish.md).
 	[ "$(gate_level verified "$ITYPE")" = off ] || verified ||
-		gate verified "item $ID: not verified (gate verified): \"## Built\" needs a \"Verified by: <model>: …\" line, not none (the verifier step in $CMD next)"
+		gate verified "item $ID: not verified (gate verified): \"## Built\" needs a \"Verified by: <model>: …\" line, not none (the verifier step in $CMD next)$([ "$(gate_level verified "$ITYPE")" = block ] || unverified_tally)"
 	# FR-85.3: stale verification warns, never blocks.
 	if [ "$(gate_level verified "$ITYPE")" != off ] && verified && [ "$(verified_since | cut -c1-2)" != ok ]; then
 		warn "item $ID: $(since_text)"

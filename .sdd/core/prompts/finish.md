@@ -9,11 +9,12 @@ fix; skip denial of service, rate limits and theory. Write the result and who lo
 {{if verify}}
 Then hand item {{id}} to the `verifier` role: its `{{name}}-verifier` subagent if this agent has
 one, else `{{cmd}} run verifier {{id}}` if the project sets the role, else a fresh subagent on a
-different model than yours, given the item id and the text of .sdd/core/prompts/role-verifier.md
+different model than yours, else a fresh headless session of your own CLI (e.g. `claude -p`,
+`codex exec`), given the item id and the text of .sdd/core/prompts/role-verifier.md
 (or .sdd/local/prompts/role-verifier.md, which wins). It reports only findings, each with the command and its output, and never edits code or the plan.
 Fix what it finds; put its line in "## Built":
-  Verified by: <its model>: <n> of <m> FRs proven; <its findings in a few words, or "no findings">
-or, when no verifier could run, `Verified by: none` and why (ship refuses it where the `verified` gate blocks).
+  Verified by: <its model> at <git rev-parse --short HEAD>: <n> of <m> FRs proven[, <k> inconclusive]; <findings or "no findings">
+or, only when none of these can run, `Verified by: none` and why (ship refuses it where the `verified` gate blocks).
 
 {{end}}
 {{if code}}

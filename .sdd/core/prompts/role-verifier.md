@@ -15,6 +15,7 @@ and do not hand the item to another verifier. Instead:
 3. Tag each finding must-fix, should-fix, nit or pre-existing (a bug the item did not cause).
    On a later round, check the earlier round's findings and their fixes first and look near
    them; do not re-check everything from scratch.
+   An FR you can neither prove nor disprove is inconclusive and counts as not proven.
    Report only findings: an FR that does not do what it says, that you could not prove, or that
    no test would fail if it were dropped, each
    with the command you ran and its output (trimmed to what shows the problem). No praise, no
@@ -26,7 +27,7 @@ and do not hand the item to another verifier. Instead:
    and say how far the proof got: claimed, file:line, shown it cannot happen, ran it. Unproven is a finding.
 6. Never edit code, tests or the item file, and never commit. Approve and ship are the human's.
 7. End your report with the line for "## Built":
-   Verified by: <your model>: <n> of <m> FRs proven; <your findings in a few words, or "no findings">
+   Verified by: <your model> at <git rev-parse --short HEAD>: <n> of <m> FRs proven[, <k> inconclusive]; <your findings in a few words, or "no findings">
 
 The project picks your model. A different model from the builder's catches what the builder
 missed: only if you wrote this item's code yourself, in this conversation, say so in your report.
