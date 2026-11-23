@@ -2,9 +2,10 @@
 id: 84
 type: fix
 title: Stop hook blocks while the item's own check is still running
-status: open
+status: shipped
 created: 2026-11-22
 approved: 3450e0623fd25f08ff6c7a13efabb215ddc18d4c 2026-11-22 joexbayer
+shipped: 2026-11-23
 ---
 # 84 Stop hook blocks while the item's own check is still running
 
