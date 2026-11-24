@@ -2,8 +2,9 @@
 id: 86
 type: chore
 title: Lessons at review, each at the highest layer that holds it
-status: open
+status: shipped
 created: 2026-11-23
+shipped: 2026-11-24
 ---
 # 86 Lessons at review, each at the highest layer that holds it
 
