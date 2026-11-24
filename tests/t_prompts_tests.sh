@@ -118,6 +118,11 @@ assert_contains "$out" 'they run `/sdd-ship` (or `.sdd/bin/sdd ship`)'
 # FR-55.3: the review is presented in chat; the human never opens a file.
 assert_contains "$out" 'never send the human to read a file'
 assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'never send the human to read a file'
+# Item 86: review proposes lessons at the highest layer that holds them.
+assert_contains "$out" '0-3 lessons'
+assert_contains "$out" 'goes up a layer'
+assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" '0-3 lessons'
+assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'goes up a layer'
 # FR-55.4: the AGENTS.md block says be brief.
 assert_contains "$(cat AGENTS.md)" 'Never send the human to read a file: summarise it in chat with an example.'
 # FR-51.2: the AGENTS.md block init writes.

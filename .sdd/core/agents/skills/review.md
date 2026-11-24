@@ -9,3 +9,6 @@ deviation from the plan; call out every deviation, risk and doubt. Ask the user 
 constitution article listed for review.
 Changes the user wants: write what they ask under "## Review" yourself, make them, say under Built
 what you changed, run `{{cmd}} check`, and come back.
+Then propose 0-3 lessons (human corrections, must-fix findings, failed checks), one line each: layer
+and file. Highest layer first: code, else check or test, else prose; a mistake a prose rule already
+covered goes up a layer. The human picks; none worth keeping: say so.
