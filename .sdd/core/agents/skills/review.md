@@ -11,4 +11,6 @@ Changes the user wants: write what they ask under "## Review" yourself, make the
 what you changed, run `{{cmd}} check`, and come back.
 Then propose 0-3 lessons (human corrections, must-fix findings, failed checks), one line each: layer
 and file. Highest layer first: code, else check or test, else prose; a mistake a prose rule already
-covered goes up a layer. The human picks; none worth keeping: say so.
+covered goes up a layer. The human picks: a code or check lesson becomes a new item (`{{cmd}} new`)
+on their word; a prose one you write in this branch, then `{{cmd}} check` (ship then warns the
+verifier saw older code: expected). None worth keeping: say so.

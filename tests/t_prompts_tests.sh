@@ -123,6 +123,10 @@ assert_contains "$out" '0-3 lessons'
 assert_contains "$out" 'goes up a layer'
 assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" '0-3 lessons'
 assert_contains "$(cat .claude/skills/sdd-review/SKILL.md)" 'goes up a layer'
+for t in "$out" "$(cat .claude/skills/sdd-review/SKILL.md)"; do
+	assert_contains "$t" 'becomes a new item'
+	assert_contains "$t" 'you write in this branch, then'
+done
 # FR-55.4: the AGENTS.md block says be brief.
 assert_contains "$(cat AGENTS.md)" 'Never send the human to read a file: summarise it in chat with an example.'
 # FR-51.2: the AGENTS.md block init writes.

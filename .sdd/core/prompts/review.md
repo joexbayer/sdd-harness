@@ -13,5 +13,6 @@ understand it and can judge it.
   change. Layers, highest first: code that makes the mistake impossible, else a check or test, else
   prose (a skill, prompt, AGENTS.md). A mistake a prose rule already covered goes up a layer. The
   human picks; a code or check lesson becomes a new item (`{{cmd}} new ...`) on their word; a prose
-  one you write in this branch, then run `{{cmd}} check` again. None worth keeping: say so in one line.
+  one you write in this branch, then run `{{cmd}} check` again (ship then warns the verifier saw older
+  code: expected). None worth keeping: say so in one line.
 - Only the human ships: when they are satisfied, they run `/{{name}}-ship` (or `{{cmd}} ship`).
