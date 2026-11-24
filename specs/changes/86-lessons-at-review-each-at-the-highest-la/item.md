@@ -20,8 +20,16 @@ Test: tests/t_prompts_tests.sh asserts the new lines in review.md and the skill.
 none: prompt text only; lessons are applied only on the human's word.
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- .sdd/core/prompts/review.md: a bullet before "Only the human ships": 0-3 lessons, layer and file each,
+  highest layer first, a covered prose rule goes up a layer, code/check → new item, prose → this branch
+  then check again (ship's stale-verification warning is expected).
+- .sdd/core/agents/skills/review.md: the same, shorter, with the same routing.
+- Test: tests/t_prompts_tests.sh:121-129 asserts the phrases in the review step and the generated skill;
+  removing the review.md bullet, the skill lines, or the skill's routing fails it.
+- Verifier fixes: the skill left out where a chosen lesson goes, and no test covered the routing (both fixed);
+  nit taken: the prompts say the stale-verification warning after a prose lesson is expected.
+- Security: none (prompt text only).
+- Verified by: claude-opus-5-5 at 0537abe: 0 of 0 FRs (chore: behaviour proven by mutation); should-fix: skill omits code/check→new item and prose→branch+check routing, and no test asserts that routing; nit: post-verify prose lesson triggers stale-verify warning
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
