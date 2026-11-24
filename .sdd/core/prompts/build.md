@@ -30,7 +30,7 @@ done; stop only where a rule says so. Be brief.
   covers the case.
 {{end}}
 {{if code}}
-- Never weaken or skip a test to pass; if one is wrong, say so under "## Built".
+- Never weaken or skip a test to pass; if wrong, say so under "## Built".
   A test that only repeats another's case may be deleted, listed under "## Built".
 - Never make a flaky test pass by rerun, sleep, retry or skip; cause unknown: delete the test, say why under "## Built".
 - Verifier tags: fix must-fix, decide should-fix, list the rest under "## Built"; pre-existing never counts against the item.
@@ -44,14 +44,14 @@ done; stop only where a rule says so. Be brief.
 {{if code}}
 - Write just enough code to pass the test: no abstractions, options or defensive code nothing
   asked for.
-- No unbounded list or query, no query in a loop, no filtering database rows in app code. If the plan
-  missed one, fix it and say so under "## Built".
+- No unbounded list or query, no query in a loop, no filtering database rows in app code.
+  If the plan missed one, fix it and say so under "## Built".
 - After two fixes resting on the same assumption fail, write that assumption under
   "## Built" and take a different approach.
 {{end}}
 {{if frs}}
 - Comments: a bare ID marks where a requirement lives (`// FR-{{id}}.1` on the function and on the test
-  that proves it; the item file holds the rest).
+  that proves it).
 {{end}}
 {{if code}}
 - Comments: prose only for why the code can't say itself (a

@@ -499,6 +499,34 @@ verified() {
 	case $_v in '' | none*) return 1 ;; esac
 }
 
+# verified_since: how the verified code stands now (FR-85.2): "ok\t", "changed\t<files>" (code
+# changed since the commit in "Verified by: <model> at <sha>:", specs/ left out), "gone\t" (that
+# commit is not in this branch) or "none\t" (the line names no commit). Meaningful when verified.
+verified_since() {
+	_s=$(verified_by | sed -n 's/^Verified by:[^:]* at \([0-9a-f]\{4,40\}\):.*/\1/p')
+	if [ -z "$_s" ]; then
+		printf 'none\t\n'
+	elif ! git merge-base --is-ancestor "$_s" HEAD 2>/dev/null; then
+		printf 'gone\t\n'
+	else
+		# Only the item's own files: a merge of the base brings in teammates' files too.
+		_o=$(git diff --name-only "$(git merge-base "$(cfg sdd.base main)" HEAD)" HEAD -- . ":(exclude)$SPECS")
+		_f=$([ -z "$_o" ] || git diff --name-only "$_s" HEAD -- . ":(exclude)$SPECS" | grep -Fx -e "$_o")
+		if [ -z "$_f" ]; then printf 'ok\t\n'; else printf 'changed\t%s\n' "$(joinlist "$_f")"; fi
+	fi
+}
+
+# since_text: the FR-85.2 sentence for verified_since; empty when no code changed since.
+since_text() {
+	_t=$(verified_since)
+	case $_t in
+	ok*) echo "no code changed since" ;;
+	changed*) echo "${_t#changed?} changed after the verifier ran" ;;
+	gone*) echo "the verified commit is not in this branch" ;;
+	*) echo "the Verified by line names no commit" ;;
+	esac
+}
+
 # review_print: what sdd review records of the item's code change (FR-22.4): a first line
 # "patch=<git patch-id of the diff from the merge base, specs/ left out>" (empty when no code
 # changed), then "<blob after>\t<path>" per changed file, to name what changed since. A rebase

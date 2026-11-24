@@ -38,6 +38,7 @@ fi
 if [ "$(gate_level verified "$ITYPE")" != off ]; then
 	vline=$(verified_by)
 	echo "verify  ${vline:-Verified by: (missing)}"
+	! verified || echo "since   $(since_text)" # FR-85.2
 fi
 # FR-67.3: every waiver, however it was written.
 awk '/^## / { on = ($0 == "## Waived"); next } on && /^- T-/ { sub(/^- /, "waived  "); print }' "$IFILE"

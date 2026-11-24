@@ -329,7 +329,7 @@ Verifying: once no task is open and the check passes, the finish steps hand the 
 `verifier` role (its `sdd-verifier` subagent, `sdd run verifier <id>`, or a fresh subagent on
 another model), whose prompt (`prompts/role-verifier.md`) is to prove each FR by running
 something and report only findings, with the command and its output, never editing. Its result
-goes under Built as `Verified by: <model>: <n> of <m> FRs proven; <findings>`, which the
+goes under Built as `Verified by: <model> at <sha>: <n> of <m> FRs proven; <findings>`, which the
 `verified` gate asks for; it stops a forgotten step, not a forged line (the human reads it in
 review, `sdd usage` shows whether a verifier ran). `sdd review` records the patch id of the
 code diff from the merge base (`specs/` left out; for a contract item, which lands no code, its
