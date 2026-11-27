@@ -33,4 +33,21 @@ assert_eq "$(cat "$f")" "$copy" "(file untouched)"
 ) && fail "fm_set should fail on an unclosed frontmatter"
 assert_eq "$(cat "$f")" "$copy" "(fm_set left the file)"
 assert_no_file "$f.tmp.$$"
+
+# FR-88.1: an empty gate level (crashed subshell) blocks; only off and warn do not.
+(
+	SDD_HOME="$SRC/.sdd"
+	. "$SRC/.sdd/core/lib/common.sh"
+	ITYPE=feature IR_APPROVED= IR_CONTRACTS=
+	gate_level() { :; }
+	gate_blocks approved feature || exit 1
+	approval_current && exit 2
+	gate_level() { echo off; }
+	gate_blocks approved feature && exit 3
+	gate_level() { echo warn; }
+	gate_blocks approved feature && exit 4
+	gate_level() { echo block; }
+	gate_blocks approved feature || exit 5
+	exit 0
+) || fail "gate_blocks/approval_current: empty level must block (exit $?)"
 exit 0

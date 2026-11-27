@@ -35,7 +35,7 @@ tests/t_frontmatter.sh style (source common.sh): stub gate_level() { :; } (a cra
 assert gate_blocks succeeds and approval_current fails; off and warn still pass.
 
 ## Tasks
-- [ ] T-88.1 A failing test: gate_blocks and approval_current with an empty gate level, FR-88.1 (files: tests/t_frontmatter.sh; test: SRC=$PWD SH=dash dash tests/t_frontmatter.sh; expect: fail; size: S)
+- [x] T-88.1 A failing test: gate_blocks and approval_current with an empty gate level, FR-88.1 (files: tests/t_frontmatter.sh; test: SRC=$PWD SH=dash dash tests/t_frontmatter.sh; expect: fail; size: S)
 - [ ] T-88.2 Read empty or unknown levels as block at the three places, FR-88.1 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/cmd/ship.sh; test: SRC=$PWD SH=dash dash tests/t_frontmatter.sh; size: S)
 
 ## Built
