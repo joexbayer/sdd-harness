@@ -269,4 +269,13 @@ git add "$ITEM" && git commit -qm "docs: plan"
 out=$(sdd approve 2>&1) || fail "approve failed: $out"
 assert_contains "$out" "⚠ item $(sed -n 's/^id: //p' "$ITEM"): changes the check that judges it (check.run): change [check] in a chore"
 assert_contains "$out" 'approved by'
+# FR-88.1: an unknown approved level (as a crashed gate_level's empty one) blocks ship.
+new_repo bogus
+setcfg type.feature.approved bogus
+sdd new feature "Bogus" >/dev/null 2>&1
+fill specs/changes/1-bogus/item.md
+git commit -qam "docs(1): plan and built"
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(unknown approved level)"
+assert_contains "$out" 'not approved'
 exit 0
