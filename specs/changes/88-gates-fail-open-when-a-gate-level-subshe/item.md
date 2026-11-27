@@ -28,12 +28,14 @@ Levels off, warn and block behave as today; no extra process per call.
 approval gates task test commands (FR-68.8) → FR-88.1 closes them on a crashed subshell.
 
 ## Test
-tests/t_frontmatter.sh style: source common.sh, define gate_level() { :; } (a crashed subshell), and
-assert approval_current fails; for task.sh and ship.sh the same through a stub gate_level on an approved-gate item.
+One helper in common.sh, `gate_blocks <gate> <type>`: true unless the level is off or warn (so empty
+blocks); approval_current and task.sh use it; ship's gate() switches to a case with block as the default.
+tests/t_frontmatter.sh style (source common.sh): stub gate_level() { :; } (a crashed subshell) and
+assert gate_blocks succeeds and approval_current fails; off and warn still pass.
 
 ## Tasks
-- [ ] T-88.1 A failing test: an empty gate level opens approval_current, task done and ship's gate, FR-88.1 (files: tests/t_phase.sh; test: SRC=$PWD SH=dash dash tests/t_phase.sh; expect: fail; size: S)
-- [ ] T-88.2 Read empty or unknown levels as block at the three places, FR-88.1 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/cmd/ship.sh; test: SRC=$PWD SH=dash dash tests/t_phase.sh; size: S)
+- [ ] T-88.1 A failing test: gate_blocks and approval_current with an empty gate level, FR-88.1 (files: tests/t_frontmatter.sh; test: SRC=$PWD SH=dash dash tests/t_frontmatter.sh; expect: fail; size: S)
+- [ ] T-88.2 Read empty or unknown levels as block at the three places, FR-88.1 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/cmd/ship.sh; test: SRC=$PWD SH=dash dash tests/t_frontmatter.sh; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
