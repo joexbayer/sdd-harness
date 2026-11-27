@@ -38,7 +38,7 @@ assert_no_file "$f.tmp.$$"
 (
 	SDD_HOME="$SRC/.sdd"
 	. "$SRC/.sdd/core/lib/common.sh"
-	ITYPE=feature IR_APPROVED= IR_CONTRACTS=
+	ITYPE=feature IR_APPROVED='' IR_CONTRACTS='' IFILE=$f
 	gate_level() { :; }
 	gate_blocks approved feature || exit 1
 	approval_current && exit 2
