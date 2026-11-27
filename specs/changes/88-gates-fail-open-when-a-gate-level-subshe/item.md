@@ -8,29 +8,32 @@ created: 2026-11-27
 # 88 Gates fail open when a gate_level subshell crashes
 
 ## Current behaviour
-<!-- What happens now, and how to reproduce it. -->
+Three gate checks read `$(gate_level …)` and treat anything but "block" as "not blocking". When the
+subshell dies (macOS /bin/dash segfaulted 5 times since 2026-11-25 under load), its output is empty and
+the gate opens:
+- common.sh:428 approval_current: `[ "$(gate_level approved …)" = block ] || return 0` → an unapproved
+  plan reads as approved; seen in chore 87's check: t_analyze showed a new item 3 in phase build.
+- task.sh:171: `!= block ] || approval_ok` → a task's test command (shell from the item) runs unapproved (FR-68.8).
+- ship.sh:49 gate(): an empty level warns instead of blocking.
 
 ## Expected behaviour
-<!-- FR-88.1 WHEN <trigger> THE SYSTEM SHALL <response>.
-  e.g. <input> → <output> -->
+FR-88.1 WHEN a gate level is empty or unknown THE SYSTEM SHALL treat it as block in approval_current,
+task done and ship's gate().
+  e.g. gate_level prints nothing → next says "waiting for the human to approve"; task done refuses; ship fails
 
 ## Must not change
-<!-- Behaviour that has to stay exactly as it is (so the fix breaks nothing else). -->
+Levels off, warn and block behave as today; no extra process per call.
 
 ## Security
-<!-- Does this touch untrusted input, login or permissions, secrets or personal data, a new
-dependency, files/network/shell, or CI/agent config? If not: "none: <why>". Otherwise, per risk:
-what can go wrong → what we do (an FR with a test, a D line, or "accept: <why>").
-    e.g. uploads are untrusted → FR-88.4 rejects non-images and files over 5 MB
-With standards in [standards] use, add a line "Standards: <name> (<note>), …" or "Standards: none". -->
+approval gates task test commands (FR-68.8) → FR-88.1 closes them on a crashed subshell.
 
 ## Test
-<!-- The regression test (name and file) that fails now and passes after the fix. -->
+tests/t_frontmatter.sh style: source common.sh, define gate_level() { :; } (a crashed subshell), and
+assert approval_current fails; for task.sh and ship.sh the same through a stub gate_level on an approved-gate item.
 
 ## Tasks
-<!-- The failing test first, then the fix; each one task:
-- [ ] T-88.1 Failing test for <the bug>, FR-88.1 (files: <test file>; test: <command>; expect: fail; size: S)
-- [ ] T-88.2 Fix <the bug>, FR-88.1 (files: <code files>; test: <same command>; size: S) -->
+- [ ] T-88.1 A failing test: an empty gate level opens approval_current, task done and ship's gate, FR-88.1 (files: tests/t_phase.sh; test: SRC=$PWD SH=dash dash tests/t_phase.sh; expect: fail; size: S)
+- [ ] T-88.2 Read empty or unknown levels as block at the three places, FR-88.1 (files: .sdd/core/lib/common.sh, .sdd/core/cmd/task.sh, .sdd/core/cmd/ship.sh; test: SRC=$PWD SH=dash dash tests/t_phase.sh; size: S)
 
 ## Built
 <!-- Written by the agent at the end of the build, for the review: per requirement what
