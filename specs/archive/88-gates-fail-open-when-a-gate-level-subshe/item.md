@@ -2,9 +2,10 @@
 id: 88
 type: fix
 title: Gates fail open when a gate_level subshell crashes
-status: open
+status: shipped
 created: 2026-11-27
 approved: b69f646648dd505a1d68103bd60c8cdec3a1cd7e 2026-11-27 joexbayer
+shipped: 2026-11-27
 ---
 # 88 Gates fail open when a gate_level subshell crashes
 
