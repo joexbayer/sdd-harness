@@ -2,8 +2,9 @@
 id: 87
 type: chore
 title: Test that key prompt sentences survive trims
-status: open
+status: shipped
 created: 2026-11-25
+shipped: 2026-11-27
 ---
 # 87 Test that key prompt sentences survive trims
 
