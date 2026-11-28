@@ -202,6 +202,13 @@ git switch -q main
 out=$(sdd new --from R-8.2 2>&1)
 assert_eq $? 1 "(roadmap 8 carried twice)"
 assert_contains "$out" 'roadmap 8 is carried by item 9: open R-8.2 after it ships'
+# FR-89.5 with a forge: item 9 shipped into its PR (carried folder already under archive/ on its branch), not merged.
+git switch -q chore/9-one && git mv specs/changes/8-carry specs/archive/8-carry && git commit -qm "docs(9): ship (PR open)"
+git switch -q main
+out=$(sdd new --from R-8.2 2>&1)
+assert_eq $? 1 "(roadmap 8 carried, PR open)"
+assert_contains "$out" 'roadmap 8 is carried by item 9'
+git switch -q chore/9-one && git reset -q --hard HEAD~1 && git switch -q main
 # FR-89.3: a spike that is written up is carried into the item that acts on it; FR-89.5: once.
 git switch -q main
 out=$(sdd new fix "Early" --from 31 2>&1)

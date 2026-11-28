@@ -327,10 +327,13 @@ fm_set "$IFILE" shipped "$(date +%F)"
 mkdir -p "$SPECS/archive"
 git mv "$IDIR" "$archive" || fail "could not move $IDIR to $archive"
 git add -- "$archive" || fail "could not stage $archive"
-# FR-89.4: items carried into this branch (new --from) ship in the same commit.
+# FR-89.4: items carried into this branch (new --from) ship in the same commit; only folders the
+# branch added, never one the base already holds.
+_mb=$(git merge-base "$base" HEAD)
 for _c in "$SPECS"/changes/*/; do
 	_c=${_c%/}
 	[ -f "$_c/item.md" ] || continue
+	! git cat-file -e "$_mb:$_c/item.md" 2>/dev/null || continue
 	fm_set "$_c/item.md" status shipped
 	fm_set "$_c/item.md" shipped "$(date +%F)"
 	git mv "$_c" "$SPECS/archive/${_c##*/}" && git add -- "$SPECS/archive/${_c##*/}" || fail "could not move $_c to the archive"

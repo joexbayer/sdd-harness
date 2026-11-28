@@ -1909,13 +1909,14 @@ carry_source() {
 	printf '%s\t%s\n' "$_cr" "$_cd"
 }
 
-# carrier_of <id>: the item id whose branch carries a copy of item <id> under changes/ (FR-89.5);
+# carrier_of <id>: the item id whose branch carries a copy of item <id> under changes/ or archive/ (FR-89.5);
 # fails when no branch does.
 carrier_of() {
 	git for-each-ref --format='%(refname:short)' refs/heads refs/remotes | while read -r _b; do
 		_bid=$(id_of "$_b") || continue
 		[ "$_bid" != "$1" ] || continue
-		git ls-tree --name-only "$_b" "$SPECS/changes/" 2>/dev/null | grep -q "/$1-[^/]*$" && { echo "$_bid"; break; }
+		# Under archive/ too: a carrier shipped into its PR and not merged yet (forge) still carries it.
+		git ls-tree --name-only "$_b" "$SPECS/changes/" "$SPECS/archive/" 2>/dev/null | grep -q "/$1-[^/]*$" && { echo "$_bid"; break; }
 	done | grep .
 }
 
