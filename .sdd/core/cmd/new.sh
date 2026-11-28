@@ -1,12 +1,14 @@
 # shellcheck shell=sh
 # new <type> "title" [--worktree]: branch from base, scaffold the item, commit only it.
+# new <type> "title" --from <spike id>: the same, carrying the spike into the item (FR-89.3).
 # new --from R-<id>.<n> [--worktree]: the same for a shipped roadmap's entry (FR-24.3): its type and
 # title, with "roadmap:" and "depends:" (its after: list) in the frontmatter.
-[ $# -ge 2 ] || usage_die "usage: $NAME new <type> \"title\" [--worktree]   or: $NAME new --from R-<id>.<n> [--worktree]   (types: $(types | paste -sd ' ' -))"
+[ $# -ge 2 ] || usage_die "usage: $NAME new <type> \"title\" [--from <spike id>] [--worktree]   or: $NAME new --from R-<id>.<n> [--worktree]   (types: $(types | paste -sd ' ' -))"
 need_repo
 
 from=
 after=
+carry=
 if [ "$1" = --from ]; then
 	from=$2
 	rid=${from#R-}
@@ -14,8 +16,18 @@ if [ "$1" = --from ]; then
 	rid=${rid%%.*}
 	case $from in R-*.*) ;; *) rid= ;; esac
 	case $rid:$rn in :* | *: | *[!0-9:]*) usage_die "--from takes a roadmap entry, e.g. --from R-30.2" ;; esac
-	entries=$(shipped_roadmaps "$rid") ||
-		die "no shipped roadmap $rid on $(cfg sdd.base main): only a shipped roadmap's entries open items (see: $CMD show $rid)"
+	# FR-89.2: a roadmap not on the base yet but approved and written up is carried into the item's branch.
+	if ! entries=$(shipped_roadmaps "$rid"); then
+		src=$(carry_source "$rid" roadmap) ||
+			die "no shipped roadmap $rid on $(cfg sdd.base main): only a shipped, or approved and written up, roadmap's entries open items (see: $CMD show $rid)"
+		carry=${src#*"$(printf '\t')"}
+		_rt=$(mktemp "${TMPDIR:-/tmp}/$NAME-roadmap.XXXXXX") && git show "${src%%"$(printf '\t')"*}:$carry/item.md" >"$_rt" ||
+			die "could not read roadmap $rid"
+		entries=$(roadmap_entries "$_rt" "$rid")
+		rm -f "$_rt"
+		# FR-89.5: one carrier at a time.
+		by=$(carrier_of "$rid") && die "roadmap $rid is carried by item $by: open $from after it ships"
+	fi
 	entry=$(printf '%s\n' "$entries" | E=$from awk -F '\t' '$3 == ENVIRON["E"]')
 	[ -n "$entry" ] || die "no entry $from in roadmap $rid (entries: $(printf '%s\n' "$entries" | cut -f3 | paste -sd ' ' -))"
 	bad=$(tsv 7 "$entry")
@@ -33,12 +45,26 @@ else
 fi
 shift 2
 wt=0
-for a in "$@"; do
-	case $a in
+spike=
+while [ $# -gt 0 ]; do
+	case $1 in
 	--worktree) wt=1 ;;
-	*) usage_die "unknown option: $a" ;;
+	--from)
+		case ${2:-} in '' | *[!0-9]*) usage_die "--from after a title takes a spike id, e.g. --from 31" ;; esac
+		spike=$2
+		shift
+		;;
+	*) usage_die "unknown option: $1" ;;
 	esac
+	shift
 done
+# FR-89.3: a written-up spike is carried into the item that acts on it; FR-89.5: by one at a time.
+if [ -n "$spike" ]; then
+	[ -z "$from" ] || usage_die "--from takes a roadmap entry or a spike id, not both"
+	src=$(carry_source "$spike" spike) || die "no written-up spike $spike to carry (it must be approved and have \"## Built\" written, and not be on $(cfg sdd.base main) yet)"
+	carry=${src#*"$(printf '\t')"}
+	by=$(carrier_of "$spike") && die "spike $spike is carried by item $by: open this item after it ships"
+fi
 
 case $type in *[!a-z0-9-]* | '') usage_die "unknown type: $type" ;; esac
 tpl=$(sdd_path "templates/$type.md") || usage_die "unknown type: $type (types: $(types | paste -sd ' ' -))"
@@ -86,7 +112,9 @@ if [ -n "$from" ]; then
 	[ -z "$after" ] || fm_set "$dir/item.md" depends "$(printf '%s' "$after" | sed 's/ /, /g')" || die "could not write $dir/item.md"
 fi
 git add -- "$dir/item.md" || die "could not add $dir/item.md"
-git commit -q -m "docs($id): open $type \"$title\"" -- "$dir/item.md" || die "could not commit $dir/item.md"
+# FR-89.2: the carried item's folder, copied from its branch, lands in the same commit.
+[ -z "$carry" ] || git checkout -q "${src%%"$(printf '\t')"*}" -- "$carry" || die "could not carry $carry"
+git commit -q -m "docs($id): open $type \"$title\"" -- "$dir/item.md" ${carry:+"$carry"} || die "could not commit $dir/item.md"
 
 [ -z "$where" ] || sync_here
 # FR-66.1: seed the worktree so it can build; a failing setup keeps the item.

@@ -63,7 +63,7 @@
 #   gates      which gates apply (default: sdd.gates)
 #   <gate>     a level that beats the profile's
 #   branch     branch name template (last part must be {id}-{slug})
-#   lands      "item" = only the archived item reaches the base branch, never the code
+#   lands      "item" = ships only inside the item built from it (new --from), never alone; its code never lands
 #   code       "no" = the type changes no code (only files under specs/): no code rules in its prompts
 [type "hotfix"]
 	gates = planned check built
@@ -92,7 +92,7 @@
 	gates = planned analyzed approved check built reviewed
 	code = no
 [type "roadmap"]
-	# A system as items in order (R-<id>.<n> entries); like a spike, only the item lands.
+	# A system as items in order (R-<id>.<n> entries); like a spike, it ships with the first item built from it.
 	gates = planned analyzed approved built
 	lands = item
 

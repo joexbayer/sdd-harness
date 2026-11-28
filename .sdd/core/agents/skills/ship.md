@@ -6,5 +6,6 @@ description: Ship a reviewed {{name}} item to the base branch. Use when the user
 Only the user ships. Run `{{cmd}} ship` (the user confirms it), without a review first: a
 review records the code as reviewed. If ship says "code changed since your review", walk the
 user through it with the {{name}}-review skill, then run ship again. Push only if the user asks.
+A roadmap or spike never ships alone: it ships inside the item that carries it (`new --from`).
 Afterwards run `{{cmd}} tidy` to remove the item's local branch and worktree; run
 `{{cmd}} tidy --remote` (it deletes remote branches) only when the user asks.

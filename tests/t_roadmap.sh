@@ -69,17 +69,16 @@ awk '{ print } $0 == "## Items" {
 out=$(sdd analyze 2>&1)
 assert_eq $? 0 "(clean roadmap: $out)"
 
-# FR-24.1: it goes through approve and ship like a spike: only the item lands on main.
+# FR-24.1: it goes through approve and build like a spike.
 sdd approve >/dev/null 2>&1 || fail "approve roadmap failed"
 assert_contains "$(sdd next)" '"## Built" is not written yet'
 fill "$f" built
-echo stray >stray.txt && git add -A && git commit -qm "docs(1): built"
-out=$(sdd ship 2>&1) || fail "roadmap ship failed: $out"
-assert_contains "$out" 'roadmap 1: plan archived on main'
-git show main:specs/archive/1-shop/item.md | grep -q '^status: shipped' || fail "roadmap not archived on main"
-git cat-file -e main:stray.txt 2>/dev/null && fail "a roadmap lands only its item"
-assert_eq "$(git log -1 --format=%s main)" 'docs(1): roadmap plan "Shop"'
-git switch -q main
+git add -A && git commit -qm "docs(1): built"
+# FR-89.1: a roadmap does not ship alone.
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(a roadmap does not ship alone)"
+assert_contains "$out" 'roadmap 1 ships with its first item: .sdd/bin/sdd new --from R-1.1'
+land_plan "$f"
 
 # FR-24.3: an unknown entry, a roadmap that has not shipped, a bad ref are refused.
 out=$(sdd new --from R-1.9 2>&1)
@@ -151,8 +150,7 @@ git switch -q main
 out=$(sdd next)
 assert_not_contains "$out" 'Ready in roadmap'
 git switch -q roadmap/6-blog && fill "$RM" built && git commit -qam "docs(6): built"
-sdd ship >/dev/null 2>&1 || fail "ship roadmap 6 failed"
-git switch -q main
+land_plan "$RM"
 
 # FR-24.5: once shipped, next offers the entries whose after: is met, with the command to open each.
 out=$(sdd next)
@@ -186,4 +184,69 @@ out=$(sdd next)
 assert_contains "$out" "Ready in roadmap 6 (Blog): R-6.2 chore: Comments → .sdd/bin/sdd new --from R-6.2"
 assert_not_contains "$out" 'R-6.3'
 assert_contains "$(sdd show 6)" 'R-6.1     [shipped (item 7)] chore: Posts'
+# FR-89.2: an entry of a roadmap that is approved and built but not on main opens an item that carries
+# the roadmap's folder in its first commit; FR-89.5: not twice until that item ships.
+git switch -q main
+roadmap "Carry" '- R-8.1 chore: One\n- R-8.2 chore: Two'
+sdd approve >/dev/null 2>&1 || fail "approve roadmap 8 failed"
+git switch -q main
+out=$(sdd new --from R-8.1 2>&1)
+assert_eq $? 1 "(roadmap 8 not built)"
+assert_contains "$out" 'no shipped roadmap 8 on main'
+git switch -q roadmap/8-carry && fill "$RM" built && git commit -qam "docs(8): built" && git switch -q main
+out=$(sdd new --from R-8.1 2>&1) || fail "new --from R-8.1 failed: $out"
+assert_eq "$(git rev-parse --abbrev-ref HEAD)" chore/9-one
+assert_eq "$(git show --name-only --format= HEAD | sort | paste -sd ' ' -)" 'specs/changes/8-carry/item.md specs/changes/9-one/item.md'
+assert_eq "$(git status --porcelain)" ""
+git switch -q main
+out=$(sdd new --from R-8.2 2>&1)
+assert_eq $? 1 "(roadmap 8 carried twice)"
+assert_contains "$out" 'roadmap 8 is carried by item 9: open R-8.2 after it ships'
+# FR-89.5 with a forge: item 9 shipped into its PR (carried folder already under archive/ on its branch), not merged.
+git switch -q chore/9-one && git mv specs/changes/8-carry specs/archive/8-carry && git commit -qm "docs(9): ship (PR open)"
+git switch -q main
+out=$(sdd new --from R-8.2 2>&1)
+assert_eq $? 1 "(roadmap 8 carried, PR open)"
+assert_contains "$out" 'roadmap 8 is carried by item 9'
+git switch -q chore/9-one && git reset -q --hard HEAD~1 && git switch -q main
+# FR-89.3: a spike that is written up is carried into the item that acts on it; FR-89.5: once.
+git switch -q main
+out=$(sdd new fix "Early" --from 31 2>&1)
+assert_eq $? 1 "(no spike 31)"
+assert_contains "$out" 'no written-up spike 31 to carry'
+planned_item spike "Probe"
+git switch -q main
+out=$(sdd new fix "Early" --from 10 2>&1)
+assert_eq $? 1 "(spike 10 not built)"
+git switch -q spike/10-probe && fill "$ITEM" built && git commit -qam "docs(10): findings" && git switch -q main
+out=$(sdd new fix "Use probe" --from 10 2>&1) || fail "new fix --from 10 failed: $out"
+assert_eq "$(git rev-parse --abbrev-ref HEAD)" fix/11-use-probe
+assert_eq "$(git show --name-only --format= HEAD | sort | paste -sd ' ' -)" 'specs/changes/10-probe/item.md specs/changes/11-use-probe/item.md'
+git switch -q main
+out=$(sdd new fix "Again" --from 10 2>&1)
+assert_eq $? 1 "(spike 10 carried twice)"
+assert_contains "$out" 'spike 10 is carried by item 11'
+sdd new fix "Bad" --from x >/dev/null 2>&1
+assert_eq $? 2 "(--from x)"
+# FR-89.4: shipping item 9 archives the roadmap it carries in the same commit; FR-89.5: roadmap 8's
+# next entry opens once item 9 has shipped, from the base like any shipped roadmap.
+# A folder the base already holds under changes/ (merged outside sdd) is not the carrier's to ship.
+git switch -q main && mkdir -p specs/changes/0-stray && printf -- '---\nid: 0\ntype: fix\nstatus: open\n---\n' >specs/changes/0-stray/item.md && git add -A && git commit -qm "stray"
+git switch -q chore/9-one
+f9=specs/changes/9-one/item.md
+fill "$f9" && git add -A && git commit -qm "docs: chore done" && sdd check >/dev/null 2>&1 || fail "check failed"
+out=$(sdd ship 2>&1) || fail "ship 9 failed: $out"
+assert_eq "$(git show --name-only --format= main | sort | paste -sd ' ' -)" 'specs/archive/8-carry/item.md specs/archive/9-one/item.md'
+git show main:specs/archive/8-carry/item.md | grep -q '^status: shipped' || fail "roadmap 8 not shipped on main"
+git show main:specs/archive/8-carry/item.md | grep -q '^shipped: ' || fail "roadmap 8 has no shipped date"
+git cat-file -e main:specs/changes/8-carry/item.md 2>/dev/null && fail "roadmap 8 still under changes/ on main"
+git cat-file -e main:specs/changes/0-stray/item.md 2>/dev/null || fail "ship 9 archived a folder the base held"
+out=$(sdd new --from R-8.2 2>&1) || fail "new --from R-8.2 failed: $out"
+assert_eq "$(git rev-parse --abbrev-ref HEAD)" chore/12-two
+assert_eq "$(git show --name-only --format= HEAD)" specs/changes/12-two/item.md
+git switch -q main
+# The roadmap's own branch holds only its plan, now shipped: tidy removes it.
+git rev-parse -q --verify refs/heads/roadmap/8-carry >/dev/null || fail "no roadmap/8-carry branch"
+sdd tidy >/dev/null 2>&1
+git rev-parse -q --verify refs/heads/roadmap/8-carry >/dev/null && fail "tidy kept the shipped roadmap's branch"
 echo ok

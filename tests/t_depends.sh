@@ -16,8 +16,7 @@ awk '{ print } $0 == "## Items" {
 	print "" }' "$rm" >"$T/rm" && cp "$T/rm" "$rm"
 git commit -qam "docs(1): plan" && sdd approve >/dev/null 2>&1 || fail "approve roadmap failed"
 fill "$rm" built && git commit -qam "docs(1): built"
-sdd ship >/dev/null 2>&1 || fail "ship roadmap failed"
-git switch -q main
+land_plan "$rm"
 
 # finish <item file>: fill it, commit it and run the check, ready to ship.
 finish() { fill "$1" && git add -A && git commit -qm "docs: done" && sdd check >/dev/null 2>&1 || fail "check failed"; }

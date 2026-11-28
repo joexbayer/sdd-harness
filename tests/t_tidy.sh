@@ -32,8 +32,7 @@ echo wip >"$T/app/.worktrees/2/wip.txt"
 # 3: a spike: its code never lands, so its branch is never safe to delete.
 planned_item spike "Learn"
 echo try >try.txt && git add try.txt && git commit -qm "spike(3): try"
-fill "$ITEM" built && git commit -qam "docs(3): findings" && sdd ship >/dev/null 2>&1 || fail "ship spike failed"
-git switch -q main
+fill "$ITEM" built && git commit -qam "docs(3): findings" && land_plan "$ITEM"
 
 # 4: still open: tidy never touches it.
 sdd new feature "Open work" >/dev/null 2>&1 && git push -q origin HEAD && git switch -q main

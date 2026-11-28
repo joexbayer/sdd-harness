@@ -78,6 +78,15 @@ planned_item() {
 	sdd approve >/dev/null 2>&1 || fail "approve failed"
 }
 
+# land_plan <item file>: put a built roadmap or spike on main as shipped, as a plan shipped by an
+# earlier version did (nothing ships alone now, FR-89.1); stays on the item's branch.
+land_plan() {
+	_b=$(git rev-parse --abbrev-ref HEAD) && _d=${1%/item.md} && _n=${_d##*/}
+	git switch -q main && git checkout -q "$_b" -- "$_d" && mkdir -p specs/archive && git mv "$_d" "specs/archive/$_n" &&
+		sed 's/^status: open$/status: shipped/' "specs/archive/$_n/item.md" >"$T/land" && cp "$T/land" "specs/archive/$_n/item.md" &&
+		git add -A && git commit -qm "docs: ship $_n" || fail "land_plan failed"
+}
+
 # done_tasks: do the pair planned_item <type> "title" tasks wrote, and commit them by name, as ship
 # wants where the tasks gate is on.
 done_tasks() {
