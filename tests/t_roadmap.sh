@@ -230,6 +230,8 @@ sdd new fix "Bad" --from x >/dev/null 2>&1
 assert_eq $? 2 "(--from x)"
 # FR-89.4: shipping item 9 archives the roadmap it carries in the same commit; FR-89.5: roadmap 8's
 # next entry opens once item 9 has shipped, from the base like any shipped roadmap.
+# A folder the base already holds under changes/ (merged outside sdd) is not the carrier's to ship.
+git switch -q main && mkdir -p specs/changes/0-stray && printf -- '---\nid: 0\ntype: fix\nstatus: open\n---\n' >specs/changes/0-stray/item.md && git add -A && git commit -qm "stray"
 git switch -q chore/9-one
 f9=specs/changes/9-one/item.md
 fill "$f9" && git add -A && git commit -qm "docs: chore done" && sdd check >/dev/null 2>&1 || fail "check failed"
@@ -238,6 +240,7 @@ assert_eq "$(git show --name-only --format= main | sort | paste -sd ' ' -)" 'spe
 git show main:specs/archive/8-carry/item.md | grep -q '^status: shipped' || fail "roadmap 8 not shipped on main"
 git show main:specs/archive/8-carry/item.md | grep -q '^shipped: ' || fail "roadmap 8 has no shipped date"
 git cat-file -e main:specs/changes/8-carry/item.md 2>/dev/null && fail "roadmap 8 still under changes/ on main"
+git cat-file -e main:specs/changes/0-stray/item.md 2>/dev/null || fail "ship 9 archived a folder the base held"
 out=$(sdd new --from R-8.2 2>&1) || fail "new --from R-8.2 failed: $out"
 assert_eq "$(git rev-parse --abbrev-ref HEAD)" chore/12-two
 assert_eq "$(git show --name-only --format= HEAD)" specs/changes/12-two/item.md
