@@ -72,8 +72,26 @@ DOD-89.1 A roadmap and a spike each land on main only inside the PR of an item w
 - [x] T-89.5 docs: design.md roadmap/spike rows, the new/ship skills and help text (files: specs/design.md, .sdd/core/cmd/help.sh, .sdd/core/agents/skills/ship.md; size: S)
 
 ## Built
-<!-- Written by the agent at the end of the build, for the review: per requirement what
-changed (file:line) and which test proves it; deviations from the plan and why; follow-ups. -->
+- FR-89.1: ship.sh refuses a roadmap or spike (after current_item) with how it ships; the old
+  `lands = item` ship path is deleted (D-89.4). Tests: t_roadmap.sh, t_ship.sh.
+- FR-89.2: new.sh `--from R-x.n` falls back to common.sh carry_source (an approved, written-up roadmap
+  not on the base) and copies its folder into the new item's first commit. Test: t_roadmap.sh.
+- FR-89.3: new.sh `new <type> "title" --from <spike id>` carries a written-up spike. Test: t_roadmap.sh.
+- FR-89.4: ship.sh archives each carried folder (only folders the branch added) as shipped in the ship
+  commit. Test: t_roadmap.sh (roadmap 8 shipped with item 9; a folder the base holds is left alone).
+- FR-89.5: common.sh carrier_of finds another branch holding the copy under changes/ or archive/ (a
+  carrier shipped into an open PR). Test: t_roadmap.sh (twice; and with the carrier's PR open).
+- tidy.sh: a roadmap's branch is removed once shipped (it holds only its plan); spike branches stay.
+- Docs: design.md rows, help.sh, config comments, prompts/none.md, the ship skill.
+- Tests: tests/lib.sh land_plan puts a roadmap on main for older fixtures (t_roadmap FR-24, t_tidy,
+  t_depends); the carry path is tested end to end.
+- Verifier fixes: with forge = github a second carry was allowed while the carrier's PR was open and
+  ship nested archive/1-carry/1-carry (must-fix, fixed); ship archived any folder under changes/ (fixed:
+  only the branch's own). Mutations of both are caught.
+- Left (nits): tidy can delete a roadmap branch with edits made after the carry (the carried copy is
+  what ships, D-89.1); an abandoned carrier branch blocks the next carry until deleted (the error names it).
+- Security: none (moves item files; ids numeric).
+- Verified by: Opus 5.5 at 51f2069: 4 of 5 FRs proven; FR-89.5 fails with forge = github (a second carry is allowed while the carrier's PR is open, and ship nests archive/1-carry/1-carry); 3 nits
 
 ## Review (optional)
 <!-- What to change, one per line (the agent writes what the human asks). The agent works through them
