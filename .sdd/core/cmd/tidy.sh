@@ -43,7 +43,7 @@ keep_reason() {
 		echo "checked out in the main checkout · git switch $base && $CMD tidy"
 	elif [ -n "$3" ] && [ "$3" = "$ROOT" ]; then
 		echo "you are in it · cd $(shq "$main") && $CMD tidy"
-	elif ! git merge-base --is-ancestor "$1" "$base"; then
+	elif [ "$2" != roadmap ] && ! git merge-base --is-ancestor "$1" "$base"; then # FR-89.4: a roadmap's branch holds its plan, now archived on the base
 		if [ "$2" = spike ]; then echo "a spike's code never lands on $base · $_rm"; else echo "has commits not on $base · $_rm"; fi
 	elif [ -d "$3" ] && [ -n "$(git -C "$3" status --porcelain)" ]; then
 		echo "uncommitted changes · $_rm"
