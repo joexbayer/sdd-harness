@@ -1,5 +1,5 @@
 # FR-1.8 ship: gates, archive, fast-forward base (checked out elsewhere or not), rollback on
-# failure, never push. FR-1.9 a spike lands only its item. FR-1.13 no code before approval.
+# failure, never push. FR-89.1 a spike does not ship alone. FR-1.13 no code before approval.
 # FR-7.4 a branch pushed before the rebase is still deleted.
 . "$SRC/tests/lib.sh"
 new_repo
@@ -113,19 +113,14 @@ assert_contains "$out" 'rebase onto main hit conflicts'
 assert_eq "$(git rev-parse HEAD)" "$before"
 git switch -q main
 
-# --- spike: only the item lands, and afterwards it is no longer open
+# --- FR-89.1: a spike does not ship alone
 planned_item spike "Try queue"
 fill "$ITEM" built
-echo hack >spike-code.txt
-git add -A && git commit -qm "spike code"
-out=$(sdd ship 2>&1) || fail "spike ship failed: $out"
-assert_contains "$out" 'findings archived on main'
-git show main:specs/archive/6-try-queue/item.md | grep -q 'status: shipped' || fail "spike item not on main"
-git cat-file -e main:spike-code.txt 2>/dev/null && fail "spike code must not land on main"
+git add -A && git commit -qm "spike findings"
 out=$(sdd ship 2>&1)
-assert_eq $? 1 "(a shipped spike cannot ship twice)"
+assert_eq $? 1 "(a spike does not ship alone)"
+assert_contains "$out" 'spike 6 ships with the item that acts on it: .sdd/bin/sdd new <type> "title" --from 6'
 git switch -q main
-assert_not_contains "$(sdd status)" 'Try queue'
 
 assert_eq "$(git ls-remote --heads origin)" "$remote_before" "(ship must never push)"
 

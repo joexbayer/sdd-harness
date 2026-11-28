@@ -8,6 +8,11 @@
 human_only ship
 need_repo
 current_item || die "not on an item branch (see: $CMD status)"
+# FR-89.1: a roadmap or spike lands inside the first item built from it (new --from).
+case $ITYPE:$(cfg "type.$ITYPE.lands" all) in
+roadmap:item) die "roadmap $ID ships with its first item: $CMD new --from R-$ID.1" ;;
+*:item) die "$ITYPE $ID ships with the item that acts on it: $CMD new <type> \"title\" --from $ID" ;;
+esac
 fm_closed "$IFILE" || die "item $ID: $FM_OPEN"
 
 [ -z "$(git status --porcelain)" ] || die "commit, stash or ignore your changes first (ship checks exactly what it lands)"
@@ -291,44 +296,16 @@ archive="$SPECS/archive/${IDIR##*/}"
 _twin=$(git ls-tree --name-only "$base" "$SPECS/archive/" "$SPECS/changes/" 2>/dev/null | sed 's|.*/||' | grep "^$ID-" | grep -vx "${IDIR##*/}" | head -n 1)
 [ -z "$_twin" ] || warn "id $ID is also $_twin on $base"
 
-lands=$(cfg "type.$ITYPE.lands" all)
 # With a forge, GitHub merges into the remote base: the branch must already contain it (no
 # rebase, which would rewrite commits a PR or a teammate may already have). It is fetched before
 # the gates judge the item (FR-68.9).
-[ -z "$forge" ] || [ "$lands" = item ] || pr_ready
+[ -z "$forge" ] || pr_ready
 item_gates
 type_guard
 # The constitution blocks in every profile.
 guard=$(constitution_guard) || fail "item $ID: $guard"
 
 pre=$(git rev-parse HEAD)
-
-# A spike's code never lands: only its archived item reaches the base branch. A roadmap's neither
-# (it has none): its entries open from the base branch once it is there (FR-24.1).
-if [ "$lands" = item ]; then
-	fm_set "$IFILE" status shipped
-	fm_set "$IFILE" shipped "$(date +%F)"
-	git commit -q -m "docs($ID): ship $ITYPE \"$title\"" -- "$IFILE" || fail "could not commit $IFILE"
-	tmpidx=$(mktemp "${TMPDIR:-/tmp}/$NAME-index.XXXXXX") && rm -f "$tmpidx"
-	GIT_INDEX_FILE=$tmpidx git read-tree "$base" || fail "could not read $base"
-	git ls-tree -r HEAD -- "$IDIR" | while IFS="$(printf '\t')" read -r meta path; do
-		GIT_INDEX_FILE=$tmpidx git update-index --add --cacheinfo "$(echo "$meta" | awk '{ print $1 "," $3 }'),$archive/${path#"$IDIR"/}"
-	done
-	tree=$(GIT_INDEX_FILE=$tmpidx git write-tree)
-	rm -f "$tmpidx"
-	what=findings
-	[ "$ITYPE" = spike ] || what=plan
-	commit=$(git commit-tree "$tree" -p "$base" -m "docs($ID): $ITYPE $what \"$title\"") || fail "could not create the $what commit"
-	ff_base "$commit"
-	if [ "$ITYPE" = roadmap ]; then
-		echo "✓ roadmap $ID: plan archived on $base (local); its ready entries: $CMD next (on $base)"
-		echo "next    ${push_hint}then open an entry: $CMD new --from R-$ID.<n>"
-	else
-		echo "✓ $ITYPE $ID: $what archived on $base (local); the code stays on $BRANCH"
-		echo "next    ${push_hint}delete the code when done: git branch -D $BRANCH"
-	fi
-	exit 0
-fi
 
 if [ -z "$forge" ] && ! git merge-base --is-ancestor "$base" HEAD; then
 	git rebase -q "$base" >/dev/null 2>&1 || {

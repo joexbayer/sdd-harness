@@ -69,17 +69,16 @@ awk '{ print } $0 == "## Items" {
 out=$(sdd analyze 2>&1)
 assert_eq $? 0 "(clean roadmap: $out)"
 
-# FR-24.1: it goes through approve and ship like a spike: only the item lands on main.
+# FR-24.1: it goes through approve and build like a spike.
 sdd approve >/dev/null 2>&1 || fail "approve roadmap failed"
 assert_contains "$(sdd next)" '"## Built" is not written yet'
 fill "$f" built
-echo stray >stray.txt && git add -A && git commit -qm "docs(1): built"
-out=$(sdd ship 2>&1) || fail "roadmap ship failed: $out"
-assert_contains "$out" 'roadmap 1: plan archived on main'
-git show main:specs/archive/1-shop/item.md | grep -q '^status: shipped' || fail "roadmap not archived on main"
-git cat-file -e main:stray.txt 2>/dev/null && fail "a roadmap lands only its item"
-assert_eq "$(git log -1 --format=%s main)" 'docs(1): roadmap plan "Shop"'
-git switch -q main
+git add -A && git commit -qm "docs(1): built"
+# FR-89.1: a roadmap does not ship alone.
+out=$(sdd ship 2>&1)
+assert_eq $? 1 "(a roadmap does not ship alone)"
+assert_contains "$out" 'roadmap 1 ships with its first item: .sdd/bin/sdd new --from R-1.1'
+land_plan "$f"
 
 # FR-24.3: an unknown entry, a roadmap that has not shipped, a bad ref are refused.
 out=$(sdd new --from R-1.9 2>&1)
@@ -151,8 +150,7 @@ git switch -q main
 out=$(sdd next)
 assert_not_contains "$out" 'Ready in roadmap'
 git switch -q roadmap/6-blog && fill "$RM" built && git commit -qam "docs(6): built"
-sdd ship >/dev/null 2>&1 || fail "ship roadmap 6 failed"
-git switch -q main
+land_plan "$RM"
 
 # FR-24.5: once shipped, next offers the entries whose after: is met, with the command to open each.
 out=$(sdd next)
