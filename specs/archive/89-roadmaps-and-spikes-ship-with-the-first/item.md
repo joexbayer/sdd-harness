@@ -2,9 +2,10 @@
 id: 89
 type: feature
 title: Roadmaps and spikes ship with the first item built from them
-status: open
+status: shipped
 created: 2026-11-28
 approved: ab550aa12139173d1360b2d31cc924fe739f8a4d 2026-11-28 joexbayer
+shipped: 2026-11-28
 ---
 # 89 Roadmaps and spikes ship with the first item built from them
 
