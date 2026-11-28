@@ -202,4 +202,23 @@ git switch -q main
 out=$(sdd new --from R-8.2 2>&1)
 assert_eq $? 1 "(roadmap 8 carried twice)"
 assert_contains "$out" 'roadmap 8 is carried by item 9: open R-8.2 after it ships'
+# FR-89.3: a spike that is written up is carried into the item that acts on it; FR-89.5: once.
+git switch -q main
+out=$(sdd new fix "Early" --from 31 2>&1)
+assert_eq $? 1 "(no spike 31)"
+assert_contains "$out" 'no written-up spike 31 to carry'
+planned_item spike "Probe"
+git switch -q main
+out=$(sdd new fix "Early" --from 10 2>&1)
+assert_eq $? 1 "(spike 10 not built)"
+git switch -q spike/10-probe && fill "$ITEM" built && git commit -qam "docs(10): findings" && git switch -q main
+out=$(sdd new fix "Use probe" --from 10 2>&1) || fail "new fix --from 10 failed: $out"
+assert_eq "$(git rev-parse --abbrev-ref HEAD)" fix/11-use-probe
+assert_eq "$(git show --name-only --format= HEAD | sort | paste -sd ' ' -)" 'specs/changes/10-probe/item.md specs/changes/11-use-probe/item.md'
+git switch -q main
+out=$(sdd new fix "Again" --from 10 2>&1)
+assert_eq $? 1 "(spike 10 carried twice)"
+assert_contains "$out" 'spike 10 is carried by item 11'
+sdd new fix "Bad" --from x >/dev/null 2>&1
+assert_eq $? 2 "(--from x)"
 echo ok
