@@ -47,9 +47,7 @@ ff_base() {
 # gate <name> <condition-failed message>: apply a gate at its level for this type.
 gate() {
 	_lvl=$(gate_level "$1" "$ITYPE")
-	[ "$_lvl" != off ] || return 0
-	[ "$_lvl" = block ] && fail "$2"
-	warn "$2"
+	case $_lvl in off) return 0 ;; warn) warn "$2" ;; *) fail "$2" ;; esac
 }
 
 # unverified_tally: " (<n> of <m> shipped items were not verified)", counted in the archive on

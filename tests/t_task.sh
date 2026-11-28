@@ -320,6 +320,12 @@ git commit -qam "docs(1): plan"
 out=$(sdd task 'done' T-1.1 2>&1) || fail "task done under approved = warn: $out"
 assert_file ran.txt
 grep -q '^- \[x\] T-1.1 ' "$f" || fail "T-1.1 not ticked"
+# FR-88.1: an unknown level (as a crashed gate_level's empty one) blocks: the test does not run.
+setcfg type.feature.approved bogus
+awk '/^- \[x\] T-1.1 / { print; print "- [ ] T-1.2 Two (test: echo ran >ran2.txt)"; next } { print }' "$f" >"$T/f" && cp "$T/f" "$f"
+git commit -qam "docs(1): plan"
+sdd task 'done' T-1.2 >/dev/null 2>&1 && fail "task done ran under an unknown approved level"
+assert_no_file ran2.txt
 
 # Must not change (item 68): T-1.1 and T-1.10 stay distinct in ticks, commit proof and ship.
 new_repo ten

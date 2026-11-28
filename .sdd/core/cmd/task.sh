@@ -168,7 +168,7 @@ bad=$(tsv 8 "$row")
 [ -z "$bad" ] || die "$tid: $bad"
 # The test is a shell command from the item: run it only for the plan the human approved. Where
 # approval does not block (hotfix, chore, a warn level) it is trusted like the check commands. FR-68.8
-[ "$(gate_level approved "$ITYPE")" != block ] || approval_ok ||
+! gate_blocks approved "$ITYPE" || approval_ok ||
 	die "the plan is not approved, or changed since: the human runs $CMD approve first (a task's test runs only for the approved plan)"
 
 # FR-73.7: in order: the first open task goes first. Asked after the task's own checks, before its

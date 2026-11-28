@@ -231,6 +231,10 @@ gate_level() {
 	}'
 }
 
+# gate_blocks <gate> <type>: true unless the level is off or warn; an empty or
+# unknown level (a crashed gate_level) blocks (FR-88.1).
+gate_blocks() { case $(gate_level "$1" "$2") in off | warn) return 1 ;; esac; }
+
 # --- text helpers -----------------------------------------------------------------
 
 # render <file> <id> <title> <type>: substitute {{id}} {{title}} {{type}} {{date}}
@@ -425,7 +429,7 @@ approval_pin() {
 # approval pins what approval_pin says now.
 approval_current() {
 	CBAD=
-	[ "$(gate_level approved "$ITYPE")" = block ] || return 0
+	gate_blocks approved "$ITYPE" || return 0
 	approval_pin "$IR_CONTRACTS" && [ -n "$IR_APPROVED" ] && [ "${IR_APPROVED%% *}" = "$APIN" ]
 }
 
