@@ -13,7 +13,8 @@ specs). Spec Kit lands the spec in the same PR as its code. A team wants every m
 
 ## What changes
 US-89.1 As a developer I ship a roadmap's or spike's item together with the first code built from it.
-FR-89.1 WHEN `sdd ship` runs on a roadmap or spike item THE SYSTEM SHALL refuse and name how it ships.
+FR-89.1 WHEN `sdd ship` runs on an item whose type has `lands = item` (roadmap, spike) THE SYSTEM SHALL
+refuse and name how it ships.
   e.g. ✗ roadmap 30 ships with its first item: sdd new --from R-30.1
        ✗ spike 31 ships with the item that acts on it: sdd new <type> "title" --from 31
 FR-89.2 WHEN `sdd new --from R-<id>.<n>` names a roadmap that is approved and written up but not on the
@@ -47,7 +48,11 @@ D-89.2 One carrier at a time (FR-89.5), because two copies landing from two PRs 
 roadmap entries usually run in order (after:) anyway.
 D-89.3 A carried item is found by its folder in the branch under specs/changes/ with another id; no new
 front matter field.
-D-89.4 No compatibility path: roadmaps already shipped on the base keep working through the existing read.
+D-89.4 ship's own `lands = item` path (archive the item alone on the base) is deleted: nothing ships
+that way any more; `lands = item` now means "ships only inside a carrier".
+D-89.5 Amendment and contract items stay as they are: they land real files (the constitution,
+specs/contracts/), not only a plan.
+D-89.6 No compatibility path: roadmaps already shipped on the base keep working through the existing read.
 
 ## Security
 none: moves item files inside the repo; ids are checked numeric as today.
