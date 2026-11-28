@@ -9,8 +9,11 @@ $NAME: spec-driven changes. Humans plan and review; agents build.
   $NAME init                        install into this repo (config, AGENTS.md block)
   $NAME new <type> "title" [--worktree]
                                    start a change: branch + specs/changes/<id>-<slug>/item.md
+  $NAME new <type> "title" --from <spike id>
+                                   the same, carrying a written-up spike: it ships with this item
   $NAME new --from R-<id>.<n> [--worktree]
-                                   open the item a shipped roadmap's entry describes
+                                   open the item a roadmap's entry describes; an unshipped roadmap
+                                   (approved, written up) ships with this item
   $NAME status                      current item and phase, or open items on local branches
   $NAME next                        instructions for the current phase (agents call this)
   $NAME analyze [<id>]              the plan's gaps: FRs no task names, open questions, …

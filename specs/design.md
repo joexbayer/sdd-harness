@@ -83,9 +83,9 @@ state (ID counter, check results, synced agents) lives in `$(git rev-parse
 | fix | wrong behaviour | Current · Expected (FR) · Must not change · Test | all |
 | chore | deps, config, CI | What and why | planned, check, built, depends |
 | refactor | structure only | Goal · Invariants | described, check |
-| spike | learning | Question · Timebox · Findings · Decision | described; only the item merges, never the code |
+| spike | learning | Question · Timebox · Findings · Decision | described; the item ships inside the item that acts on it (`new <type> "…" --from <id>`), never the code |
 | amendment | a ground truth must change | Articles affected · Current text · Proposed text · Why now · Impact · Alternatives | every gate blocks in every profile; lands no code (Impact lists the items that follow) |
-| roadmap | a system in several items | Goal · Items (`R-` entries) · Done when | planned, analyzed, approved, built; only the item lands, like a spike |
+| roadmap | a system in several items | Goal · Items (`R-` entries) · Done when | planned, analyzed, approved, built; ships inside the first item built from it (`new --from R-<id>.<n>` carries it), like a spike |
 | contract | an interface items build against changes | Why · Contract · Users · Compatibility · Security · Done when | planned, analyzed, approved, check, built, reviewed; lands no code; review shows the contract diff in full |
 | feature | new behaviour | Why · What changes (US/FR + examples) · Not in scope · How · Questions · Done when | all |
 

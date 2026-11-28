@@ -9,12 +9,12 @@ To start a change, pick the type that fits and run: {{cmd}} new <type> "short ti
   fix       behaviour is wrong: plan the fix, reproduce it with a failing test first
   chore     dependencies, config, CI: no behaviour change (no approval step)
   refactor  structure only: behaviour and existing tests stay the same
-  spike     answer a question: only the findings are kept, never the code
+  spike     answer a question: only the findings are kept, shipped with the item that acts on them (new <type> "…" --from <id>)
   feature   new behaviour: a brief a teammate can read before any code exists
   amendment change a constitution rule (specs/constitution.md)
   contract  change an interface items build against (specs/contracts/)
   roadmap   a system in several items: plan their order once, then open each with
-            {{cmd}} new --from R-<id>.<n> (only the plan lands)
+            {{cmd}} new --from R-<id>.<n> (the plan ships with the first)
 
 Changes under ~20 lines with no behaviour change need no item: commit them as `chore: ...`.
 Open items on other branches: {{cmd}} status
