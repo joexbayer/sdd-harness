@@ -66,7 +66,7 @@ DOD-89.1 A roadmap and a spike each land on main only inside the PR of an item w
 
 ## Tasks (optional)
 - [x] T-89.1 ship refuses a roadmap or spike, FR-89.1 (files: .sdd/core/cmd/ship.sh, tests/t_roadmap.sh; test: SRC=$PWD SH=dash dash tests/t_roadmap.sh; size: S)
-- [ ] T-89.2 new --from R-x.n carries an unshipped roadmap, one carrier at a time, FR-89.2, FR-89.5 (files: .sdd/core/cmd/new.sh, .sdd/core/lib/common.sh, tests/t_roadmap.sh; test: SRC=$PWD SH=dash dash tests/t_roadmap.sh; size: M)
+- [x] T-89.2 new --from R-x.n carries an unshipped roadmap, one carrier at a time, FR-89.2, FR-89.5 (files: .sdd/core/cmd/new.sh, .sdd/core/lib/common.sh, tests/t_roadmap.sh; test: SRC=$PWD SH=dash dash tests/t_roadmap.sh; size: M)
 - [ ] T-89.3 new --from <spike id> carries a spike, FR-89.3 (files: .sdd/core/cmd/new.sh, tests/t_roadmap.sh; test: SRC=$PWD SH=dash dash tests/t_roadmap.sh; size: S)
 - [ ] T-89.4 ship archives carried items, FR-89.4 (files: .sdd/core/cmd/ship.sh, tests/t_roadmap.sh; test: SRC=$PWD SH=dash dash tests/t_roadmap.sh; size: M)
 - [ ] T-89.5 docs: design.md roadmap/spike rows, the new/ship skills and help text (files: specs/design.md, .sdd/core/cmd/help.sh, .sdd/core/agents/skills/ship.md; size: S)

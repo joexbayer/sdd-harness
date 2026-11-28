@@ -7,6 +7,7 @@ need_repo
 
 from=
 after=
+carry=
 if [ "$1" = --from ]; then
 	from=$2
 	rid=${from#R-}
@@ -14,8 +15,18 @@ if [ "$1" = --from ]; then
 	rid=${rid%%.*}
 	case $from in R-*.*) ;; *) rid= ;; esac
 	case $rid:$rn in :* | *: | *[!0-9:]*) usage_die "--from takes a roadmap entry, e.g. --from R-30.2" ;; esac
-	entries=$(shipped_roadmaps "$rid") ||
-		die "no shipped roadmap $rid on $(cfg sdd.base main): only a shipped roadmap's entries open items (see: $CMD show $rid)"
+	# FR-89.2: a roadmap not on the base yet but approved and written up is carried into the item's branch.
+	if ! entries=$(shipped_roadmaps "$rid"); then
+		src=$(carry_source "$rid" roadmap) ||
+			die "no shipped roadmap $rid on $(cfg sdd.base main): only a shipped, or approved and written up, roadmap's entries open items (see: $CMD show $rid)"
+		carry=${src#*"$(printf '\t')"}
+		_rt=$(mktemp "${TMPDIR:-/tmp}/$NAME-roadmap.XXXXXX") && git show "${src%%"$(printf '\t')"*}:$carry/item.md" >"$_rt" ||
+			die "could not read roadmap $rid"
+		entries=$(roadmap_entries "$_rt" "$rid")
+		rm -f "$_rt"
+		# FR-89.5: one carrier at a time.
+		by=$(carrier_of "$rid") && die "roadmap $rid is carried by item $by: open $from after it ships"
+	fi
 	entry=$(printf '%s\n' "$entries" | E=$from awk -F '\t' '$3 == ENVIRON["E"]')
 	[ -n "$entry" ] || die "no entry $from in roadmap $rid (entries: $(printf '%s\n' "$entries" | cut -f3 | paste -sd ' ' -))"
 	bad=$(tsv 7 "$entry")
@@ -86,7 +97,9 @@ if [ -n "$from" ]; then
 	[ -z "$after" ] || fm_set "$dir/item.md" depends "$(printf '%s' "$after" | sed 's/ /, /g')" || die "could not write $dir/item.md"
 fi
 git add -- "$dir/item.md" || die "could not add $dir/item.md"
-git commit -q -m "docs($id): open $type \"$title\"" -- "$dir/item.md" || die "could not commit $dir/item.md"
+# FR-89.2: the carried item's folder, copied from its branch, lands in the same commit.
+[ -z "$carry" ] || git checkout -q "${src%%"$(printf '\t')"*}" -- "$carry" || die "could not carry $carry"
+git commit -q -m "docs($id): open $type \"$title\"" -- "$dir/item.md" ${carry:+"$carry"} || die "could not commit $dir/item.md"
 
 [ -z "$where" ] || sync_here
 # FR-66.1: seed the worktree so it can build; a failing setup keeps the item.

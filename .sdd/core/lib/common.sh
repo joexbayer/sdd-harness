@@ -1892,6 +1892,33 @@ EOF
 # it has shipped, each entry opens one item (new --from), which carries "roadmap: R-<id>.<n>" and
 # "depends: <its after: list>" in its frontmatter. An entry's state is derived from those items.
 
+# roadmap_entries <file> <id>: the entries of roadmap <id>'s item file, one line each: "<id>\t<title>\t"
+# and entry_row's fields.
+roadmap_entries() {
+	parse_item "$1" "$2" | R=$2 RT=$(fm_get title "$1") awk -F '\t' "$AWK_ENTRY"'
+		$1 == "r" && !seen[$2]++ { print ENVIRON["R"] "\t" ENVIRON["RT"] "\t" entry_row($2, $4) }'
+}
+
+# carry_source <id> <type>: "<ref>\t<folder>" of the open item <id> of <type> that is approved and
+# written up (phase review) on a branch sdd sees; fails when there is none (FR-89.2, FR-89.3).
+carry_source() {
+	_cr=$(item_rows | I=$1 T=$2 awk -F '\t' '$1 == ENVIRON["I"] && $2 == ENVIRON["T"] && $3 == "open" && $4 ~ /^review/ { print $9; exit }')
+	[ -n "$_cr" ] || return 1
+	_cd=$(git ls-tree --name-only "$_cr" "$SPECS/changes/" 2>/dev/null | grep "/$1-[^/]*$" | head -n 1)
+	[ -n "$_cd" ] || return 1
+	printf '%s\t%s\n' "$_cr" "$_cd"
+}
+
+# carrier_of <id>: the item id whose branch carries a copy of item <id> under changes/ (FR-89.5);
+# fails when no branch does.
+carrier_of() {
+	git for-each-ref --format='%(refname:short)' refs/heads refs/remotes | while read -r _b; do
+		_bid=$(id_of "$_b") || continue
+		[ "$_bid" != "$1" ] || continue
+		git ls-tree --name-only "$_b" "$SPECS/changes/" 2>/dev/null | grep -q "/$1-[^/]*$" && { echo "$_bid"; break; }
+	done | grep .
+}
+
 # shipped_roadmaps [id]: the entries of every roadmap shipped to the base branch (or only roadmap
 # <id>), read from the base branch (D-24.5), one line each: "<roadmap id>\t<roadmap title>\t" and
 # entry_row's fields. Fails when there is none. On the base branch itself the archive is read from
@@ -1913,8 +1940,7 @@ shipped_roadmaps() {
 		[ -z "${1:-}" ] || [ "$1" = "$_ri" ] || continue
 		if [ -n "$_rf" ]; then git show "$_rf:$_rp" >"$_rt" 2>/dev/null || continue; else cp "$_rp" "$_rt" || continue; fi
 		[ "$(fm_get type "$_rt")" = roadmap ] && [ "$(fm_get status "$_rt")" = shipped ] || continue
-		parse_item "$_rt" "$_ri" | R=$_ri RT=$(fm_get title "$_rt") awk -F '\t' "$AWK_ENTRY"'
-			$1 == "r" && !seen[$2]++ { print ENVIRON["R"] "\t" ENVIRON["RT"] "\t" entry_row($2, $4) }'
+		roadmap_entries "$_rt" "$_ri"
 	done)
 	rm -f "$_rt"
 	[ -n "$_rout" ] || return 1

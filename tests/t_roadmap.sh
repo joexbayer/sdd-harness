@@ -184,4 +184,22 @@ out=$(sdd next)
 assert_contains "$out" "Ready in roadmap 6 (Blog): R-6.2 chore: Comments → .sdd/bin/sdd new --from R-6.2"
 assert_not_contains "$out" 'R-6.3'
 assert_contains "$(sdd show 6)" 'R-6.1     [shipped (item 7)] chore: Posts'
+# FR-89.2: an entry of a roadmap that is approved and built but not on main opens an item that carries
+# the roadmap's folder in its first commit; FR-89.5: not twice until that item ships.
+git switch -q main
+roadmap "Carry" '- R-8.1 chore: One\n- R-8.2 chore: Two'
+sdd approve >/dev/null 2>&1 || fail "approve roadmap 8 failed"
+git switch -q main
+out=$(sdd new --from R-8.1 2>&1)
+assert_eq $? 1 "(roadmap 8 not built)"
+assert_contains "$out" 'no shipped roadmap 8 on main'
+git switch -q roadmap/8-carry && fill "$RM" built && git commit -qam "docs(8): built" && git switch -q main
+out=$(sdd new --from R-8.1 2>&1) || fail "new --from R-8.1 failed: $out"
+assert_eq "$(git rev-parse --abbrev-ref HEAD)" chore/9-one
+assert_eq "$(git show --name-only --format= HEAD | sort | paste -sd ' ' -)" 'specs/changes/8-carry/item.md specs/changes/9-one/item.md'
+assert_eq "$(git status --porcelain)" ""
+git switch -q main
+out=$(sdd new --from R-8.2 2>&1)
+assert_eq $? 1 "(roadmap 8 carried twice)"
+assert_contains "$out" 'roadmap 8 is carried by item 9: open R-8.2 after it ships'
 echo ok
